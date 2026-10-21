@@ -29,17 +29,10 @@ summary{cursor:pointer;font-weight:600}
 .tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--sub);margin-left:6px}
 code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:1px 5px;border-radius:4px}
 #log{font-size:13px;white-space:pre-wrap;color:var(--sub)}
-.st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-top:10px}
-.st-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer}
-.st-btn.on{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 35%,transparent)}
-.st-btn b{font-size:13px}
-.st-ch{display:flex;gap:3px}
-.st-ch span{width:22px;height:18px;border-radius:3px;font-size:11px;line-height:18px;text-align:center;background:color-mix(in srgb,var(--sub) 18%,transparent);color:var(--sub)}
-.st-ch span.L{background:color-mix(in srgb,var(--acc) 30%,transparent);color:var(--text)}
-.st-ch span.R{background:color-mix(in srgb,var(--warn) 35%,transparent);color:var(--text)}
-.st-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--sub)}
-.st-bar button{padding:6px 14px}
-#st-pos{width:min(320px,100%)}
+.bigl{display:block;padding:18px 20px;border-radius:12px;border:2px solid var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);color:var(--text);text-decoration:none;margin:14px 0}
+.bigl b{display:block;font-size:20px;color:var(--acc)}
+.bigl span{display:block;font-size:13px;color:var(--sub);margin-top:4px}
+.bigl:hover{background:color-mix(in srgb,var(--acc) 20%,transparent)}
 </style>
 </head>
 <body>
@@ -49,14 +42,7 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 
 
 <h2>ステレオ化 聞き比べ（試作）</h2>
-<div class="panel">
-  <div class="sub">FM音源8チャンネルの左右の振り分けを変えたもの（ドラム・音声のPCMは中央）。1面 → 3面 → 10面のBGMを20秒ずつ。
-  ボタンを押すとすぐ再生し、再生中に別のボタンを押すと同じ位置から切り替わります。左右の分かれ方が分かるよう、ヘッドホン推奨。
-  <br>四角は FM のチャンネル0〜7（<span style="color:var(--acc)">左</span>／<span style="color:var(--warn)">右</span>／灰色＝中央）。録音はMAMEに左右出力を付け足して作成（実機・通常のMAMEはモノラル）。</div>
-  <p style="margin:10px 0 0"><a href="stereo/sim.html"><b>▶ 全曲・チャンネルごとに左右を選べるシミュレーターはこちら</b></a></p>
-  <div class="st-grid" id="st-grid"></div>
-  <div class="st-bar"><button id="st-stop">停止</button><input type="range" id="st-pos" min="0" max="61" step="0.1" value="0"><span id="st-time">0:00</span><span id="st-sec"></span></div>
-</div>
+<a class="bigl" href="stereo/sim.html"><b>▶ ステレオの聞き比べはこちら</b><span>全35曲・10パターンをボタン1つで切り替え。チャンネルごとの細かい設定と、曲ごとの評価の記録もできます（ヘッドホン推奨）</span></a>
 
 <h2>最新版</h2>
 <div id="latest" class="panel">読み込み中…</div>
@@ -244,33 +230,6 @@ drop.ondragleave = () => drop.classList.remove('on');
 drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); addFiles(e.dataTransfer.files); };
 $('#build').onclick = build;
 
-// ---- ステレオ聞き比べ ----
-(() => {
-  const P = [{id:"s00",pan:"",name:"原音（モノラル）"},{id:"s01",pan:"LRLRLRLR",name:"全チャンネル左右交互"},{id:"s02",pan:"RLRLRLRL",name:"全チャンネル左右交互（逆）"},{id:"s03",pan:"CLRLRCLR",name:"ベースとリード中央・他は交互"},{id:"s04",pan:"CLRLRLRL",name:"ベースだけ中央・他は交互"},{id:"s05",pan:"CLCRCCCC",name:"控えめ（中音2パートだけ左右）"},{id:"s06",pan:"CLRCLRCC",name:"中音パートを左右に広げる"},{id:"s07",pan:"LLLLRRRR",name:"前半チャンネル左・後半右"},{id:"s08",pan:"CRRRRLCC",name:"ベース中央・リード左・伴奏右"},{id:"s09",pan:"CLLLLRCC",name:"ベース中央・リード右・伴奏左"}];
-  const g = document.getElementById('st-grid'); const A = {}; let cur = null;
-  const sec = t => t < 20.35 ? '1面' : t < 41.05 ? '3面' : '10面';
-  for (const p of P) {
-    const a = new Audio('stereo/' + p.id + '.mp3'); a.preload = 'auto'; A[p.id] = a;
-    const b = document.createElement('button'); b.className = 'st-btn'; b.dataset.id = p.id;
-    const ch = p.pan ? [...p.pan].map((c, i) => `<span class="${c}">${i}</span>`).join('') : '<span style="width:auto;padding:0 6px">モノラル</span>';
-    b.innerHTML = `<b>${p.id.slice(1)}. ${p.name}</b><span class="st-ch">${ch}</span>`;
-    b.onclick = () => play(p.id); g.appendChild(b);
-  }
-  function play(id) {
-    const t = cur ? A[cur].currentTime : 0;
-    if (cur && cur !== id) A[cur].pause();
-    const a = A[id];
-    const go = () => { try { a.currentTime = t; } catch (e) {} a.play(); };
-    if (a.readyState >= 1) go(); else a.addEventListener('loadedmetadata', go, { once: true });
-    cur = id;
-    for (const b of g.children) b.classList.toggle('on', b.dataset.id === id);
-  }
-  document.getElementById('st-stop').onclick = () => { if (cur) { A[cur].pause(); A[cur].currentTime = 0; } };
-  const pos = document.getElementById('st-pos'), tm = document.getElementById('st-time'), sc = document.getElementById('st-sec');
-  pos.oninput = () => { if (cur) A[cur].currentTime = +pos.value; };
-  setInterval(() => { if (!cur) return; const t = A[cur].currentTime; pos.value = t;
-    tm.textContent = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); sc.textContent = sec(t); }, 200);
-})();
 </script>
 </body>
 </html>
