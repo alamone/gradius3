@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>グラディウスIII 改造ROM パッチ</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--sub:#8b949e;--acc:#58a6ff;--ok:#3fb950;--ng:#f85149;--warn:#d29922}
+@media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--panel:#fff;--line:#d0d7de;--text:#1f2328;--sub:#59636e;--acc:#0969da;--ok:#1a7f37;--ng:#cf222e;--warn:#9a6700}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:17px;margin:32px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.sub{color:var(--sub);font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;transition:.15s}
+#drop.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,transparent)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.ok{color:var(--ok)}.ng{color:var(--ng)}.warn{color:var(--warn)}
+button{font:inherit;padding:10px 18px;border-radius:8px;border:1px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
+select{font:inherit;padding:6px;border-radius:6px;background:var(--panel);color:var(--text);border:1px solid var(--line)}
+ul{margin:6px 0;padding-left:22px}
+details{margin:8px 0}
+summary{cursor:pointer;font-weight:600}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--sub);margin-left:6px}
+code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:1px 5px;border-radius:4px}
+#log{font-size:13px;white-space:pre-wrap;color:var(--sub)}
+.st-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:8px;margin-top:10px}
+.st-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;text-align:left;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);cursor:pointer}
+.st-btn.on{border-color:var(--acc);box-shadow:0 0 0 2px color-mix(in srgb,var(--acc) 35%,transparent)}
+.st-btn b{font-size:13px}
+.st-ch{display:flex;gap:3px}
+.st-ch span{width:22px;height:18px;border-radius:3px;font-size:11px;line-height:18px;text-align:center;background:color-mix(in srgb,var(--sub) 18%,transparent);color:var(--sub)}
+.st-ch span.L{background:color-mix(in srgb,var(--acc) 30%,transparent);color:var(--text)}
+.st-ch span.R{background:color-mix(in srgb,var(--warn) 35%,transparent);color:var(--text)}
+.st-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px;font-size:13px;color:var(--sub)}
+.st-bar button{padding:6px 14px}
+#st-pos{width:min(320px,100%)}
+</style>
+</head>
+<body>
+<main>
+<h1>グラディウスIII 改造ROM パッチ</h1>
+<div class="sub">純正313版ベースの改造（隠しメニュー・面選択・ボスラッシュ・キューブラッシュ ほか）。このページはパッチ（差分）だけを配布しています。ROMデータは含みません。</div>
+
+
+<h2>ステレオ化 聞き比べ（試作）</h2>
+<div class="panel">
+  <div class="sub">FM音源8チャンネルの左右の振り分けを変えたもの（ドラム・音声のPCMは中央）。1面 → 3面 → 10面のBGMを20秒ずつ。
+  ボタンを押すとすぐ再生し、再生中に別のボタンを押すと同じ位置から切り替わります。左右の分かれ方が分かるよう、ヘッドホン推奨。
+  <br>四角は FM のチャンネル0〜7（<span style="color:var(--acc)">左</span>／<span style="color:var(--warn)">右</span>／灰色＝中央）。録音はMAMEに左右出力を付け足して作成（実機・通常のMAMEはモノラル）。</div>
+  <p style="margin:10px 0 0"><a href="stereo/sim.html"><b>▶ 全曲・チャンネルごとに左右を選べるシミュレーターはこちら</b></a></p>
+  <div class="st-grid" id="st-grid"></div>
+  <div class="st-bar"><button id="st-stop">停止</button><input type="range" id="st-pos" min="0" max="61" step="0.1" value="0"><span id="st-time">0:00</span><span id="st-sec"></span></div>
+</div>
+
+<h2>最新版</h2>
+<div id="latest" class="panel">読み込み中…</div>
+
+<h2>MAME用 zip を作る</h2>
+<div class="panel">
+  <ol style="margin:0 0 10px;padding-left:20px">
+    <li>お手持ちの純正ROMをまとめてドロップしてください（zipのまま・zipの中のzip・バラのファイル、どれでも可）。<br>
+      必要なもの：<b>MAME用 gradius3 一式（R版）</b> と <b>313版メインROM 2本</b>（<code>945_313.f15</code> / <code>945_312.e15</code>）。ファイル名ではなく中身（CRC）で判別します。</li>
+    <li>そろったら「作成」を押すと、MAMEの roms フォルダにそのまま入れられる zip がダウンロードされます。<br>出力するセットは <b>gradius3j</b>（新しいMAME（0.289 など）では「Japan, version 3, newer」＝313版として起動。おすすめ）、<b>gradius3</b>（「World, version R」として起動）、古いMAME向けの gradius3j（「Japan, program code S」）から選べます。中身の改造ROMはどれも同じで、ファイル名だけが違います。</li>
+  </ol>
+  <div class="sub">ROMはお使いのブラウザの中だけで処理され、どこにも送信されません。元の gradius3.zip / gradius3j.zip は上書きしないよう、別の場所に控えてください。MAMEは「チェックサム不一致」の警告を出しますが動作します。</div>
+  <p>版：<select id="ver"></select>　出力するセット：<select id="setname"><option value="gradius3j">gradius3j（新しいMAME（0.289 など）：Japan, version 3＝313版）</option><option value="gradius3">gradius3（World, version R）</option><option value="gradius3j-old">gradius3j（古いMAME：Japan, program code S）</option></select></p>
+  <div id="drop">ここにファイルをドロップ（またはクリックして選択）<input id="file" type="file" multiple hidden></div>
+  <table id="need" style="margin-top:12px"></table>
+  <p><button id="build" disabled>zip を作成</button></p>
+  <div id="log"></div>
+</div>
+
+<h2>更新履歴</h2>
+<div id="history"></div>
+
+<h2>使い方（ゲーム内）</h2>
+<div class="panel">
+<ul>
+<li>ゲーム中でないとき：<b>レバー上＋A（押す順番は自由）→ 両方離す → レバー下＋A → 両方離す</b> で隠しメニュー解除。下から始めて上で終えるとロック。各段階3秒以内。300秒放置で自動ロック。</li>
+<li>解除中にクレジットを入れて <b>上＋START</b> で既定値、<b>下＋START</b> で前回の設定のメニュー。レバーを入れずにSTARTなら純正どおり。</li>
+<li>メニューは上下で選択、左右で変更、STARTで開始、SHOT2（または BACK TO DEMO）でデモに戻る。開始後は装備選択画面になります。</li>
+<li>改造モードのプレイ中：<b>START</b>＝装備（スピード2・ミサイル・レーザー・オプション4・バリア）、<b>SHOT＋START</b>＝レーザーの代わりにダブル、<b>MISSILE＋START</b>＝スピード2・ミサイル・オプション2。NORMALは1ゲーム1回、キューブ/ボスラッシュは無制限。<b>START長押し</b>でポーズ（CONTINUE / GAME OVER）。</li>
+</ul>
+</div>
+<div class="sub" style="margin-top:24px">Gradius III は KONAMI の著作物です。本ページは非公式の改造パッチで、純正ROMをお持ちの方が個人で利用するためのものです。</div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// ---- CRC32 ----
+const CT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xffffffff; for (let i = 0; i < u8.length; i++) c = CT[(c ^ u8[i]) & 0xff] ^ (c >>> 8); return ((c ^ 0xffffffff) >>> 0).toString(16).padStart(8, '0'); }
+// ---- ZIP（ブラウザ標準の DecompressionStream を使用。外部ライブラリ不要）----
+async function inflateRaw(u8) {
+  const ds = new DecompressionStream('deflate-raw');
+  const buf = await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
+  return new Uint8Array(buf);
+}
+async function unzip(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let e = u8.length - 22;
+  while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('zipではありません');
+  const cnt = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true); const out = [];
+  for (let i = 0; i < cnt; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
+    const nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true);
+    const lho = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nlen));
+    p += 46 + nlen + xlen + clen;
+    if (name.endsWith('/')) continue;
+    const lnl = dv.getUint16(lho + 26, true), lxl = dv.getUint16(lho + 28, true);
+    const raw = u8.subarray(lho + 30 + lnl + lxl, lho + 30 + lnl + lxl + csize);
+    if (method === 0) out.push([name, raw.slice()]);
+    else if (method === 8) out.push([name, await inflateRaw(raw)]);
+  }
+  return out;
+}
+function zipStore(files) {               // [[name, Uint8Array]] → 無圧縮zip
+  const enc = new TextEncoder(); const parts = [], cd = []; let off = 0;
+  for (const [name, data] of files) {
+    const n = enc.encode(name), c = parseInt(crc32(data), 16);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 10, true); h.setUint16(10, 0, true);
+    h.setUint16(12, 0x2821, true);      // 2000-01-01
+    h.setUint32(14, c, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, n.length, true);
+    parts.push(new Uint8Array(h.buffer), n, data);
+    const d = new DataView(new ArrayBuffer(46));
+    d.setUint32(0, 0x02014b50, true); d.setUint16(4, 20, true); d.setUint16(6, 10, true); d.setUint16(14, 0x2821, true);
+    d.setUint32(16, c, true); d.setUint32(20, data.length, true); d.setUint32(24, data.length, true); d.setUint16(28, n.length, true);
+    d.setUint32(42, off, true);
+    cd.push(new Uint8Array(d.buffer), n); off += 30 + n.length + data.length;
+  }
+  const cdsize = cd.reduce((a, b) => a + b.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, cdsize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...cd, new Uint8Array(e.buffer)], { type: 'application/zip' });
+}
+// ---- BPS ----
+function bpsApply(src, p) {
+  if (String.fromCharCode(...p.slice(0, 4)) !== 'BPS1') throw new Error('BPSではありません');
+  let pos = 4;
+  const rd = () => { let d = 0, s = 1; for (;;) { const x = p[pos++]; d += (x & 0x7f) * s; if (x & 0x80) return d; s *= 128; d += s; } };
+  const ss = rd(), ts = rd(), ms = rd(); pos += ms;
+  const u32 = o => (p[o] | p[o + 1] << 8 | p[o + 2] << 16 | p[o + 3] << 24) >>> 0;
+  const end = p.length - 12;
+  if (crc32(src) !== u32(end).toString(16).padStart(8, '0')) throw new Error('元ROMのCRCが一致しません');
+  const out = new Uint8Array(ts); let o = 0, sr = 0, tr = 0;
+  while (pos < end) {
+    const d = rd(), cmd = d & 3, ln = Math.floor(d / 4) + 1;
+    if (cmd === 0) { out.set(src.subarray(o, o + ln), o); o += ln; }
+    else if (cmd === 1) { out.set(p.subarray(pos, pos + ln), o); pos += ln; o += ln; }
+    else { const v = rd(), off = (v & 1 ? -1 : 1) * Math.floor(v / 2);
+      if (cmd === 2) { sr += off; out.set(src.subarray(sr, sr + ln), o); sr += ln; o += ln; }
+      else { tr += off; for (let i = 0; i < ln; i++) out[o++] = out[tr++]; } }
+  }
+  if (crc32(out) !== u32(end + 4).toString(16).padStart(8, '0')) throw new Error('出力のCRCが一致しません');
+  return out;
+}
+// ---- 状態 ----
+let DATA = null; const have = new Map(); // crc -> Uint8Array
+function curVer() { return DATA.versions.find(v => v.version === $('#ver').value) || DATA.versions[0]; }
+function needList() {
+  const v = curVer(); const L = [];
+  for (const f of DATA.set.files) L.push({ label: f.name, crc: f.crc });
+  for (const [name, p] of Object.entries(v.patches)) L.push({ label: name + '（パッチ元）', crc: p.source_crc });
+  return L;
+}
+function refresh() {
+  const L = needList(); let ok = 0;
+  $('#need').innerHTML = '<tr><th>必要なファイル</th><th>CRC</th><th>状態</th></tr>' + L.map(x => {
+    const h = have.has(x.crc); if (h) ok++;
+    return `<tr><td>${esc(x.label)}</td><td><code>${x.crc}</code></td><td class="${h ? 'ok' : 'ng'}">${h ? 'OK' : '未'}</td></tr>`;
+  }).join('');
+  $('#build').disabled = ok !== L.length;
+  $('#log').textContent = ok === L.length ? 'すべてそろいました。' : `${ok} / ${L.length} 件そろっています。`;
+}
+async function addBytes(name, u8) {
+  if (u8.length > 4 && u8[0] === 0x50 && u8[1] === 0x4b) {          // zip（入れ子も展開）
+    try { for (const [n, b] of await unzip(u8)) await addBytes(n, b);
+      return; } catch (e) { /* zipでなければ通常ファイル扱い */ }
+  }
+  if (u8.length <= 0x100000) have.set(crc32(u8), u8);
+}
+async function addFiles(files) {
+  $('#log').textContent = '読み込み中…';
+  for (const f of files) await addBytes(f.name, new Uint8Array(await f.arrayBuffer()));
+  refresh();
+}
+async function build() {
+  const v = curVer(); const files = [];
+  try {
+    for (const f of DATA.set.files) files.push([f.name, have.get(f.crc)]);
+    for (const [name, p] of Object.entries(v.patches)) {
+      const patch = new Uint8Array(await (await fetch(p.file)).arrayBuffer());
+      const out = bpsApply(have.get(p.source_crc), patch);
+      if (crc32(out) !== p.target_crc) throw new Error(name + ' のCRCが一致しません');
+      files.push([name, out]);
+    }
+    const sel = $('#setname').value, sn = sel.replace('-old', '');
+    // セットごとに違うのはメインROMとサウンドROMのファイル名だけ（サウンドの中身は同じ）
+    //  新しいMAME(0.289 など)の gradius3j = 313版(945_313/945_312)、古いMAMEの gradius3j = S版(945_s13/945_s12)
+    const RENAME = {
+      'gradius3j': { '945_r13.f15': '945_313.f15', '945_r12.e15': '945_312.e15', '945_r05.d9': '945_m05.d9' },
+      'gradius3j-old': { '945_r13.f15': '945_s13.f15', '945_r12.e15': '945_s12.e15', '945_r05.d9': '945_m05.d9' },
+    }[sel] || {};
+    for (const f of files) if (RENAME[f[0]]) f[0] = RENAME[f[0]];
+    files.sort((a, b) => a[0] < b[0] ? -1 : 1);
+    const blob = zipStore(files);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = sn + '.zip'; a.click();
+    $('#log').textContent = `v${v.version} の ${sn}.zip を作成しました。MAMEの roms フォルダに入れ、${sn} として起動してください。`;
+  } catch (e) { $('#log').innerHTML = '<span class="ng">エラー: ' + esc(e.message) + '</span>'; }
+}
+function verHtml(v, open) {
+  const li = a => a && a.length ? '<ul>' + a.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '';
+  return `<details ${open ? 'open' : ''}><summary>v${esc(v.version)} <span class="tag">${esc(v.build ? v.build : v.date)}</span> ${esc(v.title || '')}</summary>
+    ${v.changes && v.changes.length ? '<div><b>変更点</b>' + li(v.changes) + '</div>' : ''}
+    ${v.verified && v.verified.length ? '<div><b>動作確認済み</b>' + li(v.verified) + '</div>' : ''}
+    ${v.known && v.known.length ? '<div><b>未対応・注意</b>' + li(v.known) + '</div>' : ''}</details>`;
+}
+(async () => {
+  try { DATA = await (await fetch('versions.json', { cache: 'no-store' })).json(); }
+  catch (e) { $('#latest').textContent = '版情報を読み込めませんでした。'; return; }
+  const L = DATA.versions[0];
+  $('#latest').innerHTML = verHtml(L, true);
+  $('#history').innerHTML = DATA.versions.map((v, i) => `<div class="panel">${verHtml(v, i === 0)}</div>`).join('');
+  $('#ver').innerHTML = DATA.versions.map(v => `<option value="${esc(v.version)}">v${esc(v.version)}（${esc(v.build ? 'ビルド ' + v.build : v.date)}）</option>`).join('');
+  $('#ver').onchange = refresh; refresh();
+})();
+const drop = $('#drop');
+drop.onclick = () => $('#file').click();
+$('#file').onchange = e => addFiles(e.target.files);
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
+drop.ondragleave = () => drop.classList.remove('on');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); addFiles(e.dataTransfer.files); };
+$('#build').onclick = build;
+
+// ---- ステレオ聞き比べ ----
+(() => {
+  const P = [{id:"s00",pan:"",name:"原音（モノラル）"},{id:"s01",pan:"LRLRLRLR",name:"全チャンネル左右交互"},{id:"s02",pan:"RLRLRLRL",name:"全チャンネル左右交互（逆）"},{id:"s03",pan:"CLRLRCLR",name:"ベースとリード中央・他は交互"},{id:"s04",pan:"CLRLRLRL",name:"ベースだけ中央・他は交互"},{id:"s05",pan:"CLCRCCCC",name:"控えめ（中音2パートだけ左右）"},{id:"s06",pan:"CLRCLRCC",name:"中音パートを左右に広げる"},{id:"s07",pan:"LLLLRRRR",name:"前半チャンネル左・後半右"},{id:"s08",pan:"CRRRRLCC",name:"ベース中央・リード左・伴奏右"},{id:"s09",pan:"CLLLLRCC",name:"ベース中央・リード右・伴奏左"}];
+  const g = document.getElementById('st-grid'); const A = {}; let cur = null;
+  const sec = t => t < 20.35 ? '1面' : t < 41.05 ? '3面' : '10面';
+  for (const p of P) {
+    const a = new Audio('stereo/' + p.id + '.mp3'); a.preload = 'auto'; A[p.id] = a;
+    const b = document.createElement('button'); b.className = 'st-btn'; b.dataset.id = p.id;
+    const ch = p.pan ? [...p.pan].map((c, i) => `<span class="${c}">${i}</span>`).join('') : '<span style="width:auto;padding:0 6px">モノラル</span>';
+    b.innerHTML = `<b>${p.id.slice(1)}. ${p.name}</b><span class="st-ch">${ch}</span>`;
+    b.onclick = () => play(p.id); g.appendChild(b);
+  }
+  function play(id) {
+    const t = cur ? A[cur].currentTime : 0;
+    if (cur && cur !== id) A[cur].pause();
+    const a = A[id];
+    const go = () => { try { a.currentTime = t; } catch (e) {} a.play(); };
+    if (a.readyState >= 1) go(); else a.addEventListener('loadedmetadata', go, { once: true });
+    cur = id;
+    for (const b of g.children) b.classList.toggle('on', b.dataset.id === id);
+  }
+  document.getElementById('st-stop').onclick = () => { if (cur) { A[cur].pause(); A[cur].currentTime = 0; } };
+  const pos = document.getElementById('st-pos'), tm = document.getElementById('st-time'), sc = document.getElementById('st-sec');
+  pos.oninput = () => { if (cur) A[cur].currentTime = +pos.value; };
+  setInterval(() => { if (!cur) return; const t = A[cur].currentTime; pos.value = t;
+    tm.textContent = Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0'); sc.textContent = sec(t); }, 200);
+})();
+</script>
+</body>
+</html>

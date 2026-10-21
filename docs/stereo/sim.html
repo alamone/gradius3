@@ -1,0 +1,270 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>ステレオ振り分けシミュレーター</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--sub:#8b949e;--acc:#58a6ff;--r:#d29922;--ok:#3fb950;--ng:#f85149;--star:#e3b341}
+@media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--panel:#fff;--line:#d0d7de;--text:#1f2328;--sub:#59636e;--acc:#0969da;--r:#9a6700;--ok:#1a7f37;--ng:#cf222e;--star:#bf8700}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:900px;margin:0 auto;padding:20px 16px 64px}
+h1{font-size:21px;margin:0 0 4px}
+h2{font-size:16px;margin:0 0 8px}
+.sub{color:var(--sub);font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:14px 0}
+select,button,input,textarea{font:inherit}
+select,input[type=text]{padding:6px 8px;border-radius:6px;background:var(--panel);color:var(--text);border:1px solid var(--line);max-width:100%}
+button{padding:7px 14px;border-radius:8px;border:1px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer}
+button.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+button:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin:8px 0}
+#now{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--line);background:var(--bg)}
+#now .ico{font-size:22px;width:28px;text-align:center}
+#now.play{border-color:var(--ok)} #now.load{border-color:var(--star)}
+#now .t{font-weight:700} #now .s{font-size:12px;color:var(--sub)}
+#bar{position:relative;height:14px;border-radius:7px;background:color-mix(in srgb,var(--sub) 20%,transparent);cursor:pointer;margin-top:10px}
+#bar i{position:absolute;left:0;top:0;bottom:0;border-radius:7px;background:var(--acc);width:0}
+#bar b{position:absolute;left:50%;top:-3px;bottom:-3px;width:2px;background:var(--text);opacity:.5}
+.lbl{display:flex;justify-content:space-between;font-size:12px;color:var(--sub)}
+table{border-collapse:collapse;width:100%}
+td,th{padding:5px 4px;border-bottom:1px solid var(--line);vertical-align:middle;text-align:left;font-size:14px}
+th{font-size:12px;color:var(--sub);font-weight:600}
+td.n{width:56px;font-weight:600}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.seg button{border:0;border-radius:0;background:transparent;color:var(--text);padding:4px 14px;min-width:44px}
+.seg button.on.L{background:color-mix(in srgb,var(--acc) 40%,transparent)}
+.seg button.on.C{background:color-mix(in srgb,var(--sub) 35%,transparent)}
+.seg button.on.R{background:color-mix(in srgb,var(--r) 45%,transparent)}
+.pos{width:120px;height:8px;border-radius:4px}
+code{font-size:14px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:2px 8px;border-radius:5px;letter-spacing:2px}
+.stars button{background:transparent;border:0;color:var(--sub);font-size:24px;padding:0 3px;line-height:1}
+.stars button.on{color:var(--star)}
+.st{color:var(--star);letter-spacing:1px}
+input[type=range]{width:min(240px,100%)}
+.small{font-size:12px}
+a{color:var(--acc)}
+</style>
+</head>
+<body>
+<main>
+<h1>ステレオ振り分けシミュレーター</h1>
+<div class="sub">FM音源8チャンネルの出力先（左・中央・右）をその場で切り替えて聞けます。各曲「頭15秒＋中盤15秒」。ドラム・音声（PCM）は中央。
+録音はMAMEに左右出力を付け足して作成した参考音源です（実機・通常のMAMEはモノラル）。ヘッドホン推奨。 <a href="../index.html">← パッチページへ</a></div>
+
+<div class="panel">
+  <div id="now"><span class="ico">■</span><div><div class="t" id="nowt">停止中</div><div class="s" id="nows">曲を選んで再生してください</div></div></div>
+  <div id="bar" title="クリックでその位置へ"><i id="bari"></i><b></b></div>
+  <div class="lbl"><span>頭 0〜15秒</span><span id="tm">0.0秒</span><span>中盤 15〜30秒</span></div>
+  <div class="row"><select id="song" style="flex:1;min-width:240px"></select></div>
+  <div class="row">
+    <button id="prev" class="ghost">◀ 前の曲</button>
+    <button id="play">▶ 再生</button>
+    <button id="stop" class="ghost">■ 停止</button>
+    <button id="next" class="ghost">次の曲 ▶</button>
+    <button id="j1" class="ghost">頭へ</button><button id="j2" class="ghost">中盤へ</button>
+    <label><input type="checkbox" id="loop" checked> くり返し</label>
+    <label><input type="checkbox" id="mono"> 原音（モノラル）</label>
+  </div>
+</div>
+
+<div class="panel">
+  <div class="row"><label>プリセット <select id="preset"></select></label>
+    <span>今の設定 <code id="code"></code></span></div>
+  <table id="chs"></table>
+  <div class="row" style="margin-top:8px"><label>FM の反対側への混ぜ量（基板の半固定抵抗に相当） <input type="range" id="xf" min="0" max="100" value="0"> <span id="xfv">0%</span></label></div>
+</div>
+
+<div class="panel">
+  <h2>この曲の記録</h2>
+  <div class="sub">今の設定（振り分け＋混ぜ量）に評価を付けて記録します。同じ曲で何度でも記録でき、設定ごとに集計します。記録はこのブラウザに保存されます（別のブラウザ・端末とは共有されません）。</div>
+  <div class="row"><span class="stars" id="stars"></span><input type="text" id="memo" placeholder="メモ（任意）" style="flex:1;min-width:180px"><button id="rec">この設定を記録</button></div>
+  <table id="recs"></table>
+</div>
+
+<div class="panel">
+  <h2>全曲のまとめ</h2>
+  <div class="sub">曲ごとに、平均の評価がいちばん高い設定（同じなら記録回数が多い方）。行を押すとその曲と設定を呼び出します。</div>
+  <table id="sum"></table>
+  <div class="row"><button id="exp" class="ghost">記録を書き出す（ファイル）</button><button id="cpy" class="ghost">記録をコピー（文字）</button>
+    <label class="ghost" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:7px 14px">記録を読み込む<input type="file" id="imp" accept=".json,application/json" hidden></label>
+    <span id="msg" class="small"></span></div>
+</div>
+</main>
+<script>
+const SONGS = [{"code": "89", "name": "タイプ選択（テクニカル／ビギナー）（曲番号 89）"}, {"code": "80", "name": "武器選択（WEAPON SELECT）（曲番号 80）"}, {"code": "a0", "name": "1・2・5・7・9面の始まり（曲番号 A0）"}, {"code": "81", "name": "1面・ボス手前（曲番号 81）"}, {"code": "85", "name": "2面・ボス手前（曲番号 85）"}, {"code": "98", "name": "3・6・8面の始まり（曲番号 98）"}, {"code": "99", "name": "3面・ボス手前（曲番号 99）"}, {"code": "97", "name": "4面（高速面）（曲番号 97）"}, {"code": "9b", "name": "6面・ボス手前（曲番号 9B）"}, {"code": "9d", "name": "7面・ボス手前（曲番号 9D）"}, {"code": "8b", "name": "8面・ボス手前（曲番号 8B）"}, {"code": "82", "name": "9面・ボス手前（曲番号 82）"}, {"code": "8d", "name": "10面（曲番号 8D）"}, {"code": "8e", "name": "10面・ボスラッシュ（曲番号 8E）"}, {"code": "95", "name": "10面・ボスラッシュの後（曲番号 95）"}, {"code": "9c", "name": "10面・最終地点（曲番号 9C）"}, {"code": "91", "name": "グラディウス隠し面（曲番号 91）"}, {"code": "93", "name": "サラマンダー隠し面（曲番号 93）"}, {"code": "87", "name": "ゲームオーバー（曲番号 87）"}, {"code": "83", "name": "使われ方未確認（曲番号 83）"}, {"code": "84", "name": "使われ方未確認（曲番号 84）"}, {"code": "86", "name": "使われ方未確認（曲番号 86）"}, {"code": "88", "name": "使われ方未確認（曲番号 88）"}, {"code": "8a", "name": "使われ方未確認（曲番号 8A）"}, {"code": "8c", "name": "使われ方未確認（曲番号 8C）"}, {"code": "8f", "name": "使われ方未確認（曲番号 8F）"}, {"code": "90", "name": "使われ方未確認（曲番号 90）"}, {"code": "92", "name": "使われ方未確認（曲番号 92）"}, {"code": "94", "name": "使われ方未確認（曲番号 94）"}, {"code": "96", "name": "使われ方未確認（曲番号 96）"}, {"code": "9a", "name": "使われ方未確認（曲番号 9A）"}, {"code": "9e", "name": "使われ方未確認（曲番号 9E）"}, {"code": "9f", "name": "使われ方未確認（曲番号 9F）"}, {"code": "a1", "name": "使われ方未確認（曲番号 A1）"}, {"code": "a2", "name": "使われ方未確認（曲番号 A2）"}];
+const PRESETS = [
+  ['（自分で設定）', null], ['全部中央', 'CCCCCCCC'], ['全チャンネル左右交互', 'LRLRLRLR'], ['全チャンネル左右交互（逆）', 'RLRLRLRL'],
+  ['ベースとリード中央・他は交互', 'CLRLRCLR'], ['ベースだけ中央・他は交互', 'CLRLRLRL'], ['控えめ（中音2パートだけ左右）', 'CLCRCCCC'],
+  ['中音パートを左右に広げる', 'CLRCLRCC'], ['前半チャンネル左・後半右', 'LLLLRRRR'], ['ベース中央・リード左・伴奏右', 'CRRRRLCC'], ['ベース中央・リード右・伴奏左', 'CLLLLRCC'],
+];
+const STEMS = ['c0', 'c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'p'];
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;'}[c]));
+let pan = 'CLRLRCLR'.split(''), stars = 4;
+let ctx = null, srcs = [], gains = [], playing = false, t0 = 0, off0 = 0, dur = 0, curSong = -1, loadTok = 0;
+const raw = {}, dec = {};            // raw: 圧縮データ(先読み) / dec: 再生用に展開したもの(今の曲と前後だけ)
+
+// ---------- 表示 ----------
+SONGS.forEach((s, i) => $('#song').add(new Option(`${String(i + 1).padStart(2, '0')}. ${s.name}`, i)));
+PRESETS.forEach((p, i) => $('#preset').add(new Option(p[0], i)));
+const tbl = $('#chs');
+for (let ch = 0; ch < 8; ch++) {
+  const tr = tbl.insertRow();
+  tr.innerHTML = `<td class="n">CH${ch}</td><td><span class="seg">${['L', 'C', 'R'].map(v => `<button data-ch="${ch}" data-v="${v}" class="${v}">${{L: '左', C: '中', R: '右'}[v]}</button>`).join('')}</span></td><td><div class="pos" id="m${ch}"></div></td>`;
+}
+tbl.onclick = e => { const b = e.target.closest('button'); if (!b) return; pan[+b.dataset.ch] = b.dataset.v; $('#preset').value = 0; refresh(); };
+$('#preset').onchange = () => { const p = PRESETS[$('#preset').value][1]; if (p) { pan = p.split(''); refresh(); } };
+$('#xf').oninput = () => { $('#xfv').textContent = $('#xf').value + '%'; applyGains(); };
+$('#mono').onchange = applyGains;
+$('#stars').innerHTML = [1, 2, 3, 4, 5].map(n => `<button data-n="${n}">★</button>`).join('');
+$('#stars').onclick = e => { const b = e.target.closest('button'); if (b) { stars = +b.dataset.n; drawStars(); } };
+function drawStars() { for (const b of $('#stars').children) b.classList.toggle('on', +b.dataset.n <= stars); }
+function refresh() {
+  for (const b of tbl.querySelectorAll('button')) b.classList.toggle('on', pan[+b.dataset.ch] === b.dataset.v);
+  $('#code').textContent = pan.join('');
+  applyGains();
+}
+function setNow(state, title, sub) {
+  $('#now').className = state; $('#now .ico').textContent = {play: '▶', load: '⏳', stop: '■'}[state];
+  $('#nowt').textContent = title; $('#nows').textContent = sub || '';
+}
+
+// ---------- 読み込み（前後の曲は先読み） ----------
+function fetchRaw(i) {
+  if (i < 0 || i >= SONGS.length) return null;
+  if (!raw[i]) raw[i] = Promise.all(STEMS.map(n => fetch(`sim/${SONGS[i].code}/${n}.mp3`).then(r => { if (!r.ok) throw new Error(r.status); return r.arrayBuffer(); })));
+  return raw[i];
+}
+async function getDecoded(i) {
+  if (!dec[i]) dec[i] = fetchRaw(i).then(bs => Promise.all(bs.map(b => ctx.decodeAudioData(b.slice(0)))));
+  return dec[i];
+}
+function prefetch(i) {
+  fetchRaw(i - 1); fetchRaw(i + 1); fetchRaw(i + 2);
+  if (ctx) { getDecoded(i + 1).catch(() => {}); getDecoded(i - 1).catch(() => {}); }
+  for (const k of Object.keys(dec)) if (Math.abs(k - i) > 1) delete dec[k];     // メモリ節約
+}
+
+// ---------- 再生 ----------
+function stopAll() { for (const s of srcs) { s.onended = null; try { s.stop(); } catch (e) {} } srcs = []; gains = []; playing = false; }
+async function play(i, offset = 0) {
+  if (!ctx) ctx = new (window.AudioContext || window.webkitAudioContext)();
+  await ctx.resume();
+  const tok = ++loadTok;
+  $('#song').value = i;
+  const ready = dec[i] !== undefined;
+  if (!ready || playing) setNow('load', `読み込み中: ${SONGS[i].name}`, playing ? `今は ${SONGS[curSong].name} を再生中。読み込めたら切り替わります` : '');
+  let bs;
+  try { bs = await getDecoded(i); } catch (e) { setNow('stop', '読み込みに失敗しました', String(e)); return; }
+  if (tok !== loadTok) return;                 // 途中で別の曲が選ばれた
+  stopAll();
+  dur = bs[0].duration; curSong = i;
+  const merger = ctx.createChannelMerger(2); merger.connect(ctx.destination);
+  t0 = ctx.currentTime + 0.03; off0 = offset % dur;
+  bs.forEach((b, k) => {
+    const s = ctx.createBufferSource(); s.buffer = b; s.loop = $('#loop').checked;
+    const gl = ctx.createGain(), gr = ctx.createGain();
+    s.connect(gl); s.connect(gr); gl.connect(merger, 0, 0); gr.connect(merger, 0, 1);
+    s.start(t0, off0); srcs.push(s); gains.push([gl, gr]);
+  });
+  srcs[0].onended = () => { playing = false; setNow('stop', `停止: ${SONGS[curSong].name}`, '最後まで再生しました'); };
+  playing = true; applyGains(); showRecs(); prefetch(i);
+  setNow('play', `再生中: ${SONGS[i].name}`, `${i + 1} / ${SONGS.length} 曲目`);
+}
+function pos() { return playing ? (off0 + ctx.currentTime - t0) % dur : 0; }
+function applyGains() {
+  if (!gains.length) return;
+  const k = $('#xf').value / 100, mono = $('#mono').checked, now = ctx.currentTime, G = 0.5;
+  for (let ch = 0; ch < 9; ch++) {
+    // 基板で反対側に k の割合で混ぜた状態: 左だけ→(1,k) 右だけ→(k,1) 両方→(1+k,1+k)。1+k で割って中央の音量をそろえる
+    let l = 1, r = 1;
+    if (!mono && ch < 8) { const v = pan[ch]; if (v === 'L') { l = 1 / (1 + k); r = k / (1 + k); } else if (v === 'R') { l = k / (1 + k); r = 1 / (1 + k); } }
+    gains[ch][0].gain.setTargetAtTime(l * G, now, 0.01); gains[ch][1].gain.setTargetAtTime(r * G, now, 0.01);
+  }
+  drawPos();
+}
+function drawPos() {
+  const k = $('#xf').value / 100, mono = $('#mono').checked;
+  for (let ch = 0; ch < 8; ch++) {
+    let l = 1, r = 1; const v = pan[ch];
+    if (!mono) { if (v === 'L') { l = 1; r = k; } else if (v === 'R') { l = k; r = 1; } }
+    const L = l / (l + r) * 100;
+    $('#m' + ch).style.background = `linear-gradient(90deg,var(--acc) ${L}%,var(--r) ${L}%)`;
+  }
+}
+$('#play').onclick = () => play(+$('#song').value, playing && curSong === +$('#song').value ? pos() : 0);
+$('#stop').onclick = () => { loadTok++; stopAll(); setNow('stop', '停止中', curSong >= 0 ? SONGS[curSong].name : ''); };
+$('#song').onchange = () => { if (playing) play(+$('#song').value); else { showRecs(); fetchRaw(+$('#song').value); } };
+$('#prev').onclick = () => { const i = Math.max(0, +$('#song').value - 1); $('#song').value = i; playing ? play(i) : showRecs(); };
+$('#next').onclick = () => { const i = Math.min(SONGS.length - 1, +$('#song').value + 1); $('#song').value = i; playing ? play(i) : showRecs(); };
+$('#j1').onclick = () => { if (curSong >= 0) play(curSong, 0); };
+$('#j2').onclick = () => { if (curSong >= 0) play(curSong, dur / 2); };
+$('#bar').onclick = e => { if (curSong < 0) return; const r = $('#bar').getBoundingClientRect(); play(curSong, (e.clientX - r.left) / r.width * dur); };
+$('#loop').onchange = () => { for (const s of srcs) s.loop = $('#loop').checked; };
+setInterval(() => { if (!playing) return; const t = pos(); $('#bari').style.width = (t / dur * 100) + '%'; $('#tm').textContent = (t < dur / 2 ? '頭 ' : '中盤 ') + t.toFixed(1) + '秒'; }, 100);
+
+// ---------- 記録（このブラウザに保存） ----------
+const KEY = 'g3-stereo-records-v1';
+function loadRecs() { try { return JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { return []; } }
+function saveRecs(a) { try { localStorage.setItem(KEY, JSON.stringify(a)); return true; } catch (e) { $('#msg').textContent = '保存できませんでした（ブラウザの設定を確認してください）'; return false; } }
+function groupFor(code) {
+  const g = {};
+  for (const r of loadRecs()) if (r.song === code) {
+    const k = r.pan + '|' + r.xf;
+    (g[k] = g[k] || {pan: r.pan, xf: r.xf, n: 0, sum: 0, memo: '', t: 0}); g[k].n++; g[k].sum += r.stars;
+    if (r.t > g[k].t) { g[k].t = r.t; if (r.memo) g[k].memo = r.memo; }
+  }
+  return Object.values(g).sort((a, b) => b.sum / b.n - a.sum / a.n || b.n - a.n);
+}
+const starStr = v => '★'.repeat(Math.round(v)) + '☆'.repeat(5 - Math.round(v));
+function showRecs() {
+  const code = SONGS[+$('#song').value].code, g = groupFor(code);
+  $('#recs').innerHTML = g.length ? '<tr><th>振り分け</th><th>混ぜ量</th><th>評価（平均）</th><th>回数</th><th>最新のメモ</th><th></th></tr>' + g.map(x =>
+    `<tr><td><code>${x.pan}</code></td><td>${x.xf}%</td><td><span class="st">${starStr(x.sum / x.n)}</span> ${(x.sum / x.n).toFixed(1)}</td><td>${x.n}</td><td class="small">${esc(x.memo)}</td>
+     <td><button class="ghost small" data-use="${x.pan}|${x.xf}">呼び出す</button> <button class="ghost small" data-del="${x.pan}|${x.xf}">削除</button></td></tr>`).join('')
+    : '<tr><td class="sub">この曲の記録はまだありません。</td></tr>';
+  showSum();
+}
+$('#recs').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  const code = SONGS[+$('#song').value].code;
+  if (b.dataset.use) { const [p, x] = b.dataset.use.split('|'); pan = p.split(''); $('#xf').value = x; $('#xfv').textContent = x + '%'; $('#preset').value = 0; refresh(); }
+  if (b.dataset.del && confirm('この設定の記録をすべて削除しますか？')) { const [p, x] = b.dataset.del.split('|'); saveRecs(loadRecs().filter(r => !(r.song === code && r.pan === p && String(r.xf) === x))); showRecs(); }
+};
+$('#rec').onclick = () => {
+  const a = loadRecs(); const code = SONGS[+$('#song').value].code;
+  a.push({song: code, pan: pan.join(''), xf: +$('#xf').value, stars, memo: $('#memo').value.trim(), t: Date.now()});
+  if (saveRecs(a)) { $('#memo').value = ''; $('#msg').textContent = ''; showRecs(); }
+};
+function showSum() {
+  const rows = SONGS.map((s, i) => [s, i, groupFor(s.code)]).filter(x => x[2].length);
+  $('#sum').innerHTML = rows.length ? '<tr><th>曲</th><th>いちばん良い設定</th><th>混ぜ量</th><th>評価</th><th>記録数</th></tr>' + rows.map(([s, i, g]) =>
+    `<tr data-i="${i}" data-p="${g[0].pan}" data-x="${g[0].xf}" style="cursor:pointer"><td class="small">${String(i + 1).padStart(2, '0')}. ${esc(s.name)}</td><td><code>${g[0].pan}</code></td><td>${g[0].xf}%</td><td><span class="st">${starStr(g[0].sum / g[0].n)}</span></td><td>${g.reduce((a, x) => a + x.n, 0)}</td></tr>`).join('')
+    : '<tr><td class="sub">まだ記録がありません。</td></tr>';
+}
+$('#sum').onclick = e => {
+  const tr = e.target.closest('tr[data-i]'); if (!tr) return;
+  pan = tr.dataset.p.split(''); $('#xf').value = tr.dataset.x; $('#xfv').textContent = tr.dataset.x + '%'; $('#preset').value = 0; refresh();
+  $('#song').value = tr.dataset.i; playing ? play(+tr.dataset.i) : showRecs();
+};
+function exportText() { return JSON.stringify({format: KEY, songs: SONGS.map(s => s.code), records: loadRecs()}, null, 1); }
+$('#exp').onclick = () => { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([exportText()], {type: 'application/json'})); a.download = 'gradius3_stereo_records.json'; a.click(); };
+$('#cpy').onclick = async () => { try { await navigator.clipboard.writeText(exportText()); $('#msg').textContent = 'コピーしました。そのまま貼り付けて送れます。'; } catch (e) { $('#msg').textContent = 'コピーできませんでした。「書き出す」を使ってください。'; } };
+$('#imp').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try {
+    const d = JSON.parse(await f.text()); const add = d.records || [];
+    const a = loadRecs(); const seen = new Set(a.map(r => r.song + r.pan + r.xf + r.t));
+    let n = 0; for (const r of add) if (r && r.song && r.pan && !seen.has(r.song + r.pan + r.xf + r.t)) { a.push(r); n++; }
+    saveRecs(a); showRecs(); $('#msg').textContent = `${n} 件を読み込みました。`;
+  } catch (err) { $('#msg').textContent = '読み込めませんでした: ' + err.message; }
+  e.target.value = '';
+};
+
+$('#preset').value = 4; refresh(); drawStars(); showRecs(); fetchRaw(0);
+</script>
+</body>
+</html>
