@@ -462,7 +462,7 @@ sh_boss:                        ; ボスラッシュ (開始位置はサブが�
         addq.b  #1,d0
 sh_b1:  cmp.b   $103f38.l,d0    ; 面が変わった回数を数え、一巡したらゲームオーバー
         beq.s   sh_go
-        move.b  d0,$103f38.l
+        jsr     BOSSSET.l       ; = move.b d0,$103f38.l ＋ 次の面もボス手前から始める
         addq.b  #1,$103f39.l
         cmpi.b  #10,$103f39.l   ; 開始面 + 8面 → 開始面に戻った(10回目)
         bcs.s   sh_go
@@ -567,7 +567,7 @@ def area_table_blob(base=0x103f40):
     assert len(b) <= 0xc0
     return b + bytes(0xc0 - len(b))
 
-BRDELTA = int(os.environ.get('BRDELTA', '20000'), 16)
+BRDELTA = int(os.environ.get('BRDELTA', '14000'), 16)   # ボスラッシュ: ボス接近位置のこれだけ手前から（全面で検証済み。0x10000 だと着いた瞬間に面クリアになる面がある）
 
 def boss_area_blob(base=0x103f40):
     """ボスラッシュ用エリア表: 各面(4面・10面を除く)の表を「ボス接近位置-BRDELTA」の1件だけにする。
@@ -635,6 +635,63 @@ tg_lp:  move.w  (a0)+,(a1)+
         rts
 tg_n:   jmp     $e824.l
 GREYPAL: GREYDATA
+; ボスラッシュ: 面が変わるたび、その面のボス手前を「再開位置」にする（d0 = 面 0..9）
+BossSet: move.b d0,$103f38.l
+        move.l  a0,-(sp)
+        move.w  d0,-(sp)
+        add.w   d0,d0
+        lea     BOSSPROG.l,a0
+        move.w  0(a0,d0.w),d0
+        beq.s   bs_x
+        move.w  d0,$101052.l
+        move.w  d0,$1010d2.l
+        ori.b   #1,$101063.l
+        ori.b   #1,$1010e3.l
+bs_x:   move.w  (sp)+,d0
+        move.l  (sp)+,a0
+        rts
+BOSSPROG: BOSSDATA
+; 面クリア → 次の面（状態7 の 0x3c7a: clr.w $101052 を置き換え）。ボスラッシュなら次の面もボス手前から
+NextStg: tst.b  MB_RUN.l
+        beq.s   ns_n
+        cmpi.b  #2,MB_MODE.l
+        bne.s   ns_n
+        movem.l d0/a0,-(sp)
+        moveq   #0,d0
+        move.b  $101051.l,d0
+        andi.b  #$0f,d0
+        addq.b  #1,d0
+        cmpi.b  #10,d0
+        bcs.s   ns1
+        moveq   #0,d0
+ns1:    cmpi.b  #3,d0           ; 4面(ボスなし)は飛ばす: ここで1つ進めておくと 0x68d4 で5面になる
+        bne.s   ns2
+        addq.b  #1,$101051.l
+        moveq   #4,d0
+ns2:    move.b  d0,$103f38.l
+        addq.b  #1,$103f39.l    ; 一巡したらゲームオーバー（StageHook と同じ数え方）
+        cmpi.b  #10,$103f39.l
+        bcs.s   ns3
+        move.b  #3,$103f06.l
+ns3:    add.w   d0,d0
+        lea     BOSSPROG.l,a0
+        move.w  0(a0,d0.w),d0
+        move.w  d0,$101052.l
+        move.w  d0,$1010d2.l
+        ori.b   #1,$101063.l
+        ori.b   #1,$1010e3.l
+        movem.l (sp)+,d0/a0
+        rts
+ns_n:   clr.w   $101052.l
+        rts
+; 0x68d4（次の面へ）の中の jsr $695c（位置を0に戻す）を置き換え: ボスラッシュなら 0x4ce8 でボス手前の位置を入れ直す
+NextPos: jsr    $695c.l
+        tst.b   MB_RUN.l
+        beq.s   np_r
+        cmpi.b  #2,MB_MODE.l
+        bne.s   np_r
+        jmp     $4ce8.l
+np_r:   rts
 ; 装備コマンドの残り回数（無敵中は無制限 $ff として返す）
 CmdCnt: tst.b   MB_INV.l
         beq.s   cc_n
@@ -658,14 +715,20 @@ def apply(rom):
     for i in range(16):                                   # ビギナーの枠の色(0x328c0)を灰色・やや暗く
         v = struct.unpack('>H', d313[0x328c0 + 2*i:0x328c2 + 2*i])[0]
         r, g, b_ = (v >> 10) & 31, (v >> 5) & 31, v & 31
-        y = int((r * 0.3 + g * 0.59 + b_ * 0.11) * 0.6 + 0.5)
-        gw.append((y << 10) | (y << 5) | y if v else 0)
-    src_inv = SRC_INV.replace('GREYDATA', 'dc.w    ' + ','.join('$%x' % x for x in gw))
+        y = int((r * 0.3 + g * 0.59 + b_ * 0.11) * 1.4 + 3.5)
+        gw.append(((y << 10) | (y << 5) | y) if (v and 2 <= i <= 6) else v)   # 2〜6 = ビギナーの枠の線の色だけ（8〜10 などはテクニカルの文字と共用）
+    pt_, bt_ = progress_tables()
+    bp = []
+    for st in range(10):                                  # ボスラッシュ用: 面ごとのボス手前の進行度（boss_area_blob と同じ位置）
+        if st == 9: bp.append(_prog(ST10[1][0]))
+        elif st == 3 or not bt_[st]: bp.append(0)
+        else: bp.append(_prog((bt_[st] << 8) - BRDELTA))
+    src_inv = SRC_INV.replace('GREYDATA', 'dc.w    ' + ','.join('$%x' % x for x in gw)).replace('BOSSDATA', 'dc.w    ' + ','.join('$%x' % x for x in bp))
     bi, li = asm68.assemble(src_inv, INV_ADDR)
     assert INV_ADDR + len(bi) <= 0xd8f5, hex(len(bi))
     rom.img('main')[INV_ADDR:INV_ADDR + len(bi)] = bi
     rom.used.append(('main', INV_ADDR, INV_ADDR + len(bi), 'invincible'))
-    b3, lab3 = asm68.assemble(SRC_C.replace('CMDCNT', '$%x' % li['CmdCnt']).replace('PauseChk = $%x', 'PauseChk = $%x' % lab2['PauseChk']).replace('ApplyStage = $%x', 'ApplyStage = $%x' % lab2['ApplyStage']), 0x3fd9a)
+    b3, lab3 = asm68.assemble(SRC_C.replace('CMDCNT', '$%x' % li['CmdCnt']).replace('BOSSSET', '$%x' % li['BossSet']).replace('PauseChk = $%x', 'PauseChk = $%x' % lab2['PauseChk']).replace('ApplyStage = $%x', 'ApplyStage = $%x' % lab2['ApplyStage']), 0x3fd9a)
     assert 0x3fd9a + len(b3) <= 0x3ffc0, hex(len(b3))
     rom.put('main', 0x3fd9a, b3, 'stubsC')
     rom.put('main', 0x4cfc, bytes.fromhex('4eb9') + lab3['AreaTbl'].to_bytes(4, 'big'), 'areatbl', expect=bytes.fromhex('4df9000054fe'))
@@ -687,6 +750,8 @@ def apply(rom):
     rom.put('main', 0xae22, bytes.fromhex('4eb9') + li['DieB'].to_bytes(4, 'big') + bytes.fromhex('4e71'), 'inv-b', expect=bytes.fromhex('13fc0001000400a2'))
     rom.put('main', 0x6b16, bytes.fromhex('4eb9') + li['TypeBeg'].to_bytes(4, 'big'), 'type-beg', expect=bytes.fromhex('0206000267' + '1a'))
     rom.put('main', 0x6a90, bytes.fromhex('4eb9') + li['TypeGrey'].to_bytes(4, 'big'), 'type-grey', expect=bytes.fromhex('4eb90000e824'))
+    rom.put('main', 0x692a, bytes.fromhex('4eb9') + li['NextPos'].to_bytes(4, 'big'), 'bossrush-pos', expect=bytes.fromhex('4eb90000695c'))
+    rom.put('main', 0x3c7a, bytes.fromhex('4eb9') + li['NextStg'].to_bytes(4, 'big'), 'bossrush-next', expect=bytes.fromhex('427900101052'))
     print('invincible stub bytes', len(bi))
     rom.free_main = [(0xd4aa + len(b), 0xd4aa + 425), (0xd8f6 + len(b2), 0xd8f6 + 532)]
     print('main free: A %d  B %d  C %d' % (425 - len(b), 532 - len(b2), 0x3ffc0 - 0x3fd9a - len(b3)))
