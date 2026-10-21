@@ -129,6 +129,7 @@ G3SHOT = emu.add_machine_frame_notifier(function()
       for _, r in ipairs({{"pal", 0x080000, 0x080fff}, {"vram", 0x14c000, 0x153fff}, {"chr", 0x180000, 0x19ffff}, {"shr", 0x100000, 0x103fff}, {"ram", 0x040000, 0x043fff}}) do
         local o2 = io.open(string.format("%s/%s_%d.bin", shotdir, r[1], frame), "wb"); o2:write(main:read_range(r[2], r[3], 8)); o2:close()
       end
+      if sub then local o3 = io.open(string.format("%s/spr_%d.bin", shotdir, frame), "wb"); o3:write(sub:read_range(0x2c0800, 0x2c0fff, 8)); o3:close() end
     end
   end
 end)

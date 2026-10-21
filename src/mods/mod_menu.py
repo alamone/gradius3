@@ -8,23 +8,30 @@ import struct
 # (ラベル, 種別, 最小, 最大, MBオフセット, 値文字列 or None, 既定値)   種別 0=数値 1=列挙 2=アクション
 # 種別 3 = 面/エリアの表の1行（最小値=面番号 1..12、最大値=その面のエリア数）
 AREAS = [4, 5, 9, 1, 5, 4, 3, 4, 3, 10, 2, 0, 5]   # 選べるエリア数。1面V・7面IV・8面V はボス戦中の復活地点で、そこから開始すると即面クリアになるため除外
-STAGE_LABELS = ['STAGE 1', 'STAGE 2', 'STAGE 3', 'STAGE 4', 'STAGE 5', 'STAGE 6', 'STAGE 7', 'STAGE 8', 'STAGE 9', 'STAGE 10', 'EX STAGE', '', 'BOSS RUSH']
+STAGE_LABELS = ['STAGE   %d' % i for i in range(1, 10)] + ['STAGE  10', 'EX STAGE', '', 'BOSS RUSH']   # 数字の右端を BOSS RUSH の H にそろえる
 # 行の並び: 面1〜10, BOSS RUSH(内部の面番号13), EX STAGE(11。A=グラディウス B=サラマンダ → 開始時に 11/12)
 ROW_ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 10]
 ITEMS = [
+    ('INVINCIBLE', 1, 0, 1, 0x20, ['OFF', 'ON'], 0),   # 一時的な項目（無敵）
     ('MODE',      1, 0, 2, 0x0b, ['NORMAL', 'CUBE RUSH', 'BOSS RUSH'], 0),
-] + [(STAGE_LABELS[i], 3, i + 1, AREAS[i], 0x08, None, 0) for i in ROW_ORDER] + [
     ('LOOP',      0, 1, 99, 0x09, None, 1),
-    ('LIVES',     0, 1, 99, 0x0d, None, 3),
+] + [(STAGE_LABELS[i], 3, i + 1, AREAS[i], 0x08, None, 0) for i in ROW_ORDER] + [
+    ('CUBE HEIGHT', 1, 0, 16, 0x35, ['RANDOM'] + [str(i) for i in range(1, 17)], 0),   # キューブラッシュの並び: 3つとも RANDOM = 純正のまま
+    ('      SHIFT', 1, 0, 4, 0x36, ['RANDOM', 'A', 'B', 'C', 'D'], 0),
+    ('       TYPE', 1, 0, 45, 0x37, ['RANDOM'] + ['%02d' % i for i in range(1, 46)], 0),
     ('SHD COLOR', 1, 1, 10, 0x16, ['?', 'BLUE', 'RED', 'GREEN', 'GOLD', 'PURPLE', 'CYAN', 'ORANGE', 'PINK', 'SILVER', 'BLACK'], 1),
-    ('CUBE PATTERN', 0, 0, 99, 0x1d, None, 0),
     ('HUNTER NEXT', 1, 0, 3, 0x1b, ['DEFAULT', 'TYPE 1', 'TYPE 2', 'TYPE 3'], 0),
     ('HUNTER TIME', 0, 0, 99, 0x1c, None, 0),
-    ('RANK DISP', 1, 0, 1, 0x0e, ['OFF', 'ON'], 0),
-    ('INVINCIBLE', 1, 0, 1, 0x20, ['OFF', 'ON'], 0),   # 一時的な項目（無敵）
-    ('START',     2, 0, 0, 0, None, 0),
-    ('BACK TO DEMO', 2, 0, 0, 0, None, 0),
+    ('SPEED', 0, 0, 5, 0x0d, None, 0),                  # 開始時のスピード（スピードアップを使った回数）
+    ('CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 0),   # 開始時のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
 ]
+# 各項目の画面の行（可視は行2〜29）。面の表の後・CUBE の後に1行ずつ空ける
+ROWS = [2, 3, 5] + list(range(7, 19)) + [20, 21, 22] + [24, 25, 26, 27, 28]   # INVINCIBLE が一番上、最下段は PUSH START
+assert len(ROWS) == len(ITEMS)
+PLUS_ROWS = ['........', '...f....', '...f9...', '.ffffff.', '..9f9999', '...f9...', '....9...', '........']   # ゲームの文字と同じ傾き・影
+PLUS_GFX = bytes(int(r[i] if r[i] != '.' else '0', 16) << 4 | int(r[i+1] if r[i+1] != '.' else '0', 16) for r in PLUS_ROWS for i in range(0, 8, 2))
+BANG_ROWS = ['...ff...', '...ff9..', '...ff9..', '...f9...', '....9...', '...ff...', '...ff9..', '....99..']
+BANG_GFX = bytes(int(r[i] if r[i] != '.' else '0', 16) << 4 | int(r[i+1] if r[i+1] != '.' else '0', 16) for r in BANG_ROWS for i in range(0, 8, 2))
 ROMAN = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']   # エリア名(英字)
 GRID_COL = 26
 ROMAN_OFS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
@@ -51,22 +58,46 @@ def build_data(base):
         if it[5]:
             ptrs = []
             for j, s in enumerate(it[5]):
-                put(f'V{i}_{j}', s.encode() + b'\0'); ptrs.append(lab[f'V{i}_{j}'])
+                put(f'V{i}_{j}', s.encode('latin-1') + b'\0'); ptrs.append(lab[f'V{i}_{j}'])
             al(); lab[f'VT{i}'] = base + len(blob)
             for p in ptrs: blob.extend(struct.pack('>I', p))
-    put('TITLE', b'GRADIUS III  SPECIAL MENU\0')
+    put('ROWMAP', bytes(ROWS))
     put('HELP1', b'UP DOWN SELECT  LEFT RIGHT CHANGE\0')
-    put('HELP2', b'START GO   SHOT2 BACK TO DEMO\0')
+    put('HELP2', b'PUSH START\0')
     put('PS_T', b'PAUSE\0')
-    put('RK_T', b'RANK\0')
+    put('RK_T', b'RANK>\0')
+    put('LG_T', b'LAG>\0')
+    put('CH_C', b'CUBE>\0')
+    put('CH_H', b'H>\0')
+    put('CH_S', b'S>\0')
+    put('CH_T', b'T>\0')
+    put('CH_P', b':\0')          # 0x0a の文字 = 「+」（PlusChr が描き込む）
+    put('CH_Q2', b'__\0')        # '_' の位置が「?」
+    for i, t in enumerate([b'_', b'A', b'B', b'C', b'D']): put('CH_S%d' % i, t + b'\0')
+    al(); lab['CH_STAB'] = base + len(blob)
+    for i in range(5): blob.extend(struct.pack('>I', lab['CH_S%d' % i]))
+    al(); lab['CS_PTS'] = base + len(blob)
+    blob.extend(bytes([0x00, 0x00, 0x10, 0x00]))   # キューブ1個 = 1000点（BCD）
+    al(); lab['PLUSGFX'] = base + len(blob)
+    blob.extend(PLUS_GFX)
+    al(); lab['BANGGFX'] = base + len(blob)
+    blob.extend(BANG_GFX)
     put('PS_C0', b'>CONTINUE\0')
     put('PS_C1', b' CONTINUE\0')
     put('PS_G0', b'>GAME OVER\0')
     put('PS_G1', b' GAME OVER\0')
     put('PS_I0', b'>INVINCIBLE\0')
     put('PS_I1', b' INVINCIBLE\0')
+    put('PS_R0', b'>RANK DISP\0')
+    put('PS_R1', b' RANK DISP\0')
+    put('PS_Q0', b'>CUBE INFO\0')
+    put('PS_Q1', b' CUBE INFO\0')
     put('PS_ON', b'ON \0')
     put('PS_OFF', b'OFF\0')
+    # ポーズの項目: 選択中の文字列.l 通常の文字列.l ON/OFF の場所.l(0=なし)
+    al(); lab['PTAB'] = base + len(blob)
+    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_Q0', 'PS_Q1', 0x203f0c)]:
+        blob.extend(struct.pack('>III', lab[a], lab[b], f))
     # 項目記述子 12B: labelptr.l type.b min.b max.b mboff.b pad.b strtab.l
     al(); lab['ITM'] = base + len(blob)
     for i, it in enumerate(ITEMS):
@@ -190,8 +221,9 @@ da_row:
         mulu    #12,d3
         lea     ITM.l,a5
         adda.l  d3,a5
-        move.w  d7,d1
-        addi.w  #%(row0)d,d1
+        lea     ROWMAP.l,a1
+        moveq   #0,d1
+        move.b  0(a1,d7.w),d1
         move.w  d1,V_Y.l
         lea     V_TMP.l,a0
         move.b  #$20,(a0)
@@ -354,20 +386,13 @@ mi_dl:  moveq   #0,d0
         beq.s   mi_scr
         move.b  (a0)+,0(a1,d0.w)
         bra.s   mi_dl
-mi_scr: jsr     ClrAll.l
-        lea     TITLE.l,a0
-        move.w  #14,d0
-        move.w  #2,d1
-        move.b  #%(attr)d,d2
-        jsr     PutStr.l
-        lea     HELP1.l,a0
-        move.w  #13,d0
-        move.w  #27,d1
-        move.b  #%(attr)d,d2
-        jsr     PutStr.l
+mi_scr: clr.b   $203f0e.l       ; RANK DISP・CUBE INFO はポーズで切り替える（始めは OFF）
+        clr.b   $203f0c.l
+        jsr     ClrAll.l
+        jsr     MbgInit.l
         lea     HELP2.l,a0
-        move.w  #13,d0
-        move.w  #28,d1
+        move.w  #27,d0
+        move.w  #29,d1
         move.b  #%(attr)d,d2
         jsr     PutStr.l
         clr.b   V_CUR.l
@@ -378,7 +403,303 @@ mi_scr: jsr     ClrAll.l
         rts
 
 ; ---- メニュー 1フレーム ----
+; ---- キューブラッシュ中の表示: 右上 行3 に「H nn S x T nn」（実際に出ている並び）----
+; メインが1個目の瞬間のカウンタを $203e3a に置く。それを H/S/T に割り出す（$203e3c = 割り出し済みの値）
+CubeHud:
+        cmpi.b  #1,$203f0b.l    ; MODE = CUBE RUSH のときだけ
+        bne.w   ch_rts
+        move.w  $203e3a.l,d0
+        cmp.w   $203e3c.l,d0
+        beq.w   ch_draw
+        move.w  d0,$203e3c.l
+        cmpi.w  #$ffff,d0
+        beq.w   ch_draw
+        move.b  d0,d1           ; H = 高さの番号 (下位 xor 上位 の bit2-5)
+        move.w  d0,d2
+        lsr.w   #8,d2
+        eor.b   d2,d1
+        andi.w  #$3c,d1
+        lsr.w   #2,d1
+        move.b  d1,$203e3e.l
+        move.w  d0,d2           ; S = bit2-3
+        lsr.w   #2,d2
+        andi.w  #3,d2
+        move.b  d2,$203e3f.l
+        lsl.w   #2,d1
+        add.w   d2,d1
+        mulu    #90,d1          ; (h*4+s)*45 語
+        lea     CUBETBL.l,a2
+        adda.l  d1,a2
+        moveq   #0,d4           ; t
+ch_t:   move.w  (a2)+,d5        ; 候補の c0
+        lea     CUBEDLT.l,a3
+        moveq   #98,d6
+ch_k:   move.w  (a3)+,d7
+        move.w  d5,d1
+        add.w   d7,d1
+        move.w  d1,d2
+        lsr.w   #8,d2
+        eor.b   d2,d1
+        add.w   d0,d7
+        move.w  d7,d2
+        lsr.w   #8,d2
+        eor.b   d2,d7
+        eor.b   d7,d1
+        andi.b  #$3c,d1
+        bne.s   ch_nx
+        dbf     d6,ch_k
+        move.b  d4,$203e35.l    ; 一致した
+        bra.s   ch_draw
+ch_nx:  addq.w  #1,d4
+        cmpi.w  #45,d4
+        bcs.s   ch_t
+        move.b  #$ff,$203e35.l  ; 見つからない（処理落ち等）
+ch_draw:
+        jsr     LagChk.l
+        tst.b   $203ed1.l       ; CUBE INFO が有効なときだけ描く
+        beq.w   ch_rts
+        jsr     PlusChr.l
+        move.w  #26,d0          ; 最上段 col 26〜50 を消す（HI・2P の跡も）
+        move.w  #HROW,d1
+        moveq   #24,d7
+        jsr     ClrFld.l
+        ; CUBE:nn（今何個目。1個目が出る前は 00）
+        lea     CH_C.l,a0
+        move.w  #30,d0
+        bsr.w   HLab
+        moveq   #0,d5
+        cmpi.w  #$ffff,$203e3c.l
+        beq.s   ch_c0
+        move.w  $203e36.l,d5
+ch_c0:  move.w  #35,d0
+        moveq   #2,d6
+        bsr.w   HNum
+        lea     CH_H.l,a0
+        move.w  #38,d0
+        bsr.w   HLab
+        lea     CH_S.l,a0
+        move.w  #43,d0
+        bsr.w   HLab
+        lea     CH_T.l,a0
+        move.w  #47,d0
+        bsr.w   HLab
+        cmpi.w  #$ffff,$203e3c.l
+        bne.s   ch_d1
+        ; まだ1個目が出ていない: メニューの設定（0 = RANDOM → ?）
+        move.b  $203f35.l,d5
+        move.b  $203f36.l,d3
+        move.b  $203f37.l,d4
+        bra.s   ch_d2
+ch_d1:  move.b  $203e3e.l,d5
+        addq.b  #1,d5
+        move.b  $203e3f.l,d3
+        addq.b  #1,d3
+        move.b  $203e35.l,d4
+        addq.b  #1,d4
+        cmpi.b  #46,d4          ; 見つからない($ff+1=0)
+        bcs.s   ch_d2
+        moveq   #0,d4
+ch_d2:  movem.l d3-d4,-(a7)
+        andi.w  #$ff,d5
+        move.w  #40,d0
+        moveq   #2,d6
+        bsr.w   HNumR           ; H:nn / H:??
+        movem.l (a7)+,d3-d4
+        move.l  d4,-(a7)
+        moveq   #0,d0
+        move.b  d3,d0
+        lsl.w   #2,d0
+        lea     CH_STAB.l,a0
+        movea.l 0(a0,d0.w),a0
+        move.w  #45,d0
+        move.w  #HROW,d1
+        moveq   #0,d2
+        jsr     PutStr.l        ; S の値
+        move.l  (a7)+,d5
+        andi.w  #$ff,d5
+        move.w  #49,d0
+        moveq   #2,d6
+        bsr.w   HNumR           ; T:nn / T:??
+        bra.w   ch_rts
+; 見出し（暗め: パレット6）: a0=文字列 d0=桁
+HLab:   move.w  #HROW,d1
+        move.b  #ATTRLAB,d2
+        jmp     PutStr.l
+; 数字（明るめ）: d5=値 d6=桁数 d0=桁。0 なら「?」（HNumR）
+HNumR:  tst.w   d5
+        bne.s   HNum
+        lea     CH_Q2.l,a0
+        move.w  #HROW,d1
+        moveq   #0,d2
+        jmp     PutStr.l
+HNum:   move.w  #HROW,d1
+        moveq   #0,d2
+; ゼロ付きの数字: d5.w=値 d6=桁数 d0,d1,d2
+PutZ:   lea     V_TMP.l,a0
+        adda.w  d6,a0
+        clr.b   (a0)
+        andi.l  #$ffff,d5
+pz_l:   divu    #10,d5
+        swap    d5
+        addi.b  #$30,d5
+        move.b  d5,-(a0)
+        clr.w   d5
+        swap    d5
+        subq.w  #1,d6
+        bne.s   pz_l
+        jmp     PutStr.l
+; 「+」の字を空き文字(0x0a)に入れる（ゲームの文字には + がない。0x0a は画面で使われていない空白の文字）
+PlusChr:
+        lea     PLUSGFX.l,a0
+        lea     $280140.l,a1
+        moveq   #31,d0
+pc_c:   move.b  (a0)+,(a1)+
+        dbf     d0,pc_c
+        rts
+ch_rts: rts
+
+; ---- 処理落ちのずれ: 出現のたびに「その瞬間のカウンタ」と「1個目のカウンタ＋決まった間隔」を比べる。
+;      最初にずれたキューブの番号を V_LAG に残し、"LAG nn" を H の左に表示する
+HROW    = 2                ; キューブの表示の段（最上段）
+ATTRLAB = $c0              ; 見出しの色: パレット6（メインがプレイ中に暗めの灰色を入れる。ゲームでは未使用）
+V_LAGI  = $1011c0          ; 最後に調べた出現番号
+V_LAG   = $1011c2          ; 最初にずれたキューブの番号 (0 = ずれなし)
+V_LAGF  = $1011c4          ; ずれの累計（フレーム）
+V_SHL   = $1011c6
+V_RKL   = $1011c8          ; RANK の表示を出しているか（OFF にしたら消す）          ; メニューのシールド色の見本: 最後に入れた色
+LagChk:
+        cmpi.w  #$ffff,$203e3c.l
+        bne.s   lc_go
+        clr.w   V_LAGI.l        ; まだ1個目が出ていない（やり直し含む）: リセット
+        clr.b   V_LAG.l
+        clr.w   V_LAGF.l
+        bra.w   lc_draw
+lc_go:  move.w  $203e36.l,d0    ; 何個目
+        cmp.w   V_LAGI.l,d0
+        beq.w   lc_draw
+        move.w  d0,V_LAGI.l
+        cmpi.w  #1,d0
+        bne.s   lc_n1
+        clr.b   V_LAG.l         ; 1個目 = 新しいラッシュ
+        clr.w   V_LAGF.l
+lc_n1:  subq.w  #1,d0
+        cmpi.w  #99,d0
+        bcc.w   lc_draw
+        add.w   d0,d0
+        lea     CUBEDLT.l,a0
+        move.w  0(a0,d0.w),d1
+        add.w   $203e3a.l,d1    ; d1 = 計算どおりならこの瞬間のカウンタ
+        move.w  $203e38.l,d2    ; d2 = 実際のカウンタ
+        move.w  d2,d3
+        sub.w   d1,d3
+        move.w  d3,V_LAGF.l     ; ずれの累計（フレーム）
+        tst.b   V_LAG.l
+        bne.s   lc_draw
+        move.w  d1,d3           ; 高さの番号（下位 xor 上位 の bit2-5）が変わったときだけ「並びが変わった」
+        move.w  d1,d4
+        lsr.w   #8,d4
+        eor.b   d4,d3
+        andi.b  #$3c,d3
+        move.w  d2,d4
+        move.w  d2,d5
+        lsr.w   #8,d5
+        eor.b   d5,d4
+        andi.b  #$3c,d4
+        cmp.b   d3,d4
+        beq.s   lc_draw
+        lsr.w   #1,d0
+        addq.w  #1,d0
+        move.b  d0,V_LAG.l
+lc_draw:
+        tst.b   $203ed1.l
+        beq.w   lc_r
+        move.w  #31,d0          ; 2段目 col 31〜41: 「LAG:12+0005」
+        move.w  #3,d1
+        moveq   #10,d7
+        jsr     ClrFld.l
+        moveq   #0,d5
+        move.b  V_LAG.l,d5
+        beq.w   lc_r
+        move.w  #35,d0
+        move.w  #3,d1
+        moveq   #0,d2
+        moveq   #2,d6
+        jsr     PutZ.l
+        move.w  V_LAGF.l,d5
+        cmpi.w  #9999,d5
+        bls.s   lc_f
+        move.w  #9999,d5
+lc_f:   move.w  #38,d0
+        move.w  #3,d1
+        moveq   #0,d2
+        moveq   #4,d6
+        jsr     PutZ.l
+        lea     LG_T.l,a0
+        move.w  #31,d0
+        move.w  #3,d1
+        move.b  #ATTRLAB,d2
+        jsr     PutStr.l
+        lea     CH_P.l,a0
+        move.w  #37,d0
+        move.w  #3,d1
+        move.b  #ATTRLAB,d2
+        jmp     PutStr.l
+lc_r:   rts
+
+; ---- メニューの背景（スプライトと色）: スプライト表をそのまま書き、暗くした色を共有RAMに置いてメインに写してもらう ----
+; スプライト表の書き込み: ゲームのスプライト処理の 0x877c（使っていない枠を消す bsr $8850 と move.b #0,$203936）を置き換え。
+; メニュー表示中だけ、消す代わりに背景のスプライト表を丸ごと書く
+SprHook:
+        tst.b   MBS_REQ.l
+        beq.s   sh_n
+        tst.b   MBS_DONE.l
+        bne.s   sh_n
+        moveq   #0,d0               ; シールド色の見本: 選んだ色が変わったら色3(0x131-0x136,0x13e)を入れ替える
+        move.b  $203f16.l,d0
+        cmp.b   V_SHL.l,d0
+        beq.s   sh_sp
+        move.b  d0,V_SHL.l
+        subq.b  #1,d0
+        cmpi.b  #9,d0
+        bls.s   sh_c1
+        moveq   #0,d0
+sh_c1:  mulu    #14,d0
+        lea     SHCOL.l,a0
+        adda.w  d0,a0
+        lea     $202062.l,a1
+        moveq   #5,d0
+sh_c2:  move.w  (a0)+,(a1)+
+        dbf     d0,sh_c2
+        move.w  (a0),$20207c.l
+        move.b  #1,$203e34.l
+sh_sp:  lea     MBGSPR.l,a0
+        lea     $2c0801.l,a1
+        move.w  #1023,d0
+mb_sp:  move.b  (a0)+,(a1)
+        addq.l  #2,a1
+        dbf     d0,mb_sp
+        bra.s   sh_x
+sh_n:   jsr     $8850.l
+sh_x:   move.b  #0,$203936.l
+        rts
+MbgInit:
+        move.w  #$ffff,$203e3a.l  ; キューブの表示: まだ1個目が出ていない
+        move.w  #$ffff,$203e3c.l
+        lea     MBGPAL.l,a0
+        lea     $202000.l,a1
+        move.w  #255,d0
+mb_pl:  move.w  (a0)+,(a1)+
+        dbf     d0,mb_pl
+        move.b  #1,$203e34.l
+        move.b  #$ff,V_SHL.l
+        rts
+
 MenuFrame:
+        lea     BANGGFX.l,a0    ; 「!」の字を空き文字(0x5c)に入れる（CAPSULE の値用。ゲームの文字には ! がない）
+        lea     $280b80.l,a1
+        moveq   #31,d0
+mf_bg:  move.b  (a0)+,(a1)+
+        dbf     d0,mf_bg
         tst.b   V_INIT.l
         bne.w   mf_run
         jsr     MenuInit.l
@@ -452,12 +773,8 @@ mf_nr:  ; 決定: SYSTEMスタート or (B1 かつ START行)
         jsr     CurDesc.l
         cmpi.b  #2,4(a5)
         bne.w   mf_nb1
-        cmpi.b  #NITEM-1,V_CUR.l
-        beq.w   mf_cancel
         bra.w   mf_go
-mf_nb1: btst    #5,d2
-        bne.w   mf_cancel
-        tst.b   V_DIRTY.l
+mf_nb1: tst.b   V_DIRTY.l
         beq.w   mf_ret
         clr.b   V_DIRTY.l
         jsr     DrawAll.l
@@ -561,24 +878,55 @@ cc_op:  move.b  $68(a0),d0
 cc3:    move.b  d3,4(a1)
         rts
 
-; ---- ランク表示 (改造プレイ中・RANK DISP=ON): 画面右上 行3 に "RANK nn" ----
-RankDisp:
-        lea     RK_T.l,a0
-        move.w  #43,d0
+; ---- ランク表示 (改造プレイ中・RANK DISP=ON): 画面左上 行3（残機の右）に "RANK nn" ----
+; ---- キューブが壁・ほかのキューブにくっついた瞬間（サブ 0xafc4 の move.b #1,$26(a0) の置き換え）----
+;      キューブラッシュ（改造プレイ）なら 1P の点数に 1000点を足す。点数はゲームの加算処理を通さないので、
+;      ハイスコア・残機の増加には関わらない（メインの HiHk / RankHk / 次の増加点 0 でも止めてある）
+CubeStick:
+        move.b  #1,$26(a0)
+        tst.b   MBS_RUN.l
+        beq.s   cst_r
+        cmpi.b  #1,$203f0b.l
+        bne.s   cst_r
+        movem.l d0/a1-a2,-(a7)
+        lea     CS_PTS.l,a1
+        addq.l  #4,a1
+        lea     $201058.l,a2
+        dc.w    $44fc,$0000     ; move #0,ccr（X=0）
+        moveq   #3,d0
+cst_l:  dc.w    $c509           ; abcd -(a1),-(a2)
+        dbf     d0,cst_l
+        movem.l (a7)+,d0/a1-a2
+        move.b  #1,$203ed0.l    ; メインに点数の描き直しを頼む
+cst_r:  rts
+
+RankDisp:                       ; 2段目の右寄せ「RANK:10」（右端 col 50 = T の数字の右端）
+        jsr     PlusChr.l
+        move.w  #44,d0
         move.w  #3,d1
-        moveq   #0,d2
-        jsr     PutStr.l
+        moveq   #6,d7
+        jsr     ClrFld.l
+        moveq   #0,d5
         move.b  $2039c1.l,d5
-        move.w  #48,d0
+        cmpi.w  #99,d5
+        bls.s   rd_v
+        moveq   #99,d5
+rd_v:   move.w  #49,d0
         move.w  #3,d1
         moveq   #0,d2
-        jmp     PutDec.l
+        moveq   #2,d6
+        jsr     PutZ.l
+        lea     RK_T.l,a0
+        move.w  #44,d0
+        move.w  #3,d1
+        move.b  #ATTRLAB,d2
+        jmp     PutStr.l
 
 V_PST   = $100f50
 V_PSEL  = $100f51
 V_PPIN  = $100f52
 V_PSIN  = $100f53
-V_PSAV  = $101100          ; 4行x16桁x2バイト = 128（0x101100〜: 元のサブのプログラムが使っていない範囲）
+V_PSAV  = $101100          ; 6行x16桁x2バイト = 192（0x101100〜: 元のサブのプログラムが使っていない範囲）
 MBS_INV = $203f20          ; 無敵（メインの MB+$20）
 V_LINV  = $100f38          ; スタートメニューの前回値の写し（MB+$20 に対応）
 PX      = 26
@@ -590,7 +938,7 @@ PSave:  lea     V_PSAV.l,a0
         bra.s   ps_go
 PRest:  lea     V_PSAV.l,a0
         moveq   #1,d0
-ps_go:  moveq   #3,d6
+ps_go:  moveq   #5,d6
         move.w  #PY,d1
 pr_row: move.w  d1,d3
         lsl.w   #6,d3
@@ -619,7 +967,7 @@ PLine:  move.w  #PX+1,d0
         moveq   #0,d2
         jmp     PutStr.l
 
-PDraw:  moveq   #3,d6
+PDraw:  moveq   #5,d6
         move.w  #PY,d1
 pd_cl:  move.w  #PX,d0
         moveq   #PW-1,d7
@@ -634,34 +982,36 @@ pd_cl:  move.w  #PX,d0
         moveq   #0,d2
         jsr     PutStr.l
         moveq   #0,d4
-        lea     PS_C1.l,a0
-        tst.b   V_PSEL.l
-        bne.s   pd_1
-        lea     PS_C0.l,a0
-pd_1:   bsr.w   PLine
-        moveq   #1,d4
-        lea     PS_G1.l,a0
-        cmpi.b  #1,V_PSEL.l
-        bne.s   pd_2
-        lea     PS_G0.l,a0
-pd_2:   bsr.w   PLine
-        moveq   #2,d4
-        lea     PS_I1.l,a0
-        cmpi.b  #2,V_PSEL.l
-        bne.s   pd_3
-        lea     PS_I0.l,a0
-pd_3:   bsr.w   PLine
+        lea     PTAB.l,a2
+pd_lp:  movea.l 4(a2),a0
+        cmp.b   V_PSEL.l,d4
+        bne.s   pd_u
+        movea.l (a2),a0
+pd_u:   movem.l d4/a2,-(a7)
+        bsr.w   PLine
+        movem.l (a7)+,d4/a2
+        move.l  8(a2),d0
+        beq.s   pd_nx
+        movea.l d0,a3
         lea     PS_OFF.l,a0
-        tst.b   MBS_INV.l
-        beq.s   pd_4
+        tst.b   (a3)
+        beq.s   pd_v
         lea     PS_ON.l,a0
-pd_4:   move.w  #PX+13,d0
-        move.w  #PY+3,d1
+pd_v:   movem.l d4/a2,-(a7)
+        move.w  #PX+13,d0
+        move.w  d4,d1
+        addi.w  #PY+1,d1
         moveq   #0,d2
-        jmp     PutStr.l
+        jsr     PutStr.l
+        movem.l (a7)+,d4/a2
+pd_nx:  lea     12(a2),a2
+        addq.w  #1,d4
+        cmpi.w  #5,d4
+        bcs.s   pd_lp
+        rts
 
 ; ---- ポーズ 1フレーム (MBS_PAUS==1 の間) ----
-; 上下: CONTINUE / GAME OVER / INVINCIBLE。INVINCIBLE の行では 左右・ショットで ON/OFF。START か ショットで決定
+; 上下: CONTINUE / GAME OVER / INVINCIBLE / RANK DISP / CUBE INFO。ON/OFF の行では 左右・ショットで ON/OFF。START か ショットで決定
 PauseFrame:
         tst.b   V_PST.l
         bne.s   pf_run
@@ -685,21 +1035,26 @@ pf_run: move.b  MBS_P1.l,d0
         beq.s   pf_dn
         subq.b  #1,V_PSEL.l
         bpl.s   pf_rd
-        move.b  #2,V_PSEL.l
+        move.b  #4,V_PSEL.l
         bra.s   pf_rd
 pf_dn:  btst    #3,d1           ; 下
         beq.s   pf_lr
         addq.b  #1,V_PSEL.l
-        cmpi.b  #3,V_PSEL.l
+        cmpi.b  #5,V_PSEL.l
         bcs.s   pf_rd
         clr.b   V_PSEL.l
         bra.s   pf_rd
-pf_lr:  cmpi.b  #2,V_PSEL.l
-        bne.s   pf_nm
-        move.b  d1,d2
-        andi.b  #$13,d2         ; 左右・ショット
+pf_lr:  moveq   #0,d0           ; ON/OFF のある行（INVINCIBLE・RANK DISP・CUBE INFO）: 左右・ショットで切り替え
+        move.b  V_PSEL.l,d0
+        mulu    #12,d0
+        lea     PTAB.l,a0
+        move.l  8(a0,d0.w),d0
         beq.s   pf_nm
-        eori.b  #1,MBS_INV.l
+        move.b  d1,d2
+        andi.b  #$13,d2
+        beq.s   pf_nm
+        movea.l d0,a0
+        eori.b  #1,(a0)
         move.b  MBS_INV.l,V_LINV.l
 pf_rd:  movem.l d1/d5,-(a7)
         jsr     PDraw.l

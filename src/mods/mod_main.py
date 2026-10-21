@@ -32,19 +32,10 @@ MB_ELSR  = $103f13
         org $d4aa
 ; ---- キューブラッシュのパターン固定 (0x26238 の move.b $40032.l,d5 を置換) ----
 ; キューブの出現の高さは「その瞬間の $40032 xor $40033」で16通りから決まる。
-; 改造プレイ中で CUBE PATTERN≠0 のとき、出現の瞬間のフレームカウンタを決まった数列の値に置き換える
+; 改造プレイ中で CUBE HEIGHT/SHIFT/TYPE のどれかが R 以外のとき、1個目が出る瞬間だけ
+; フレームカウンタを「その並びになる値」(サブが毎フレーム $103e30 に用意)にする。2個目以降は純正どおり
 CubeSeed:
-        tst.b   $103f07.l
-        beq.s   cs_x
-        tst.b   $103f1d.l
-        beq.s   cs_x
-        move.w  $103e30.l,d5
-        mulu    #25173,d5
-        addi.w  #13849,d5
-        move.w  d5,$103e30.l
-        move.w  d5,$40032.l
-cs_x:   move.b  $40032.l,d5
-        rts
+        jmp     CUBESEED2.l      ; 本体は 0xd653〜 の空き領域（CubeSeed2）
         even
 StubIn:
         jsr     $33b8.l
@@ -55,6 +46,13 @@ StubIn:
         move.b  $c8001.l,d0
         not.b   d0
         move.b  d0,MB_SYS.l
+        tst.b   $103ed0.l       ; サブからスコアの描き直しの依頼（CUBE INFO を OFF にした／キューブがくっついて点が入った）
+        beq.s   ms_nr
+        clr.b   $103ed0.l
+        movem.l d0-d7/a0-a6,-(a7)
+        jsr     SCOREHK.l
+        movem.l (a7)+,d0-d7/a0-a6
+ms_nr:  jsr     HUDPAL.l
         rts
 
 HookStart:
@@ -99,6 +97,7 @@ hs_norm:
 
 ; 新トップ状態3: メニュー実行中（サブCPUが描画・操作）。確定/キャンセルを待つ
 ModState:
+        jsr     PALCOPY.l       ; メニューの背景の色（サブが用意したら写す）
         move.l  #$6000,$1038e8.l ; スクロール位置 0 に固定（レジスタ値 = 変数-0x6000 を毎フレーム反映する処理がある）
         move.l  #$6000,$1038f0.l
         clr.l   $1038ec.l
@@ -196,8 +195,16 @@ SkipType:
         jmp     $3710.l
 sk_mod:                         ; 改造プレイもテクニカル/ビギナー選択を表示する（ビギナーは選べない: TypeBeg/TypeGrey）
         jmp     $3710.l
-sk_set: move.b  MB_LIVES.l,$50(a0)
-        rts
+sk_set: cmpi.b  #1,MB_MODE.l    ; 残機はディップスイッチどおり。キューブラッシュはそれに +4（遊んでいない側＝残機0 には足さない）
+        bne.s   sk_sr
+        tst.b   $50(a0)
+        beq.s   sk_sr
+        move.b  $50(a0),d0      ; 残機は BCD
+        moveq   #4,d1
+        dc.w    $44fc,$0000     ; move #0,ccr
+        dc.w    $c101           ; abcd d1,d0
+        move.b  d0,$50(a0)
+sk_sr:  rts
 
 ; ---- 改造モードのポーズ(プレイ中 START)。戻り d0≠0 ならこのフレームのゲーム処理を止める ----
 ; MB_PAUS: 0=通常 1=ポーズ中(サブがメニュー表示) 2=再開 3=ゲームオーバー
@@ -294,6 +301,45 @@ lk_act: clr.b   (a0)
         rts
 
 
+; ---- 開始時のハンターの設定（PlayHook から） ----
+PendB:  move.b  $103f1b.l,d0    ; HUNTER NEXT (0=そのまま, 1..3 → $42e73=0..2)
+        beq.s   pb_h1
+        subq.b  #1,d0
+        move.b  d0,$42e73.l
+pb_h1:  moveq   #0,d0           ; HUNTER TIME (0=そのまま, n → $42e70=n*60: オプション1個で n 秒)
+        move.b  $103f1c.l,d0
+        beq.s   pb_r
+        mulu    #60,d0
+        move.w  d0,$42e70.l
+pb_r:   rts
+
+; ---- キューブラッシュ（改造プレイ）の点数はハイスコア・ランキングに入れない ----
+CkCR:   tst.b   MB_RUN.l        ; 戻り: eq = キューブラッシュの改造プレイ
+        beq.s   ck_n
+        cmpi.b  #1,MB_MODE.l
+        rts
+ck_n:   cmpi.b  #1,MB_RUN.l
+        rts
+; 0x197e の cmp.l $40058.l,d7 の置き換え（点数加算後のハイスコア更新）: キューブラッシュなら更新しない（C=1）
+HiHk:   bsr.s   CkCR
+        bne.s   hh_n
+        ori     #1,ccr
+        rts
+hh_n:   cmp.l   $40058.l,d7
+        rts
+; 0x226c4 の move.l $101054.l,d0 の置き換え（ゲームオーバー後のランキング判定）: キューブラッシュなら 0点として扱う
+RankHk: move.l  $101054.l,d0
+        bsr.s   CkCR
+        bne.s   rh_r
+        moveq   #0,d0
+rh_r:   rts
+; 見出しの暗めの色（F面パレット6・ゲームでは未使用）: 改造プレイ中は毎フレーム入れる
+HudPal: tst.b   MB_RUN.l
+        beq.s   hp_r
+        move.w  #$5252,$800de.l
+        move.w  #$10a9,$800d2.l
+hp_r:   rts
+
 ; ---- 敵出現表ポインタ ($42e00) の補正 (0x154aa の move.l a6,$42e00 を置換) ----
 ; 改造プレイ・10面(マップ13)・X<0x780(ボスラッシュ区間) のときだけ「X 以上の最初のイベント」から始める
 ; (ゲーム本来の X/0x300 刻みの索引だと、ボス直前から始めたときにボスの出現イベントを取りこぼす/前のボスが出る)
@@ -360,15 +406,14 @@ ph_np:
         moveq   #1,d0
 ph_p:   bclr    d0,MB_PEND.l
         beq.s   ph_x
-        move.b  $103f1b.l,d0    ; HUNTER NEXT (0=そのまま, 1..3 → $42e73=0..2)
-        beq.s   ph_h1
-        subq.b  #1,d0
-        move.b  d0,$42e73.l
-ph_h1:  moveq   #0,d0           ; HUNTER TIME (0=そのまま, n → $42e70=n*60: オプション1個で n 秒)
-        move.b  $103f1c.l,d0
+        jsr     PENDB.l         ; ハンターの設定（本体は B 領域）
+        move.b  $103f0d.l,d4    ; SPEED (0〜5): スピードアップを n 回使う
+        beq.s   ph_g
+        moveq   #1,d3
+        bsr.w   Use
+ph_g:   move.b  $103f23.l,d0    ; CAPSULE (0=そのまま, 1〜7 = SPEEDUP〜!): カプセルゲージの位置
         beq.s   ph_h2
-        mulu    #60,d0
-        move.w  d0,$42e70.l
+        move.b  d0,$6a(a2)
 ph_h2:
 ph_x:   movem.l (a7)+,d0-d7/a0-a6
 ph_go:  jmp     $3a24.l
@@ -482,11 +527,11 @@ at_r:   rts
 import os
 CUBEX = int(os.environ.get('CUBEX', '54000'), 16); CUBEY = int(os.environ.get('CUBEY', '0'), 16)
 # 10面(マップ13)の独自エリア表。
-# ボスラッシュの各ボス = 敵出現表(0x252d4)のボス出現イベント X(0x1e0/0x2e0/0x420/0x560/0x6a0/0x7e0)の
-#   0x80 手前(スクロール約6.4秒前)。ボス1〜6 = 0x16000/0x26000/0x3a000/0x4e000/0x62000/0x76000
+# ボスラッシュの各ボス = 敵出現表(0x252d4)のボス出現イベントの約0xc4手前。ボス1 = 0x11c00、
+#   ボス2〜6 = 0x21c02/0x35bdd/0x49c21/0x5dc03/0x71bde（端数を不規則に数単位ずらす）
 # ボスラッシュ後 = EvPtr の補正区間(X<0x780)を抜けた直後の 0x7a000 / ラスボス手前 = 0x25c000
-ST10 = [(0, 0x20000), (0x16000, 0x20000), (0x26000, 0x20000), (0x3a000, 0x20000), (0x4e000, 0x20000),
-        (0x62000, 0x20000), (0x76000, 0x20000), (0x7a000, 0x20000), (0xc0000, 0), (0xf0000, 0), (0x120000, 0),
+ST10 = [(0, 0x20000), (0x11c00, 0x20000), (0x21c02, 0x20000), (0x35bdd, 0x20000), (0x49c21, 0x20000),
+        (0x5dc03, 0x20000), (0x71bde, 0x20000), (0x7a000, 0x20000), (0xc0000, 0), (0xf0000, 0), (0x120000, 0),
         (0x148000, 0), (0x180000, 0), (0x1b0000, 0), (0x200000, 0), (0x25c000, 0)]
 # メニューの構成:
 #   STAGE 10 = 開始 / ボスラッシュ直後 / 本来の復活地点7つ / 最終地点   BOSS RUSH = ボス2〜6の手前
@@ -651,6 +696,43 @@ bs_x:   move.w  (sp)+,d0
         move.l  (sp)+,a0
         rts
 BOSSPROG: BOSSDATA
+; ---- キューブの出現の瞬間（0x26238 の move.b $40032.l,d5 の置き換え。CubeSeed から来る）----
+CubeSeed2:
+        tst.b   $103f07.l
+        beq.s   cs_x
+        cmpi.w  #1,$48(a3)
+        bne.s   cs_rec
+        move.b  $103f35.l,d5
+        or.b    $103f36.l,d5
+        or.b    $103f37.l,d5
+        beq.s   cs_r
+CUBESEEDBODY
+cs_r:   move.w  $40032.l,$103e3a.l   ; 1個目の瞬間のカウンタ（サブが H/S/T を割り出してプレイ中に表示）
+cs_rec: move.w  $48(a3),$103e36.l    ; 何個目か と その瞬間のカウンタ（サブが予想と比べて処理落ちのずれを見る）
+        move.w  $40032.l,$103e38.l
+cs_x:   move.b  $40032.l,d5
+        rts
+; メニューの背景: サブが共有RAM $102000 に置いたスプライトの色(256語)をパレット $80200〜 へ（$103e34 が合図）
+PalCopy: tst.b  $103e34.l
+        beq.s   pc_r
+        clr.b   $103e34.l
+        lea     $102000.l,a0
+        lea     $80200.l,a1
+        move.w  #255,d0
+pc_l:   move.w  (a0)+,(a1)+
+        dbf     d0,pc_l
+pc_r:   rts
+; 0x1d24 の jsr $326e（CREDIT の表示）を置き換え: 隠しメニュー表示中（トップ状態3）は出さない
+; スコア表示(0x180a: 2P→HI→1P の順に3つ描く)の入口: キューブラッシュで CUBE INFO を ON にしている間は 1P だけ描く（HI・2P の場所にキューブの情報）
+ScoreHk: tst.b  $103ed1.l       ; サブが「CUBE INFO 表示中」としたとき
+        bne.s   sk_1p
+        jmp     $180a.l
+sk_1p:  moveq   #0,d0
+        jmp     $180e.l
+CredHook: cmpi.b #3,$40005.l
+        beq.s   ch_r
+        jmp     $326e.l
+ch_r:   rts
 ; 面クリア → 次の面（状態7 の 0x3c7a: clr.w $101052 を置き換え）。ボスラッシュなら次の面もボス手前から
 NextStg: tst.b  MB_RUN.l
         beq.s   ns_n
@@ -704,7 +786,12 @@ cc_n:   move.b  $103f22.l,d1
 def apply(rom):
     import asm68
     # 組み立て順: B → C(PauseChk を参照) → A(IdleLock を参照)
-    b2, lab2 = asm68.assemble(SRC_B, 0xd8f6, labels=None)
+    src_b = SRC_B
+    if LOCK_SUSPEND:                                      # 解除/ロックは一時停止中: 本体はROMに入れない（ソースは残す）
+        a_, b_ = src_b.index('Lock:   lea'), src_b.index('lk_act: clr.b   (a0)')
+        b_ = src_b.index('rts', b_) + 3
+        src_b = src_b[:a_] + 'Lock:   rts' + src_b[b_:]
+    b2, lab2 = asm68.assemble(src_b, 0xd8f6, labels=None)
     assert len(b2) <= 532, len(b2)
     rom.put('main', 0xd8f6, b2, 'stubsB')
     rom.put('main', 0x154aa, bytes.fromhex('4eb9') + lab2['EvPtr'].to_bytes(4, 'big'), 'evptr', expect=bytes.fromhex('23ce00042e00'))
@@ -724,17 +811,18 @@ def apply(rom):
         elif st == 3 or not bt_[st]: bp.append(0)
         else: bp.append(_prog((bt_[st] << 8) - BRDELTA))
     src_inv = SRC_INV.replace('GREYDATA', 'dc.w    ' + ','.join('$%x' % x for x in gw)).replace('BOSSDATA', 'dc.w    ' + ','.join('$%x' % x for x in bp))
+    src_inv = src_inv.replace('CUBESEEDBODY', ('        move.w  #$%x,$40032.l' % ((int(os.environ['CUBESLOT']) << 2) << 8)) if os.environ.get('CUBESLOT') else '        move.w  $103e30.l,$40032.l')
     bi, li = asm68.assemble(src_inv, INV_ADDR)
     assert INV_ADDR + len(bi) <= 0xd8f5, hex(len(bi))
     rom.img('main')[INV_ADDR:INV_ADDR + len(bi)] = bi
     rom.used.append(('main', INV_ADDR, INV_ADDR + len(bi), 'invincible'))
-    b3, lab3 = asm68.assemble(SRC_C.replace('CMDCNT', '$%x' % li['CmdCnt']).replace('BOSSSET', '$%x' % li['BossSet']).replace('PauseChk = $%x', 'PauseChk = $%x' % lab2['PauseChk']).replace('ApplyStage = $%x', 'ApplyStage = $%x' % lab2['ApplyStage']), 0x3fd9a)
+    b3, lab3 = asm68.assemble(SRC_C.replace('PENDB', '$%x' % lab2['PendB']).replace('CMDCNT', '$%x' % li['CmdCnt']).replace('BOSSSET', '$%x' % li['BossSet']).replace('PauseChk = $%x', 'PauseChk = $%x' % lab2['PauseChk']).replace('ApplyStage = $%x', 'ApplyStage = $%x' % lab2['ApplyStage']), 0x3fd9a)
     assert 0x3fd9a + len(b3) <= 0x3ffc0, hex(len(b3))
     rom.put('main', 0x3fd9a, b3, 'stubsC')
     rom.put('main', 0x4cfc, bytes.fromhex('4eb9') + lab3['AreaTbl'].to_bytes(4, 'big'), 'areatbl', expect=bytes.fromhex('4df9000054fe'))
     rom.put('main', 0x28ec + 2*4, lab3['StageHook'].to_bytes(4, 'big'), 'stagehook', expect=bytes.fromhex('00003790'))
     rom.put('main', 0x28ec + 5*4, lab3['PlayHook'].to_bytes(4, 'big'), 'playhook', expect=bytes.fromhex('00003a24'))
-    srca = SRC_A.replace('LOCKCALL', 'move.b  #1,MB_UNLK.l     ; 解除/ロックのコマンドは一時停止中: 常に解除' if LOCK_SUSPEND else 'jsr     Lock.l')
+    srca = SRC_A.replace('PALCOPY', '$%x' % li['PalCopy']).replace('SCOREHK', '$%x' % li['ScoreHk']).replace('HUDPAL', '$%x' % lab2['HudPal']).replace('CUBESEED2', '$%x' % li['CubeSeed2']).replace('CUBESEEDBODY_UNUSED', ('        move.w  #$%x,$40032.l' % ((int(os.environ['CUBESLOT']) << 2) << 8)) if os.environ.get('CUBESLOT') else '''        move.w  $103e30.l,$40032.l''').replace('LOCKCALL', 'move.b  #1,MB_UNLK.l     ; 解除/ロックのコマンドは一時停止中: 常に解除' if LOCK_SUSPEND else 'jsr     Lock.l')
     b, lab = asm68.assemble(('Lock = $%x\n' % lab2['Lock']) + srca, 0xd4aa)
     assert len(b) <= 425, len(b)
     rom.put('main', 0xd4aa, b, 'stubsA')
@@ -750,6 +838,12 @@ def apply(rom):
     rom.put('main', 0xae22, bytes.fromhex('4eb9') + li['DieB'].to_bytes(4, 'big') + bytes.fromhex('4e71'), 'inv-b', expect=bytes.fromhex('13fc0001000400a2'))
     rom.put('main', 0x6b16, bytes.fromhex('4eb9') + li['TypeBeg'].to_bytes(4, 'big'), 'type-beg', expect=bytes.fromhex('0206000267' + '1a'))
     rom.put('main', 0x6a90, bytes.fromhex('4eb9') + li['TypeGrey'].to_bytes(4, 'big'), 'type-grey', expect=bytes.fromhex('4eb90000e824'))
+    rom.put('main', 0x197e, bytes.fromhex('4eb9') + lab2['HiHk'].to_bytes(4, 'big'), 'hi-cube', expect=bytes.fromhex('beb900040058'))
+    rom.put('main', 0x226c4, bytes.fromhex('4eb9') + lab2['RankHk'].to_bytes(4, 'big'), 'rank-cube', expect=bytes.fromhex('203900101054'))
+    rom.put('main', 0x15b6, li['ScoreHk'].to_bytes(4, 'big'), 'score-tbl', expect=bytes.fromhex('0000180a'))
+    rom.put('main', 0x1932, li['ScoreHk'].to_bytes(4, 'big'), 'score-1p', expect=bytes.fromhex('0000180a'))
+    rom.put('main', 0x1954, li['ScoreHk'].to_bytes(4, 'big'), 'score-2p', expect=bytes.fromhex('0000180a'))
+    rom.put('main', 0x1d24, bytes.fromhex('4eb9') + li['CredHook'].to_bytes(4, 'big'), 'credit-hide', expect=bytes.fromhex('4eb90000326e'))
     rom.put('main', 0x692a, bytes.fromhex('4eb9') + li['NextPos'].to_bytes(4, 'big'), 'bossrush-pos', expect=bytes.fromhex('4eb90000695c'))
     rom.put('main', 0x3c7a, bytes.fromhex('4eb9') + li['NextStg'].to_bytes(4, 'big'), 'bossrush-next', expect=bytes.fromhex('427900101052'))
     print('invincible stub bytes', len(bi))

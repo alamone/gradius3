@@ -83,6 +83,38 @@ sb_c3:  move.l  (a0)+,(a1)+
 
 ; ---- 毎フレーム ----  (解除/ロック/自動ロックはメインCPU側で処理)
 Frame:
+        move.w  $203e32.l,d0    ; キューブの RANDOM 用の乱数: 電源投入から毎フレーム進める（デモ・メニュー中も）
+        mulu    #25173,d0
+        addi.w  #13849,d0
+        move.w  d0,$203e32.l
+        moveq   #0,d1               ; CUBE INFO が有効か → $203ed1（メインはこれを見て HI・2P を描かない）
+        cmpi.b  #2,TOPSTATE.l
+        bne.s   fe_set
+        tst.b   MBS_RUN.l
+        beq.s   fe_set
+        tst.l   $2038de.l
+        beq.s   fe_set
+        cmpi.b  #1,$203f0b.l
+        bne.s   fe_set
+        tst.b   $203f0c.l
+        beq.s   fe_off
+        moveq   #1,d1
+        bra.s   fe_set
+fe_off: tst.b   $203ed1.l           ; 表示中に OFF にされた → 最上段を消して、メインにスコアの描き直しを頼む
+        beq.s   fe_set
+        move.w  #26,d0
+        move.w  #2,d1
+        moveq   #24,d7
+        jsr     ClrFld.l
+        move.b  #1,$203ed0.l
+        moveq   #0,d1
+fe_set: move.b  d1,$203ed1.l
+        tst.b   MBS_RUN.l           ; キューブラッシュでは残機が増えない（次に増える点数を 0 = もう増えない にしておく）
+        beq.s   fe_x
+        cmpi.b  #1,$203f0b.l
+        bne.s   fe_x
+        clr.l   $201058.l
+fe_x:
         cmpi.b  #2,TOPSTATE.l
         beq.w   fr_ingame
         tst.b   MBS_REQ.l
@@ -97,9 +129,22 @@ fr_ingame:
         tst.b   MBS_RUN.l
         beq.w   fr_nr
         jsr     CmdCalc.l
+        jsr     CubeCalc.l
         jsr     EditOv.l
-        tst.b   $203f0e.l       ; RANK DISP
+        tst.l   $2038de.l       ; 面が始まってから（武器選択などの画面では出さない）
         beq.w   fr_nr
+        jsr     CubeHud.l
+        tst.b   $203f0e.l       ; RANK DISP（ポーズで切り替え。OFF にしたら消す）
+        bne.s   fr_rk
+        tst.b   V_RKL.l
+        beq.w   fr_nr
+        clr.b   V_RKL.l
+        move.w  #43,d0
+        move.w  #3,d1
+        moveq   #7,d7
+        jsr     ClrFld.l
+        bra.w   fr_nr
+fr_rk:  move.b  #1,V_RKL.l
         jsr     RankDisp.l
 fr_nr:  cmpi.b  #1,MBS_PAUS.l
         bne.w   fr_np
@@ -107,6 +152,46 @@ fr_nr:  cmpi.b  #1,MBS_PAUS.l
 fr_np:  clr.b   $100f50.l
         rts
 
+
+; ---- キューブラッシュの並び: 毎フレーム、選ばれた H/S/T（R は毎フレーム乱数で選び直す）から
+;      1個目が出る瞬間に入れるフレームカウンタの値を表から引いて $203e30 に置く（メインの CubeSeed が使う）
+V_CRNG  = $203e32
+CubeCalc:
+        move.w  V_CRNG.l,d0
+        moveq   #0,d1
+        move.b  $203f35.l,d1    ; H: 0=R, 1..16
+        bne.s   cu_h
+        move.w  d0,d1
+        lsr.w   #8,d1
+        andi.w  #15,d1
+        addq.w  #1,d1
+cu_h:   subq.w  #1,d1
+        lsl.w   #2,d1           ; (h*4 + s)
+        moveq   #0,d2
+        move.b  $203f36.l,d2    ; S: 0=R, 1..4
+        bne.s   cu_s
+        move.w  d0,d2
+        lsr.w   #4,d2
+        andi.w  #3,d2
+        addq.w  #1,d2
+cu_s:   subq.w  #1,d2
+        add.w   d2,d1
+        mulu    #45,d1
+        moveq   #0,d2
+        move.b  $203f37.l,d2    ; T: 0=R, 1..45
+        bne.s   cu_t
+        moveq   #0,d2
+        move.w  d0,d2
+        divu    #45,d2
+        swap    d2
+        andi.l  #$ffff,d2
+        addq.w  #1,d2
+cu_t:   subq.w  #1,d2
+        add.w   d2,d1
+        add.w   d1,d1
+        lea     CUBETBL.l,a0
+        move.w  0(a0,d1.w),$203e30.l
+        rts
 """
 
 DATA_BASE = 0x39000
@@ -133,6 +218,14 @@ def apply(rom):
     dl['EXTB'] = DATA_BASE + len(data); data += mod_main.ext10_blob(True)
     import struct
     pt, bt = mod_main.progress_tables()
+    import mod_cube
+    if len(data) & 1: data += b'\0'
+    dl['CUBETBL'] = DATA_BASE + len(data); data += b''.join(struct.pack('>H', x) for x in mod_cube.table())
+    dl['CUBEDLT'] = DATA_BASE + len(data); data += b''.join(struct.pack('>H', x) for x in mod_cube.DELTAS)
+    import mod_menubg
+    for k, (n, blob) in mod_menubg.blobs().items():
+        if len(data) & 1: data += b'\0'
+        dl[k] = DATA_BASE + len(data); data += blob
     dl['PROGTBL'] = DATA_BASE + len(data); data += b''.join(struct.pack('>H', x) for x in pt)
     dl['BOSSTBL'] = DATA_BASE + len(data); data += b''.join(struct.pack('>H', x) for x in bt)
     dl['SHCOL'] = DATA_BASE + len(data)
@@ -145,6 +238,8 @@ def apply(rom):
     b, lab = asm68.assemble('V_INIT = $100f12\n' + src if 'V_INIT   =' not in src else src, SUB_FREE)
     assert SUB_FREE + len(b) <= DATA_BASE, hex(SUB_FREE + len(b))
     rom.put('sub', SUB_FREE, b, 'subcore')
+    rom.put('sub', 0xafc4, bytes.fromhex('4eb9') + lab['CubeStick'].to_bytes(4, 'big'), 'cube-stick', expect=bytes.fromhex('117c00010026'))
+    rom.put('sub', 0x877c, bytes.fromhex('4eb9') + lab['SprHook'].to_bytes(4, 'big') + bytes.fromhex('4e714e714e71'), 'menubg-spr', expect=bytes.fromhex('610000d213fc000000203936'))
     rom.put('sub', DATA_BASE, data, 'menudata')
     # IRQ1 ハンドラ(0xc6e)内の jsr $5c8 (0xc88) → jsr IrqHook
     rom.put('sub', 0xc88, bytes.fromhex('4eb9') + lab['IrqHook'].to_bytes(4, 'big'), 'irq1hook', expect=bytes.fromhex('4eb9000005c8'))
