@@ -51,7 +51,7 @@ StubIn:
         move.b  $c8003.l,d0
         not.b   d0
         move.b  d0,MB_P1.l
-        jsr     Lock.l
+        LOCKCALL
         move.b  $c8001.l,d0
         not.b   d0
         move.b  d0,MB_SYS.l
@@ -194,9 +194,8 @@ SkipType:
         tst.b   MB_RUN.l
         bne.s   sk_mod
         jmp     $3710.l
-sk_mod:                         ; テクニカル/ビギナー選択を飛ばして装備選択画面(副状態3)へ
-        move.b  #3,$4002b.l
-        rts
+sk_mod:                         ; 改造プレイもテクニカル/ビギナー選択を表示する（ビギナーは選べない: TypeBeg/TypeGrey）
+        jmp     $3710.l
 sk_set: move.b  MB_LIVES.l,$50(a0)
         rts
 
@@ -378,7 +377,7 @@ ph_rts: rts
 ; ---- 装備コマンド: サブCPUが「目標の装備にそろえるのに各枠を何回使うか」を計算済み(MB+$24〜 / 2P は +$2c〜) ----
 ; 枠 1=SPEED 2=MISSILE 3=DOUBLE 4=LASER 5=OPTION 6=SHIELD、+6 = スピードを2段階へ下げる印
 Command:
-        move.b  $103f22.l,d1    ; 残り回数 ($ff=無制限)
+        jsr     CMDCNT.l        ; d1 = 残り回数 ($ff=無制限。無敵中も無制限)
         beq.s   cm_r
         addq.b  #1,d1
         beq.s   cm_go
@@ -591,6 +590,7 @@ def boss_area_blob(base=0x103f40):
     assert len(b) <= 0xc0, len(b)
     return b + bytes(0xc0 - len(b))
 
+LOCK_SUSPEND = True        # 解除・ロックのコマンドを一時停止（True の間は常に解除状態）。戻すときは False
 INV_ADDR = 0xd6a0          # 0xd653〜0xd8f5 の未使用データ領域（エディット左右切り替えの後ろ）
 SRC_INV = CONSTS + """
 MB_INV  = $103f20
@@ -614,6 +614,34 @@ DieB:   bsr.s   InvChk
 db_inv: addq.l  #4,sp
         clr.w   $1a(a0)
         jmp     $ae52.l
+
+; ---- テクニカル/ビギナー選択（改造プレイ）: ビギナーは選べない・灰色 ----
+; 0x6b16 の andi.b #2,d6 / beq.s を置き換え（右でビギナーへ移る処理）
+TypeBeg: tst.b  MB_RUN.l
+        bne.s   tb_no
+        andi.b  #2,d6
+        beq.s   tb_no
+        rts
+tb_no:  addq.l  #4,sp
+        rts
+; 0x6a90 の jsr $e824（ビギナーの枠 = パレット $80600 を「選ばれていない色」にする）を置き換え
+TypeGrey: tst.b MB_RUN.l
+        beq.s   tg_n
+        lea     GREYPAL.l,a0
+        lea     $80600.l,a1
+        moveq   #15,d1
+tg_lp:  move.w  (a0)+,(a1)+
+        dbf     d1,tg_lp
+        rts
+tg_n:   jmp     $e824.l
+GREYPAL: GREYDATA
+; 装備コマンドの残り回数（無敵中は無制限 $ff として返す）
+CmdCnt: tst.b   MB_INV.l
+        beq.s   cc_n
+        moveq   #-1,d1
+        rts
+cc_n:   move.b  $103f22.l,d1
+        rts
 """
 
 def apply(rom):
@@ -624,13 +652,27 @@ def apply(rom):
     rom.put('main', 0xd8f6, b2, 'stubsB')
     rom.put('main', 0x154aa, bytes.fromhex('4eb9') + lab2['EvPtr'].to_bytes(4, 'big'), 'evptr', expect=bytes.fromhex('23ce00042e00'))
     rom.put('main', 0x3658, lab2['SkipType'].to_bytes(4, 'big'), 'skiptype', expect=bytes.fromhex('00003710'))
-    b3, lab3 = asm68.assemble(SRC_C.replace('PauseChk = $%x', 'PauseChk = $%x' % lab2['PauseChk']).replace('ApplyStage = $%x', 'ApplyStage = $%x' % lab2['ApplyStage']), 0x3fd9a)
+    import struct
+    d313 = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    gw = []
+    for i in range(16):                                   # ビギナーの枠の色(0x328c0)を灰色・やや暗く
+        v = struct.unpack('>H', d313[0x328c0 + 2*i:0x328c2 + 2*i])[0]
+        r, g, b_ = (v >> 10) & 31, (v >> 5) & 31, v & 31
+        y = int((r * 0.3 + g * 0.59 + b_ * 0.11) * 0.6 + 0.5)
+        gw.append((y << 10) | (y << 5) | y if v else 0)
+    src_inv = SRC_INV.replace('GREYDATA', 'dc.w    ' + ','.join('$%x' % x for x in gw))
+    bi, li = asm68.assemble(src_inv, INV_ADDR)
+    assert INV_ADDR + len(bi) <= 0xd8f5, hex(len(bi))
+    rom.img('main')[INV_ADDR:INV_ADDR + len(bi)] = bi
+    rom.used.append(('main', INV_ADDR, INV_ADDR + len(bi), 'invincible'))
+    b3, lab3 = asm68.assemble(SRC_C.replace('CMDCNT', '$%x' % li['CmdCnt']).replace('PauseChk = $%x', 'PauseChk = $%x' % lab2['PauseChk']).replace('ApplyStage = $%x', 'ApplyStage = $%x' % lab2['ApplyStage']), 0x3fd9a)
     assert 0x3fd9a + len(b3) <= 0x3ffc0, hex(len(b3))
     rom.put('main', 0x3fd9a, b3, 'stubsC')
     rom.put('main', 0x4cfc, bytes.fromhex('4eb9') + lab3['AreaTbl'].to_bytes(4, 'big'), 'areatbl', expect=bytes.fromhex('4df9000054fe'))
     rom.put('main', 0x28ec + 2*4, lab3['StageHook'].to_bytes(4, 'big'), 'stagehook', expect=bytes.fromhex('00003790'))
     rom.put('main', 0x28ec + 5*4, lab3['PlayHook'].to_bytes(4, 'big'), 'playhook', expect=bytes.fromhex('00003a24'))
-    b, lab = asm68.assemble(('Lock = $%x\n' % lab2['Lock']) + SRC_A, 0xd4aa)
+    srca = SRC_A.replace('LOCKCALL', 'move.b  #1,MB_UNLK.l     ; 解除/ロックのコマンドは一時停止中: 常に解除' if LOCK_SUSPEND else 'jsr     Lock.l')
+    b, lab = asm68.assemble(('Lock = $%x\n' % lab2['Lock']) + srca, 0xd4aa)
     assert len(b) <= 425, len(b)
     rom.put('main', 0xd4aa, b, 'stubsA')
     rom.put('main', 0x1d1e, bytes.fromhex('4eb9') + lab['StubIn'].to_bytes(4, 'big'), 'hook-in', expect=bytes.fromhex('4eb9000033b8'))
@@ -641,12 +683,10 @@ def apply(rom):
     mod_edit.apply_main(rom, open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read())
     print('edit L/R stub bytes', mod_edit.apply_lr(rom))
     # 無敵（改造プレイのみ・メニューの INVINCIBLE）: 自機が死亡に入る2か所の直前で、無敵なら当たりを消して通常の続きへ
-    bi, li = asm68.assemble(SRC_INV, INV_ADDR)
-    assert INV_ADDR + len(bi) <= 0xd8f5, hex(len(bi))
-    rom.img('main')[INV_ADDR:INV_ADDR + len(bi)] = bi
-    rom.used.append(('main', INV_ADDR, INV_ADDR + len(bi), 'invincible'))
     rom.put('main', 0x7bc4, bytes.fromhex('4eb9') + li['DieA'].to_bytes(4, 'big') + bytes.fromhex('4e71'), 'inv-a', expect=bytes.fromhex('13fc0001000400a2'))
     rom.put('main', 0xae22, bytes.fromhex('4eb9') + li['DieB'].to_bytes(4, 'big') + bytes.fromhex('4e71'), 'inv-b', expect=bytes.fromhex('13fc0001000400a2'))
+    rom.put('main', 0x6b16, bytes.fromhex('4eb9') + li['TypeBeg'].to_bytes(4, 'big'), 'type-beg', expect=bytes.fromhex('0206000267' + '1a'))
+    rom.put('main', 0x6a90, bytes.fromhex('4eb9') + li['TypeGrey'].to_bytes(4, 'big'), 'type-grey', expect=bytes.fromhex('4eb90000e824'))
     print('invincible stub bytes', len(bi))
     rom.free_main = [(0xd4aa + len(b), 0xd4aa + 425), (0xd8f6 + len(b2), 0xd8f6 + 532)]
     print('main free: A %d  B %d  C %d' % (425 - len(b), 532 - len(b2), 0x3ffc0 - 0x3fd9a - len(b3)))

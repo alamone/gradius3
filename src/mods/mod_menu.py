@@ -63,6 +63,10 @@ def build_data(base):
     put('PS_C1', b' CONTINUE\0')
     put('PS_G0', b'>GAME OVER\0')
     put('PS_G1', b' GAME OVER\0')
+    put('PS_I0', b'>INVINCIBLE\0')
+    put('PS_I1', b' INVINCIBLE\0')
+    put('PS_ON', b'ON \0')
+    put('PS_OFF', b'OFF\0')
     # 項目記述子 12B: labelptr.l type.b min.b max.b mboff.b pad.b strtab.l
     al(); lab['ITM'] = base + len(blob)
     for i, it in enumerate(ITEMS):
@@ -574,16 +578,19 @@ V_PST   = $100f50
 V_PSEL  = $100f51
 V_PPIN  = $100f52
 V_PSIN  = $100f53
-V_PSAV  = $100f60          ; 3行x14桁x2バイト = 84
+V_PSAV  = $101100          ; 4行x16桁x2バイト = 128（0x101100〜: 元のサブのプログラムが使っていない範囲）
+MBS_INV = $203f20          ; 無敵（メインの MB+$20）
+V_LINV  = $100f38          ; スタートメニューの前回値の写し（MB+$20 に対応）
 PX      = 26
 PY      = 14
-; ---- ポーズ窓: 保存/復元 (layer A, 行PY..PY+2, 桁PX..PX+13) ----
+PW      = 16
+; ---- ポーズ窓: 保存/復元 (layer A, 行PY..PY+3, 桁PX..PX+PW-1) ----
 PSave:  lea     V_PSAV.l,a0
         moveq   #0,d0
         bra.s   ps_go
 PRest:  lea     V_PSAV.l,a0
         moveq   #1,d0
-ps_go:  moveq   #2,d6
+ps_go:  moveq   #3,d6
         move.w  #PY,d1
 pr_row: move.w  d1,d3
         lsl.w   #6,d3
@@ -591,7 +598,7 @@ pr_row: move.w  d1,d3
         add.w   d3,d3
         lea     TILEA.l,a1
         adda.w  d3,a1
-        moveq   #13,d7
+        moveq   #PW-1,d7
 pr_col: tst.b   d0
         bne.s   pr_r
         move.b  1(a1),(a0)+
@@ -605,42 +612,56 @@ pr_n:   addq.w  #2,a1
         dbf     d6,pr_row
         rts
 
-PDraw:  move.w  #PX,d0
+; 1行描く: a0=文字列(選択中なら '>' 付き), d4=行番号(0..2) → PY+1+d4
+PLine:  move.w  #PX+1,d0
+        move.w  d4,d1
+        addi.w  #PY+1,d1
+        moveq   #0,d2
+        jmp     PutStr.l
+
+PDraw:  moveq   #3,d6
         move.w  #PY,d1
-        moveq   #13,d7
+pd_cl:  move.w  #PX,d0
+        moveq   #PW-1,d7
+        movem.l d1/d6,-(a7)
         jsr     ClrFld.l
-        move.w  #PX,d0
-        move.w  #PY+1,d1
-        moveq   #13,d7
-        jsr     ClrFld.l
-        move.w  #PX,d0
-        move.w  #PY+2,d1
-        moveq   #13,d7
-        jsr     ClrFld.l
+        movem.l (a7)+,d1/d6
+        addq.w  #1,d1
+        dbf     d6,pd_cl
         lea     PS_T.l,a0
-        move.w  #PX+4,d0
+        move.w  #PX+5,d0
         move.w  #PY,d1
         moveq   #0,d2
         jsr     PutStr.l
-        lea     PS_C0.l,a0
-        tst.b   V_PSEL.l
-        beq.s   pd_1
+        moveq   #0,d4
         lea     PS_C1.l,a0
-pd_1:   move.w  #PX+1,d0
-        move.w  #PY+1,d1
-        moveq   #0,d2
-        jsr     PutStr.l
-        lea     PS_G0.l,a0
         tst.b   V_PSEL.l
-        bne.s   pd_2
+        bne.s   pd_1
+        lea     PS_C0.l,a0
+pd_1:   bsr.w   PLine
+        moveq   #1,d4
         lea     PS_G1.l,a0
-pd_2:   move.w  #PX+1,d0
-        move.w  #PY+2,d1
+        cmpi.b  #1,V_PSEL.l
+        bne.s   pd_2
+        lea     PS_G0.l,a0
+pd_2:   bsr.w   PLine
+        moveq   #2,d4
+        lea     PS_I1.l,a0
+        cmpi.b  #2,V_PSEL.l
+        bne.s   pd_3
+        lea     PS_I0.l,a0
+pd_3:   bsr.w   PLine
+        lea     PS_OFF.l,a0
+        tst.b   MBS_INV.l
+        beq.s   pd_4
+        lea     PS_ON.l,a0
+pd_4:   move.w  #PX+13,d0
+        move.w  #PY+3,d1
         moveq   #0,d2
-        jsr     PutStr.l
-        rts
+        jmp     PutStr.l
 
 ; ---- ポーズ 1フレーム (MBS_PAUS==1 の間) ----
+; 上下: CONTINUE / GAME OVER / INVINCIBLE。INVINCIBLE の行では 左右・ショットで ON/OFF。START か ショットで決定
 PauseFrame:
         tst.b   V_PST.l
         bne.s   pf_run
@@ -660,22 +681,41 @@ pf_run: move.b  MBS_P1.l,d0
         move.b  d4,V_PSIN.l
         not.b   d5
         and.b   d4,d5
+        btst    #2,d1           ; 上
+        beq.s   pf_dn
+        subq.b  #1,V_PSEL.l
+        bpl.s   pf_rd
+        move.b  #2,V_PSEL.l
+        bra.s   pf_rd
+pf_dn:  btst    #3,d1           ; 下
+        beq.s   pf_lr
+        addq.b  #1,V_PSEL.l
+        cmpi.b  #3,V_PSEL.l
+        bcs.s   pf_rd
+        clr.b   V_PSEL.l
+        bra.s   pf_rd
+pf_lr:  cmpi.b  #2,V_PSEL.l
+        bne.s   pf_nm
         move.b  d1,d2
-        andi.b  #$0c,d2
+        andi.b  #$13,d2         ; 左右・ショット
         beq.s   pf_nm
-        eori.b  #1,V_PSEL.l
-        movem.l d1/d5,-(a7)
+        eori.b  #1,MBS_INV.l
+        move.b  MBS_INV.l,V_LINV.l
+pf_rd:  movem.l d1/d5,-(a7)
         jsr     PDraw.l
         movem.l (a7)+,d1/d5
+        rts
 pf_nm:  andi.b  #$18,d5
         bne.s   pf_ok
         btst    #4,d1
         beq.s   pf_ret
 pf_ok:  jsr     PRest.l
         clr.b   V_PST.l
-        move.b  V_PSEL.l,d0
-        addq.b  #2,d0
-        move.b  d0,MBS_PAUS.l
+        moveq   #2,d0           ; CONTINUE / INVINCIBLE の行 → 再開
+        cmpi.b  #1,V_PSEL.l
+        bne.s   pf_go
+        moveq   #3,d0           ; GAME OVER
+pf_go:  move.b  d0,MBS_PAUS.l
 pf_ret: rts
 """
 
