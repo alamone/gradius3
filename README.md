@@ -9,7 +9,7 @@
 |---|---|
 | `docs/index.html` | パッチ当てページ（GitHub Pages） |
 | `docs/versions.json` | 版ごとの変更点・確認項目・パッチ情報 |
-| `docs/patches/<版>/` | BPSパッチ（改造4本分）。公開は最新と1つ前の版のみ |
+| `docs/patches/<版>/` | BPSパッチ（改造4本分）。パッチの公開は最新と1つ前の版のみ（更新履歴は全版残す） |
 | `src/` | 改造のソース（68000アセンブラ＋ビルドスクリプト） |
 | `tools/bps.py` / `tools/release.py` | パッチ作成・リリース作成 |
 

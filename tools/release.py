@@ -46,12 +46,12 @@ if k >= 0:
 entry = {'version': ver, 'date': datetime.date.today().isoformat(), **({'build': build} if build else {}), **n, 'patches': patches}
 data['versions'] = [v for v in data['versions'] if v['version'] != ver]
 data['versions'].insert(0, entry)
-# 公開するのは最新と1つ前の版だけ。それより古い版は versions.json とパッチを削除
+# パッチを公開するのは最新と1つ前の版だけ。それより古い版はパッチを削除（更新履歴の説明は残す）
 KEEP = 2
 for v in data['versions'][KEEP:]:
     d = os.path.join(REPO, 'docs', 'patches', v['version'])
     if os.path.isdir(d):
         import shutil; shutil.rmtree(d); print('removed old patches', v['version'])
-data['versions'] = data['versions'][:KEEP]
+    v.pop('patches', None)
 json.dump(data, open(vj, 'w'), ensure_ascii=False, indent=1)
 print('versions.json updated:', ver)

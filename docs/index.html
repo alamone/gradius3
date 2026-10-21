@@ -168,7 +168,7 @@ function bpsApply(src, p) {
 }
 // ---- 状態 ----
 let DATA = null; const have = new Map(); // crc -> Uint8Array
-function curVer() { return DATA.versions.find(v => v.version === $('#ver').value) || DATA.versions[0]; }
+function curVer() { return DATA.versions.find(v => v.patches && v.version === $('#ver').value) || DATA.versions[0]; }
 function needList() {
   const v = curVer(); const L = [];
   for (const f of DATA.set.files) L.push({ label: f.name, crc: f.crc });
@@ -222,7 +222,7 @@ async function build() {
 }
 function verHtml(v, open) {
   const li = a => a && a.length ? '<ul>' + a.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '';
-  return `<details ${open ? 'open' : ''}><summary>v${esc(v.version)} <span class="tag">${esc(v.build ? v.build : v.date)}</span> ${esc(v.title || '')}</summary>
+  return `<details ${open ? 'open' : ''}><summary>v${esc(v.version)} <span class="tag">${esc(v.build ? v.build : v.date)}</span> ${esc(v.title || '')}${v.patches ? '' : ' <span class="tag">パッチ公開終了</span>'}</summary>
     ${v.changes && v.changes.length ? '<div><b>変更点</b>' + li(v.changes) + '</div>' : ''}
     ${v.verified && v.verified.length ? '<div><b>動作確認済み</b>' + li(v.verified) + '</div>' : ''}
     ${v.known && v.known.length ? '<div><b>未対応・注意</b>' + li(v.known) + '</div>' : ''}</details>`;
@@ -233,7 +233,7 @@ function verHtml(v, open) {
   const L = DATA.versions[0];
   $('#latest').innerHTML = verHtml(L, true);
   $('#history').innerHTML = DATA.versions.map((v, i) => `<div class="panel">${verHtml(v, i === 0)}</div>`).join('');
-  $('#ver').innerHTML = DATA.versions.map(v => `<option value="${esc(v.version)}">v${esc(v.version)}（${esc(v.build ? 'ビルド ' + v.build : v.date)}）</option>`).join('');
+  $('#ver').innerHTML = DATA.versions.filter(v => v.patches).map(v => `<option value="${esc(v.version)}">v${esc(v.version)}（${esc(v.build ? 'ビルド ' + v.build : v.date)}）</option>`).join('');
   $('#ver').onchange = refresh; refresh();
 })();
 const drop = $('#drop');
