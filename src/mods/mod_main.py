@@ -591,6 +591,31 @@ def boss_area_blob(base=0x103f40):
     assert len(b) <= 0xc0, len(b)
     return b + bytes(0xc0 - len(b))
 
+INV_ADDR = 0xd6a0          # 0xd653〜0xd8f5 の未使用データ領域（エディット左右切り替えの後ろ）
+SRC_INV = CONSTS + """
+MB_INV  = $103f20
+; Z=0 なら無敵（改造プレイ中かつ INVINCIBLE=ON）
+InvChk: tst.b   MB_RUN.l
+        beq.s   ic_r
+        tst.b   MB_INV.l
+ic_r:   rts
+; 0x7bc4 / 0xae22 の move.b #1,$400a2.l を置き換え（ここから先が死亡処理）
+DieA:   bsr.s   InvChk
+        bne.s   da_inv
+        move.b  #1,$400a2.l
+        rts
+da_inv: addq.l  #4,sp
+        clr.w   $1a(a0)
+        jmp     $7bf4.l
+DieB:   bsr.s   InvChk
+        bne.s   db_inv
+        move.b  #1,$400a2.l
+        rts
+db_inv: addq.l  #4,sp
+        clr.w   $1a(a0)
+        jmp     $ae52.l
+"""
+
 def apply(rom):
     import asm68
     # 組み立て順: B → C(PauseChk を参照) → A(IdleLock を参照)
@@ -615,6 +640,14 @@ def apply(rom):
     import mod_edit
     mod_edit.apply_main(rom, open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read())
     print('edit L/R stub bytes', mod_edit.apply_lr(rom))
+    # 無敵（改造プレイのみ・メニューの INVINCIBLE）: 自機が死亡に入る2か所の直前で、無敵なら当たりを消して通常の続きへ
+    bi, li = asm68.assemble(SRC_INV, INV_ADDR)
+    assert INV_ADDR + len(bi) <= 0xd8f5, hex(len(bi))
+    rom.img('main')[INV_ADDR:INV_ADDR + len(bi)] = bi
+    rom.used.append(('main', INV_ADDR, INV_ADDR + len(bi), 'invincible'))
+    rom.put('main', 0x7bc4, bytes.fromhex('4eb9') + li['DieA'].to_bytes(4, 'big') + bytes.fromhex('4e71'), 'inv-a', expect=bytes.fromhex('13fc0001000400a2'))
+    rom.put('main', 0xae22, bytes.fromhex('4eb9') + li['DieB'].to_bytes(4, 'big') + bytes.fromhex('4e71'), 'inv-b', expect=bytes.fromhex('13fc0001000400a2'))
+    print('invincible stub bytes', len(bi))
     rom.free_main = [(0xd4aa + len(b), 0xd4aa + 425), (0xd8f6 + len(b2), 0xd8f6 + 532)]
     print('main free: A %d  B %d  C %d' % (425 - len(b), 532 - len(b2), 0x3ffc0 - 0x3fd9a - len(b3)))
     return lab, lab2

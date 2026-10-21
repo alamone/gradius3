@@ -21,6 +21,7 @@ ITEMS = [
     ('HUNTER NEXT', 1, 0, 3, 0x1b, ['DEFAULT', 'TYPE 1', 'TYPE 2', 'TYPE 3'], 0),
     ('HUNTER TIME', 0, 0, 99, 0x1c, None, 0),
     ('RANK DISP', 1, 0, 1, 0x0e, ['OFF', 'ON'], 0),
+    ('INVINCIBLE', 1, 0, 1, 0x20, ['OFF', 'ON'], 0),   # 一時的な項目（無敵）
     ('START',     2, 0, 0, 0, None, 0),
     ('BACK TO DEMO', 2, 0, 0, 0, None, 0),
 ]
