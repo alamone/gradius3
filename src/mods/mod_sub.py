@@ -141,6 +141,7 @@ fe_set: move.b  d1,$203ed1.l
         bne.s   fe_x
         clr.l   $201058.l
         jsr     CrEnd.l
+        jsr     HuntCtl.l
 fe_x:   moveq   #0,d1               ; CUBE COLOR が有効か → $203ed4（メインはこれを見てキューブの色を写す）
         cmpi.b  #2,TOPSTATE.l
         bne.s   fc_s
@@ -214,6 +215,7 @@ CrEnd:  cmpi.b  #2,TOPSTATE.l
         ori.b   #$80,$20101b.l
         rts
 ce_done: move.b #1,$203ed3.l
+        move.b  #1,$201027.l    ; 爆発の演出を飛ばす（死亡の動きの「終わり」の印 → すぐ再開へ）
 ce_off: clr.b   $203ed2.l
         rts
 ce_clr: clr.b   $203ed3.l
@@ -246,6 +248,45 @@ BrSkip: cmpi.b  #2,TOPSTATE.l
         bcc.s   bk_r
         move.l  d2,$2038de.l
 bk_r:   rts
+
+; ---- キューブラッシュのオプションハンター（ポーズの CUBE HUNTER）: OFF = 出さない / ON = キューブラッシュ1回につき最初の1体だけ
+; ハンター = 種類($28) $4200 のオブジェクト。出させないものは出た瞬間に消す
+V_HUSED = $101228               ; このキューブラッシュで1体出した
+V_HALLOW = $10122c              ; 出してよいハンターの場所
+HuntCtl: cmpi.b #2,TOPSTATE.l
+        bne.s   hu_r
+        tst.l   $2038de.l
+        beq.s   hu_r
+        tst.w   $203e36.l       ; まだ1個目のキューブが出ていない（始め直し）→ 数え直す
+        bne.s   hu_1
+        clr.b   V_HUSED.l
+hu_1:   move.l  V_HALLOW.l,d1
+        beq.s   hu_2
+        movea.l d1,a1
+        tst.b   (a1)
+        beq.s   hu_c
+        cmpi.w  #$4200,$28(a1)
+        beq.s   hu_2
+hu_c:   clr.l   V_HALLOW.l
+hu_2:   lea     $202320.l,a0
+        moveq   #31,d6
+hu_l:   tst.b   (a0)
+        beq.s   hu_n
+        cmpi.w  #$4200,$28(a0)
+        bne.s   hu_n
+        cmpa.l  V_HALLOW.l,a0
+        beq.s   hu_n
+        tst.b   $203f33.l
+        beq.s   hu_d
+        tst.b   V_HUSED.l
+        bne.s   hu_d
+        move.b  #1,V_HUSED.l
+        move.l  a0,V_HALLOW.l
+        bra.s   hu_n
+hu_d:   clr.b   (a0)
+hu_n:   lea     $50(a0),a0
+        dbf     d6,hu_l
+hu_r:   rts
 
 CubeCalc:
         move.w  V_CRNG.l,d0

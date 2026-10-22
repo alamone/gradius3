@@ -169,11 +169,13 @@ def build_data(base):
     put('PS_Q1', b' CUBE INFO\0')
     put('PS_K0', b'>CUBE COLOR\0')
     put('PS_K1', b' CUBE COLOR\0')
+    put('PS_U0', b'>CUBE HUNTER\0')
+    put('PS_U1', b' CUBE HUNTER\0')
     put('PS_ON', b'ON \0')
     put('PS_OFF', b'OFF\0')
     # ポーズの項目: 選択中の文字列.l 通常の文字列.l ON/OFF の場所.l(0=なし)
     al(); lab['PTAB'] = base + len(blob)
-    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_Q0', 'PS_Q1', 0x203f0c), ('PS_K0', 'PS_K1', 0x203f34)]:
+    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_Q0', 'PS_Q1', 0x203f0c), ('PS_K0', 'PS_K1', 0x203f34), ('PS_U0', 'PS_U1', 0x203f33)]:
         blob.extend(struct.pack('>III', lab[a], lab[b], f))
     # 項目記述子 12B: labelptr.l type.b min.b max.b mboff.b pad.b strtab.l
     al(); lab['ITM'] = base + len(blob)
@@ -506,6 +508,7 @@ mi_ah:  move.b  (a0),(a1)+
         clr.b   $203f0e.l       ; RANK DISP・CUBE INFO はポーズで切り替える（始めは OFF）
         clr.b   $203f0c.l
         clr.b   $203f34.l       ; CUBE COLOR
+        move.b  #1,$203f33.l    ; CUBE HUNTER（始めは ON = 1回目だけ出す）
         jsr     ClrAll.l
         jsr     MbgInit.l
         lea     HELP2.l,a0
@@ -1148,12 +1151,12 @@ V_PST   = $100f50
 V_PSEL  = $100f51
 V_PPIN  = $100f52
 V_PSIN  = $100f53
-V_PSAV  = $101100          ; 7行x16桁x2バイト = 224（〜0x1011df）（0x101100〜: 元のサブのプログラムが使っていない範囲）
+V_PSAV  = $101300          ; 8行x18桁x2バイト = 288（〜0x10141f）（ポーズの間だけ使う。プレイ中は元のプログラムが使っていない範囲）
 MBS_INV = $203f20          ; 無敵（メインの MB+$20）
 V_LINV  = $203ef0          ; スタートメニューの前回値の写し（MB+$20 に対応）
 PX      = 26
 PY      = 14
-PW      = 16
+PW      = 18
 ; ---- ポーズ窓: 保存/復元 (layer A, 行PY..PY+3, 桁PX..PX+PW-1) ----
 PSave:  lea     V_PSAV.l,a0
         moveq   #0,d0
@@ -1189,8 +1192,8 @@ PLine:  move.w  #PX+1,d0
         moveq   #0,d2
         jmp     PutStr.l
 
-; d6 = 項目の数（キューブラッシュは6、ほかは4）
-PCnt6:  moveq   #6,d6
+; d6 = 項目の数（キューブラッシュは7、ほかは4）
+PCnt6:  moveq   #7,d6
         cmpi.b  #1,$203f0b.l
         beq.s   pc6_r
         moveq   #4,d6
@@ -1206,7 +1209,7 @@ pd_cl:  move.w  #PX,d0
         addq.w  #1,d1
         dbf     d6,pd_cl
         lea     PS_T.l,a0
-        move.w  #PX+5,d0
+        move.w  #PX+6,d0
         move.w  #PY,d1
         moveq   #0,d2
         jsr     PutStr.l
@@ -1227,7 +1230,7 @@ pd_u:   movem.l d4/a2,-(a7)
         beq.s   pd_v
         lea     PS_ON.l,a0
 pd_v:   movem.l d4/a2,-(a7)
-        move.w  #PX+13,d0
+        move.w  #PX+15,d0
         move.w  d4,d1
         addi.w  #PY+1,d1
         moveq   #0,d2
