@@ -38,7 +38,7 @@ CubeSeed:
         jmp     CUBESEED2.l      ; 本体は 0xd653〜 の空き領域（CubeSeed2）
         even
 StubIn:
-        jsr     $33b8.l
+        jsr     $33b8.w
         move.b  $c8003.l,d0
         not.b   d0
         move.b  d0,MB_P1.l
@@ -90,7 +90,7 @@ hs_k:
         bne.s   hs_norm
 hs_go:
         moveq   #-$5f,d7        ; メニューの曲: 未使用曲 A1 を鳴らす（音量はサウンドROM側で半分に）
-        jsr     $2b0c.l
+        jsr     $2b0c.w
         move.b  d3,MB_REQ.l
         move.b  d2,MB_KIND.l
         clr.b   MB_DONE.l
@@ -98,7 +98,7 @@ hs_go:
         ori     #1,ccr
         rts
 hs_norm:
-        jmp     $2968.l
+        jmp     $2968.w
 
 ; 新トップ状態3: メニュー実行中（サブCPUが描画・操作）。確定/キャンセルを待つ
 ModState:
@@ -117,14 +117,14 @@ ModState:
         cmpi.b  #2,MB_KIND.l
         beq.s   ms_p2
         moveq   #1,d7
-        jsr     $2a76.l
+        jsr     $2a76.w
         clr.b   $40080.l
         bra.s   ms_begin
 ms_p2:  moveq   #2,d7
-        jsr     $2a76.l
+        jsr     $2a76.w
         move.b  #1,$40080.l
 ms_begin:
-        jsr     $29c0.l
+        jsr     $29c0.w
         jsr     ApplyStart.l
         clr.b   MB_REQ.l
         clr.b   MB_DONE.l
@@ -303,9 +303,9 @@ lk_act: clr.b   (a0)
 ; スコア表示(0x180a: 2P→HI→1P の順に3つ描く)の入口: キューブラッシュで CUBE INFO を ON にしている間は 1P だけ描く（HI・2P の場所にキューブの情報）
 ScoreHk: tst.b  $103ed1.l       ; サブが「CUBE INFO 表示中」としたとき
         bne.s   sk_1p
-        jmp     $180a.l
+        jmp     $180a.w
 sk_1p:  moveq   #0,d0
-        jmp     $180e.l
+        jmp     $180e.w
 ; ---- 開始時のハンターの設定（PlayHook から） ----
 PendB:  move.b  $103f1b.l,d0    ; HUNTER NEXT (0=そのまま, 1..3 → $42e73=0..2)
         beq.s   pb_h1
@@ -425,7 +425,7 @@ ph_g:   move.b  $103f23.l,d0    ; CAPSULE (0=そのまま, 1〜7 = SPEEDUP〜!):
         move.b  d0,$6a(a2)
 ph_h2:
 ph_x:   movem.l (a7)+,d0-d7/a0-a6
-ph_go:  jmp     $3a24.l
+ph_go:  jmp     $3a24.w
 ph_rts: rts
 
 ; ---- 装備コマンド: サブCPUが「目標の装備にそろえるのに各枠を何回使うか」を計算済み(MB+$24〜 / 2P は +$2c〜) ----
@@ -521,11 +521,11 @@ sh_b1:  cmp.b   $103f38.l,d0    ; 面が変わった回数を数え、一巡し�
         cmpi.b  #10,$103f39.l   ; 開始面 + 8面 → 開始面に戻った(10回目)
         bcs.s   sh_go
         move.b  #3,$103f06.l    ; 一巡した → ポーズの「GAME OVER」と同じ処理をプレイ開始時に行わせる
-sh_go:  jmp     $3790.l
+sh_go:  jmp     $3790.w
 
 ; ---- エリア開始表の差し替え (0x4cfc の lea $54fe,a6 を置換) : 改造プレイ時のみ独自表 ----
 AreaTbl:
-        lea     $54fe.l,a6
+        lea     $54fe.w,a6
         tst.b   MB_RUN.l
         beq.s   at_r
         lea     $103f40.l,a6    ; サブCPUが共有RAMに置く独自エリア表(ポインタ16個+表)
@@ -713,7 +713,7 @@ DieA:   bsr.s   InvChk
         rts
 da_inv: addq.l  #4,sp
         clr.w   $1a(a0)
-        jmp     $7bf4.l
+        jmp     $7bf4.w
 DieB:   bsr.s   InvChk
         bne.s   db_inv
         move.b  #1,$400a2.l
@@ -787,7 +787,7 @@ pc_r:   rts
 ; 0x1d24 の jsr $326e（CREDIT の表示）を置き換え: 隠しメニュー表示中（トップ状態3）は出さない
 CredHook: cmpi.b #3,$40005.l
         beq.s   ch_r
-        jmp     $326e.l
+        jmp     $326e.w
 ch_r:   rts
 ; 面クリア → 次の面（状態7 の 0x3c7a: clr.w $101052 を置き換え）。ボスラッシュなら次の面もボス手前から
 NextStg: tst.b  MB_RUN.l
@@ -823,12 +823,12 @@ ns3:    add.w   d0,d0
 ns_n:   clr.w   $101052.l
         rts
 ; 0x68d4（次の面へ）の中の jsr $695c（位置を0に戻す）を置き換え: ボスラッシュなら 0x4ce8 でボス手前の位置を入れ直す
-NextPos: jsr    $695c.l
+NextPos: jsr    $695c.w
         tst.b   MB_RUN.l
         beq.s   np_r
         cmpi.b  #2,MB_MODE.l
         bne.s   np_r
-        jmp     $4ce8.l
+        jmp     $4ce8.w
 np_r:   rts
 ; 装備コマンドの残り回数（無敵中は無制限 $ff として返す）
 CmdCnt: tst.b   MB_INV.l        ; d1 = 残り回数（$ff=無制限。無敵中も無制限）。0 でなければ装備コマンドを使う

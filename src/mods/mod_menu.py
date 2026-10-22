@@ -136,6 +136,8 @@ def build_data(base):
     put('HELP2', b'PUSH START\0')
     put('PS_T', b'PAUSE\0')
     put('RK_T', b'RANK>\0')
+    put('PO_X', b'X>\0')
+    put('PO_Y', b'Y>\0')
     put('LG_T', b'LAG>\0')
     put('CH_C', b'CUBE>\0')
     put('CH_H', b'H>\0')
@@ -170,13 +172,15 @@ def build_data(base):
     put('PS_Q1', b' CUBE INFO\0')
     put('PS_K0', b'>CUBE COLOR\0')
     put('PS_K1', b' CUBE COLOR\0')
+    put('PS_P0', b'>POS DISP\0')
+    put('PS_P1', b' POS DISP\0')
     put('PS_U0', b'>CUBE HUNTER\0')
     put('PS_U1', b' CUBE HUNTER\0')
     put('PS_ON', b'ON \0')
     put('PS_OFF', b'OFF\0')
     # ポーズの項目: 選択中の文字列.l 通常の文字列.l ON/OFF の場所.l(0=なし)
     al(); lab['PTAB'] = base + len(blob)
-    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_Q0', 'PS_Q1', 0x203f0c), ('PS_K0', 'PS_K1', 0x203f34), ('PS_U0', 'PS_U1', 0x203f33)]:
+    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_P0', 'PS_P1', 0x203f2b), ('PS_Q0', 'PS_Q1', 0x203f0c), ('PS_K0', 'PS_K1', 0x203f34), ('PS_U0', 'PS_U1', 0x203f33)]:
         blob.extend(struct.pack('>III', lab[a], lab[b], f))
     # 項目記述子 12B: labelptr.l type.b min.b max.b mboff.b pad.b strtab.l
     al(); lab['ITM'] = base + len(blob)
@@ -509,9 +513,10 @@ mi_ah:  move.b  (a0),(a1)+
         move.b  (a2)+,(a0)+
         dbf     d0,mi_ah
         clr.b   $203f0e.l       ; RANK DISP・CUBE INFO はポーズで切り替える（始めは OFF）
+        clr.b   $203f2b.l       ; POS DISP
         clr.b   $203f0c.l
         clr.b   $203f34.l       ; CUBE COLOR
-        move.b  #1,$203f33.l    ; CUBE HUNTER（始めは ON = 1回目だけ出す）
+        clr.b   $203f33.l       ; CUBE HUNTER（始めは OFF = 出さない）
         jsr     ClrAll.l
         jsr     MbgInit.l
         lea     HELP2.l,a0
@@ -1150,11 +1155,69 @@ rd_v:   move.w  #49,d0
         jmp     PutStr.l
 rd_x:   rts
 
+; ---- POS DISP（ポーズで切り替え）: RANK の下の段に画面の位置 「X:1CA0 Y:0200」（ゲームの進み具合の値 = 画面の位置÷0x100）
+V_PSL   = $101231          ; 位置を表示しているか（OFF にしたら消す）
+PosChk: tst.b   MBS_RUN.l
+        beq.w   po_x
+        cmpi.b  #2,TOPSTATE.l
+        bne.w   po_x
+        tst.l   $2038de.l
+        beq.w   po_x
+        tst.b   $203f2b.l
+        bne.s   po_on
+        tst.b   V_PSL.l
+        beq.w   po_x
+        clr.b   V_PSL.l
+        move.w  #38,d0
+        move.w  #4,d1
+        moveq   #13,d7
+        jmp     ClrFld.l
+po_on:  move.b  #1,V_PSL.l
+        move.w  FRAMECNT.l,d0   ; 4フレームに1回
+        andi.w  #3,d0
+        cmpi.w  #3,d0
+        bne.w   po_x
+        jsr     PlusChr.l
+        lea     PO_X.l,a0
+        move.w  #38,d0
+        move.w  #4,d1
+        move.b  #ATTRLAB,d2
+        jsr     PutStr.l
+        lea     PO_Y.l,a0
+        move.w  #45,d0
+        move.w  #4,d1
+        move.b  #ATTRLAB,d2
+        jsr     PutStr.l
+        move.l  $2038de.l,d5     ; X÷0x100
+        lsr.l   #8,d5
+        move.w  #40,d0
+        bsr.s   PoHex
+        move.l  $2038e2.l,d5
+        lsr.l   #8,d5
+        move.w  #47,d0
+PoHex:  lea     V_TMP.l,a0      ; d5.w を16進4桁で (d0=桁)
+        moveq   #3,d6
+ph_l:   rol.w   #4,d5
+        move.b  d5,d7
+        andi.b  #$0f,d7
+        addi.b  #$30,d7
+        cmpi.b  #$3a,d7
+        bcs.s   ph_d
+        addq.b  #7,d7           ; A〜F
+ph_d:   move.b  d7,(a0)+
+        dbf     d6,ph_l
+        clr.b   (a0)
+        lea     V_TMP.l,a0
+        move.w  #4,d1
+        moveq   #0,d2
+        jmp     PutStr.l
+po_x:   rts
+
 V_PST   = $100f50
 V_PSEL  = $100f51
 V_PPIN  = $100f52
 V_PSIN  = $100f53
-V_PSAV  = $101300          ; 8行x18桁x2バイト = 288（〜0x10141f）（ポーズの間だけ使う。プレイ中は元のプログラムが使っていない範囲）
+V_PSAV  = $101300          ; 10行x18桁x2バイト = 360（〜0x101467）（ポーズの間だけ使う。プレイ中は元のプログラムが使っていない範囲）
 MBS_INV = $203f20          ; 無敵（メインの MB+$20）
 V_LINV  = $203ef0          ; スタートメニューの前回値の写し（MB+$20 に対応）
 PX      = 26
@@ -1195,11 +1258,11 @@ PLine:  move.w  #PX+1,d0
         moveq   #0,d2
         jmp     PutStr.l
 
-; d6 = 項目の数（キューブラッシュは7、ほかは4）
-PCnt6:  moveq   #7,d6
+; d6 = 項目の数（キューブラッシュは8、ほかは5）
+PCnt6:  moveq   #8,d6
         cmpi.b  #1,$203f0b.l
         beq.s   pc6_r
-        moveq   #4,d6
+        moveq   #5,d6
 pc6_r:  rts
 
 PDraw:  bsr.s   PCnt6

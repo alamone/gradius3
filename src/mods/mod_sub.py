@@ -142,6 +142,12 @@ fe_set: move.b  d1,$203ed1.l
         clr.l   $201058.l
         jsr     CrEnd.l
         jsr     HuntCtl.l
+        cmpi.b  #2,TOPSTATE.l   ; キューブラッシュ: カプセルゲージは SPEED UP に固定（使ってもまた SPEED UP。5速まで）
+        bne.s   fe_g
+        tst.l   $2038de.l
+        beq.s   fe_g
+        move.b  #1,$20106a.l
+fe_g:
 fe_x:   moveq   #0,d1               ; CUBE COLOR が有効か → $203ed4（メインはこれを見てキューブの色を写す）
         cmpi.b  #2,TOPSTATE.l
         bne.s   fc_s
@@ -185,7 +191,8 @@ fr_ingame:
         bra.w   fr_nr
 fr_rk:  move.b  #1,V_RKL.l
         jsr     RankDisp.l
-fr_nr:  cmpi.b  #1,MBS_PAUS.l
+fr_nr:  jsr     PosChk.l
+        cmpi.b  #1,MBS_PAUS.l
         bne.w   fr_np
         jmp     PauseFrame.l
 fr_np:  clr.b   $100f50.l
@@ -210,6 +217,15 @@ CrEnd:  cmpi.b  #2,TOPSTATE.l
         bne.s   ce_off
         cmpi.b  #4,$201001.l    ; 死亡中になった → 済み
         beq.s   ce_done
+        move.w  FRAMECNT.l,d0   ; 画面が止まってから約2秒（崩れた壁の破片が消えきるまで）待つ。ボスは約3.7秒後に見え始める
+        tst.w   V_CEW.l
+        bne.s   ce_w
+        addq.w  #1,d0           ; 着いたフレーム+1 を覚える（0 = まだ）
+        move.w  d0,V_CEW.l
+        rts
+ce_w:   sub.w   V_CEW.l,d0
+        cmpi.w  #119,d0
+        bcs.s   ce_r
         ; 当たり判定は使わず、自機を「死亡の動きが終わった」状態にする（爆発・死ぬ音・曲の止めを出さない）
         move.b  #4,$201001.l
         move.b  #1,$201027.l
@@ -217,8 +233,9 @@ CrEnd:  cmpi.b  #2,TOPSTATE.l
 ce_done: move.b #1,$203ed3.l
         move.b  #1,$201027.l    ; 爆発の演出を飛ばす（死亡の動きの「終わり」の印 → すぐ再開へ）
 ce_off: clr.b   $203ed2.l
-        rts
-ce_clr: clr.b   $203ed3.l
+ce_r:   rts
+ce_clr: clr.w   V_CEW.l
+        clr.b   $203ed3.l
         clr.b   $203ed2.l
         rts
 
@@ -251,6 +268,7 @@ bk_r:   rts
 
 ; ---- キューブラッシュのオプションハンター（ポーズの CUBE HUNTER）: OFF = 出さない / ON = キューブラッシュ1回につき最初の1体だけ
 ; ハンター = 種類($28) $4200 のオブジェクト。出させないものは出た瞬間に消す
+V_CEW   = $203ed6               ; キューブラッシュの終わり: 画面が止まったフレーム+1（共有RAMの空き。サブの私有RAMは途中で消されることがある）
 V_HUSED = $101228               ; このキューブラッシュで1体出した
 V_HALLOW = $10122c              ; 出してよいハンターの場所
 HuntCtl: cmpi.b #2,TOPSTATE.l
