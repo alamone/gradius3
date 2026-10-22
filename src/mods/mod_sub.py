@@ -30,7 +30,18 @@ SRC = CONSTS + """
 ; サブ IRQ1(垂直同期, 毎フレーム) の前に割り込ませる。元のハンドラ 0x5c8 へ続ける
 IrqHook:
         movem.l d0-d7/a0-a6,-(a7)
-        lea     AREABLOB.l,a0           ; 独自エリア表を共有RAMへ (ボスラッシュ時は専用表)
+        moveq   #0,d0                   ; 独自エリア表を共有RAMへ: 今の面(0〜9)の分 (ボスラッシュ時は専用表)
+        move.b  $201051.l,d0
+        btst    #2,$203f1a.l            ; メニューから始めた直後（面・エリアをまだ反映していない）はメニューで選んだ面
+        beq.s   sb_sc
+        move.b  $203f08.l,d0
+        subq.b  #1,d0
+sb_sc:  cmpi.b  #9,d0
+        bls.s   sb_s9
+        moveq   #9,d0
+sb_s9:  mulu    #192,d0
+        lea     AREABLOB.l,a0
+        adda.l  d0,a0
         cmpi.b  #2,$203f0b.l
         bne.s   sb_a0
         lea     BOSSBLOB.l,a0
@@ -205,17 +216,18 @@ cu_t:   subq.w  #1,d2
         rts
 """
 
-DATA_BASE = 0x39000
+DATA_BASE = 0x39400
 WTYPE_BYTES = bytes([1,3,1, 3,1,4, 4,2,2, 2,4,3])   # TYPE A..D -> (missile, double, laser)
 
 def apply(rom):
     import asm68, mod_menu, os
     import mod_main
     data, dl = mod_menu.build_data(DATA_BASE)
-    ab = mod_main.area_table_blob()
+    abs_ = [mod_main.area_table_blob(st) for st in range(10)]
+    ab = abs_[0]
     if len(data) & 1: data += b'\0'
     dl['AREABLOB'] = DATA_BASE + len(data); dl['AREACNT'] = len(ab) // 4 - 1
-    data += ab
+    data += b''.join(abs_)
     bb = mod_main.boss_area_blob(); assert len(bb) == len(ab)
     dl['BOSSBLOB'] = DATA_BASE + len(data); data += bb
     import mod_edit

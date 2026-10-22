@@ -7,7 +7,24 @@ import struct
 
 # (ラベル, 種別, 最小, 最大, MBオフセット, 値文字列 or None, 既定値)   種別 0=数値 1=列挙 2=アクション
 # 種別 3 = 面/エリアの表の1行（最小値=面番号 1..12、最大値=その面のエリア数）
-AREAS = [4, 5, 9, 1, 5, 4, 3, 4, 3, 10, 2, 0, 5]   # 選べるエリア数。1面V・7面IV・8面V はボス戦中の復活地点で、そこから開始すると即面クリアになるため除外
+AREAS = [5, 5, 9, 1, 7, 5, 4, 5, 3, 12, 2, 0, 5]   # 選べるエリア数。1面V・7面IV・8面V はボス戦中の復活地点で、そこから開始すると即面クリアになるため除外（代わりに ❶ボスの手前）
+# 各行の表示（英字は普通の文字、数字は白抜き ❶〜❹）
+_W = lambda n: '#%d' % n
+AREA_LABELS = [
+    ['A', 'B', 'C', 'D', _W(1)],                                  # 1面: ❶ボスの手前
+    ['A', 'B', 'C', 'D', 'E'],                                    # 2面
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', _W(1)],              # 3面: ❶ビッグコアMkIIIの手前
+    ['A'],                                                        # 4面
+    ['A', 'B', 'C', 'D', 'E', _W(1), _W(2)],                      # 5面: ❶中ボスの手前 ❷ボスの手前
+    ['A', 'B', 'C', 'D', _W(1)],                                  # 6面
+    ['A', 'B', 'C', _W(1)],                                       # 7面
+    ['A', 'B', 'C', 'D', _W(1)],                                  # 8面
+    ['A', _W(1), _W(2)],                                          # 9面: ❶キューブ地帯の手前 ❷ボスの手前
+    ['A', _W(1), 'B', 'C', 'D', 'E', 'F', 'G', _W(2), 'H', _W(3), _W(4)],   # 10面: ❶ボスラッシュ直後 ❷クラブ ❸ラスボスの手前 ❹脱出
+    ['A', 'B'],                                                   # EX STAGE
+    [],
+    ['A', 'B', 'C', 'D', 'E'],                                    # BOSS RUSH
+]
 STAGE_LABELS = ['STAGE   %d' % i for i in range(1, 10)] + ['STAGE  10', 'EX STAGE', '', 'BOSS RUSH']   # 数字の右端を BOSS RUSH の H にそろえる
 # 行の並び: 面1〜10, BOSS RUSH(内部の面番号13), EX STAGE(11。A=グラディウス B=サラマンダ → 開始時に 11/12)
 ROW_ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 10]
@@ -62,8 +79,31 @@ def cube_orig_palettes():
         out += struct.pack('>I', 0x80000 + pl * 32) + b''.join(struct.pack('>H', P[pl*16+i]) for i in range(16))
     return bytes(out)
 ROMAN = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']   # エリア名(英字)
+# エリアの英字を「白抜き」（塗った四角から文字を抜く）で、すき間なしに並べる。
+# 文字はメニューの間だけ、メニューで使わない文字の場所（KONAMI ロゴの 0x31〜0x3a）を借りて描き、メニューを出るときに元に戻す
+AREA_TILE0 = 0x31
+# 色番号（メニューの文字のパレット）: 普段 = 四角 4番(青)／数字 1番(白) パレット4、選択中 = 四角 10番(赤)／数字 1番(白) パレット4、
+#   使えない = 四角 10番(青)／数字 15番(使えない英字と同じ色) パレット5
+AREA_COLS = [(0x4, 0x1), (0xa, 0x1), (0xa, 0xf)]   # [普段, 選択中, 使えない] の (四角, 数字)
+AREA_FONT = {   # 白抜きの数字（四角の中に 5x6 で抜く）
+ '1':["..#..",".##..","..#..","..#..","..#..",".###."], '2':[".###.","#...#","...#.","..#..",".#...","#####"],
+ '3':["####.","....#",".###.","....#","....#","####."], '4':["...#.","..##.",".#.#.","#..#.","#####","...#."]}
+AREA_NUMS = ['1', '2', '3', '4']
+def area_tiles():
+    out = bytearray()
+    for box, dig in AREA_COLS:
+        for ch in AREA_NUMS:
+            px = [[0]*8 for _ in range(8)]
+            for y in range(7):
+                for x in range(7): px[y][x] = box
+            for y, r in enumerate(AREA_FONT[ch]):
+                for x, c in enumerate(r):
+                    if c == '#': px[1+y][1+x] = dig
+            for y in range(8):
+                for x in range(0, 8, 2): out.append((px[y][x] << 4) | px[y][x+1])
+    return bytes(out)
 GRID_COL = 26
-ROMAN_OFS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
+ROMAN_OFS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]   # 1文字ずつ空ける
 ATTR_SELGRID = 0x80      # 選択中のマスの色（パレット4: アトラクト後はオレンジ）
 ATTR_DIS = 0xa0          # MODE で使われないマスの色（パレット5: 暗い青紫）
 NITEM = len(ITEMS)
@@ -147,6 +187,13 @@ def build_data(base):
     blob.extend(b'\xff\xff')
     # ローマ数字(エリア)
     for i, r in enumerate(ROMAN): put(f'RM{i}', r.encode() + b'\0')
+    for i in range(4): put(f'RW{i+1}', bytes([AREA_TILE0 + i + 0x30, 0, AREA_TILE0 + 4 + i + 0x30, 0, AREA_TILE0 + 8 + i + 0x30, 0]))   # 借りた文字（白抜きの 1〜4）: 普段, 選択中, 使えない
+    al(); lab['AREAGFX'] = base + len(blob); blob.extend(area_tiles())
+    al(); lab['ROWLAB'] = base + len(blob)                 # 行(面番号1〜13) × 12 の文字列ポインタ
+    for labs in AREA_LABELS:
+        labs = list(labs) + ['A'] * (12 - len(labs))
+        for t in labs:
+            blob.extend(struct.pack('>I', lab['RW' + t[1:]] if t.startswith('#') else lab['RM%d' % ROMAN.index(t)]))
     al(); lab['ROMAN'] = base + len(blob)
     for i in range(len(ROMAN)): blob.extend(struct.pack('>I', lab[f'RM{i}']))
     lab['ROMOFS'] = base + len(blob); blob.extend(bytes(ROMAN_OFS))
@@ -393,8 +440,24 @@ dg_n:   moveq   #0,d3
         move.b  0(a0,d3.w),d0
         addi.w  #GRIDCOL,d0
         lsl.w   #2,d3
-        lea     ROMAN.l,a0
+        moveq   #0,d7           ; この行（面番号 1〜13）の表示: ROWLAB[(面-1)*12 + 列]
+        move.b  5(a5),d7
+        subq.w  #1,d7
+        mulu    #48,d7
+        add.w   d7,d3
+        lea     ROWLAB.l,a0
         movea.l 0(a0,d3.w),a0
+        cmpi.b  #$61,(a0)       ; 白抜きの数字: 普段・選択中=パレット4（選択中は選択中用の文字）/ 使えない=パレット5 で使えない用の文字
+        bcs.s   dg_p
+        cmpi.b  #ATTRDIS,d2
+        bne.s   dg_q1
+        addq.l  #4,a0
+        bra.s   dg_p
+dg_q1:  cmpi.b  #ATTRSELGRID,d2
+        bne.s   dg_q2
+        addq.l  #2,a0
+dg_q2:  move.b  #$80,d2
+dg_p:
         move.w  V_Y.l,d1
         movem.l d6/a5,-(a7)
         jsr     PutStr.l
@@ -423,7 +486,19 @@ mi_dl:  moveq   #0,d0
         beq.s   mi_scr
         move.b  (a0)+,0(a1,d0.w)
         bra.s   mi_dl
-mi_scr: clr.b   $203f0e.l       ; RANK DISP・CUBE INFO はポーズで切り替える（始めは OFF）
+mi_scr: lea     $280620.l,a0     ; 白抜きの A〜J: 借りる文字を共有RAMの空き(0x203cb0〜)に控えてから描く
+        lea     $203cb0.l,a1
+        lea     AREAGFX.l,a2
+        move.w  #255,d0
+mi_ag:  move.b  (a0),(a1)+
+        move.b  (a2)+,(a0)+
+        dbf     d0,mi_ag
+        lea     $101100.l,a1        ; 残り4文字分はポーズ窓の退避場所に（メニュー中は使わない）
+        moveq   #127,d0
+mi_ah:  move.b  (a0),(a1)+
+        move.b  (a2)+,(a0)+
+        dbf     d0,mi_ah
+        clr.b   $203f0e.l       ; RANK DISP・CUBE INFO はポーズで切り替える（始めは OFF）
         clr.b   $203f0c.l
         clr.b   $203f34.l       ; CUBE COLOR
         jsr     ClrAll.l
@@ -838,7 +913,7 @@ mf_g0:
         moveq   #0,d0               ; 開始進行度 = PROGTBL[(面-1)*8 + (エリア-1)] → MB+$1e
         move.b  $203f08.l,d0
         subq.w  #1,d0
-        mulu    #10,d0
+        mulu    #12,d0
         moveq   #0,d1
         move.b  $203f0a.l,d1
         subq.w  #1,d1
@@ -860,6 +935,15 @@ mf_g3:  cmpi.b  #11,$203f08.l       ; EX STAGE の B → サラマンダ隠し�
         bne.s   mf_g4
         move.b  #12,$203f08.l
 mf_g4:  move.b  #1,V_HAVE.l
+        lea     $280620.l,a0     ; 借りた文字を元に戻す
+        lea     $203cb0.l,a1
+        move.w  #255,d0
+mf_ag:  move.b  (a1)+,(a0)+
+        dbf     d0,mf_ag
+        lea     $101100.l,a1
+        moveq   #127,d0
+mf_ah:  move.b  (a1)+,(a0)+
+        dbf     d0,mf_ah
         move.b  #1,MBS_DONE.l
         rts
 mf_cancel:

@@ -537,14 +537,17 @@ CUBEX = int(os.environ.get('CUBEX', '54000'), 16); CUBEY = int(os.environ.get('C
 # ボスラッシュの各ボス = 敵出現表(0x252d4)のボス出現イベントの約0xc4手前。ボス1 = 0x11c00、
 #   ボス2〜6 = 0x21c02/0x35bdd/0x49c21/0x5dc03/0x71bde（端数を不規則に数単位ずらす）
 # ボスラッシュ後 = EvPtr の補正区間(X<0x780)を抜けた直後の 0x7a000 / ラスボス手前 = 0x25c000
+ST10_C2 = int(os.environ.get('C2X', '1ca000'), 16)   # ❷ 中ボス（0x1bc840 で止まる壁の砲台）を過ぎて（0x1c0000 だとまだ中ボスが出る）、クラブに入るところ
+ST10_C3 = int(os.environ.get('C3X', '234000'), 16)   # ❸ ラスボスの手前（肉団子の区間 0x200000〜0x230000 の後。ラスボスは 0x24xxxx）
 ST10 = [(0, 0x20000), (0x11c00, 0x20000), (0x21c02, 0x20000), (0x35bdd, 0x20000), (0x49c21, 0x20000),
         (0x5dc03, 0x20000), (0x71bde, 0x20000), (0x7a000, 0x20000), (0xc0000, 0), (0xf0000, 0), (0x120000, 0),
-        (0x148000, 0), (0x180000, 0), (0x1b0000, 0), (0x200000, 0), (0x25c000, 0)]
+        (0x148000, 0), (0x180000, 0), (0x1b0000, 0), (ST10_C2, 0), (0x200000, 0), (ST10_C3, 0), (0x25c000, 0)]
 # メニューの構成:
-#   STAGE 10 = 開始 / ボスラッシュ直後 / 本来の復活地点7つ / 最終地点   BOSS RUSH = ボス2〜6の手前
+#   STAGE 10 = A 開始 / ❶ ボスラッシュ直後 / B〜G 本来の復活地点1〜6 / ❷ / H 本来の7番目 / ❸ / ❹ 脱出(0x25c000)
+#   BOSS RUSH = ボス2〜6の手前
 for _kv in os.environ.get('ST10X', '').split(','):      # テスト用: ST10X="2=24000,3=38000"
     if _kv: _i, _v = _kv.split('='); ST10[int(_i)] = (int(_v, 16), ST10[int(_i)][1])
-ST10_ROW = [0, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+ST10_ROW = [0, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
 BR_ROW = [2, 3, 4, 5, 6]
 # 9面 = 開始 / 0x58000(キューブ地帯の手前。キューブラッシュもここから) / 0x5c000(ボス手前)
 ST9 = [(0, 0), (0x58000, 0), (0x5c000, 0)]
@@ -552,7 +555,51 @@ if os.environ.get('ST9X'): ST9 = [(0, 0)] + [(int(v, 16), 0) for v in os.environ
 # 3面 = 本来の8地点 + ビッグコアMkIII手前 0x1ca000 (Y は8番目と同じ)
 MK3 = (int(os.environ.get("MK3X", "1ca000"), 16), 0x30000)
 EXT10 = 0x103e40                                  # 10面の表を置く共有RAM (0x103e40〜0x103ec7, 起動後は未使用)
-PTCOLS = 10                                       # PROGTBL の1行の語数
+PTCOLS = 12                                       # PROGTBL の1行の語数（10面が12か所）
+
+MID5 = int(os.environ.get('MID5X', 'e0000'), 16)   # 5面 ❶ 中ボス（大きなモアイ。0xe7xxx で出て 0xf0000 で止まる）の手前
+BOSS5 = int(os.environ.get('BOSS5X', 'f6000'), 16)  # 5面 ❷ ボスの手前（中ボスの停止位置 0xf0000 を過ぎたところ。ボスは 0x102000 で止まる）
+
+def stage_areas(st):
+    """面 st(0..8) のエリア表 [(x, y), ...]。本来の復活地点に「ボスの手前」などを足したもの（x の順）
+    1・6・7・8面 = ❶ボスの手前 / 3面 = ❶ビッグコアMkIIIの手前(MK3) / 5面 = ❶中ボスの手前・❷ボスの手前 / 9面 = 独自"""
+    import struct
+    d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    L = lambda a: struct.unpack('>I', d[a:a+4])[0]
+    smap = d[0x69ce:0x69de]
+    if st == 8: return list(ST9)
+    m = smap[st]; a = L(0x54fe + 4*m); r = []
+    while L(a) != 0x0fffffff and len(r) < 16: r.append((L(a), L(a+4))); a += 8
+    add = []
+    if st == 2: add = [MK3]
+    elif st in (0, 4, 5, 6, 7):
+        bt = boss_progress()
+        bx = (bt[st] << 8) - BRDELTA
+        if st == 4: add += [MID5, BOSS5]       # 5面はボスラッシュの位置(0xf0000)だと中ボスになるので、中ボスの後から
+        else: add.append(bx)
+    for x in add:
+        if isinstance(x, tuple): r.append(x); continue
+        y = 0
+        for ex, ey in r:
+            if ex <= x: y = ey
+        r.append((x, y))
+    r.sort(key=lambda e: e[0])
+    return r
+
+def boss_progress():
+    import struct
+    d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    L = lambda a: struct.unpack('>I', d[a:a+4])[0]
+    smap = d[0x69ce:0x69de]; bt = []
+    for st in range(16):
+        m = smap[st]; v = 0
+        if m != 0xff:
+            a = L(0x4f06 + 4*m)
+            while L(a) != 0xffffffff:
+                if d[a+5] & 0x80: v = L(a) >> 8; break
+                a += 6
+        bt.append(v)
+    return bt
 
 def _prog(x):
     return ((x >> 8) + 1) if x else 0
@@ -564,13 +611,9 @@ def progress_tables():
     d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
     L = lambda a: struct.unpack('>I', d[a:a+4])[0]
     smap = d[0x69ce:0x69de]
-    custom = {1: ST9, 5: None}
     def areas(m):
-        if custom.get(m): return custom[m]
-        a = L(0x54fe + 4*m); r = []
-        while L(a) != 0x0fffffff and len(r) < 16: r.append((L(a), L(a+4))); a += 8
-        if m == 5: r.append(MK3)
-        return r
+        st = list(smap).index(m)
+        return stage_areas(st)
     def row(xs):
         xs = list(xs) + [xs[-1]] * (PTCOLS - len(xs))
         return [_prog(x) for x in xs[:PTCOLS]]
@@ -595,28 +638,30 @@ def progress_tables():
     return pt, bt
 
 def ext10_blob(boss=False):
-    """共有RAM EXT10 に置く10面の表 (ボスラッシュ時はボス1直前から)"""
+    """共有RAM EXT10 に置く10面の表。通常 = ボスラッシュ区間の地点を除いたもの（そこで死ぬと面の最初から＝純正どおり）
+    ボスラッシュ時 = ボス1直前から（❷❸ は除く）"""
     import struct
-    t = ST10[1:] if boss else ST10
+    if boss: t = [e for e in ST10[1:] if e[0] not in (ST10_C2, ST10_C3)]
+    else: t = [ST10[i] for i in ST10_ROW]
     b = b''.join(struct.pack('>II', x, y) for x, y in t + [(0x0fffffff, 0)])
-    assert len(b) <= 0x88
+    assert len(b) <= 0x88, len(b)
     return b + bytes(0x88 - len(b))
 
-def area_table_blob(base=0x103f40):
-    """共有RAM base に置く独自エリア表 (メインCPU空間のアドレスで構成)"""
+def area_table_blob(st, base=0x103f40):
+    """面 st(0..9) をプレイ中に共有RAM base に置く独自エリア表（ポインタ16個 + その面の表 128バイト）。
+    サブが今の面に合わせて毎フレーム書き直す（表は今の面の分だけ置けばよい）"""
     import struct
     d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
     L = lambda a: struct.unpack('>I', d[a:a+4])[0]
-    a = 0x560a; m5 = []
-    while L(a) != 0x0fffffff: m5.append((L(a), L(a+4))); a += 8
-    m1 = ST9 + [(0x0fffffff, 0)]
-    m5 = m5 + [MK3, (0x0fffffff, 0)]
-    p1 = base + 64; p5 = p1 + 8 * len(m1)
-    ptr = [0x553a, p1, 0x557a, 0x55aa, 0x55da, p5, 0x5652, 0x5682, 0x56b2, 0x56e2, 0x5712, 0x573a, 0x576a, EXT10, 0x57ea, 0]
-    assert L(0x54fe + 4*5) == 0x560a
-    b = b''.join(struct.pack('>I', x) for x in ptr)
-    b += b''.join(struct.pack('>II', x, y) for x, y in m1 + m5)
-    assert len(b) <= 0xc0
+    smap = d[0x69ce:0x69de]
+    ptr = [L(0x54fe + 4*m) for m in range(16)]
+    ptr[13] = EXT10
+    body = b''
+    if st <= 8:
+        ptr[smap[st]] = base + 64
+        body = b''.join(struct.pack('>II', x, y) for x, y in stage_areas(st) + [(0x0fffffff, 0)])
+    assert len(body) <= 0x80, (st, len(body))
+    b = b''.join(struct.pack('>I', x) for x in ptr) + body
     return b + bytes(0xc0 - len(b))
 
 BRDELTA = int(os.environ.get('BRDELTA', '14000'), 16)   # ボスラッシュ: ボス接近位置のこれだけ手前から（全面で検証済み。0x10000 だと着いた瞬間に面クリアになる面がある）
