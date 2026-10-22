@@ -120,7 +120,7 @@ button{font:inherit;padding:6px 14px;border-radius:8px;border:1px solid var(--ac
 
 <h2>シミュレーター</h2>
 <div class="panel">
-  <div class="sub">自機の位置とランクを決めて、99個のキューブがどう流れてどこで反応するかを動かして見られます。再生中は<b>キーボードの矢印キー</b>、<b>ゲームパッドの十字キー（スティック）</b>、または<b>図の中を指でなぞる</b>と自機を動かせます（指で触れている場所へ自機が向かいます）（キューブはゲームと同じく、反応した瞬間の自機の位置へ向かいます）。止めているときは図の中をクリック（タップ）すると自機がそこへ移ります。キューブ同士・地形にくっつく動きは省いています（画面の左・上下の端でくっつき、右へ抜けたものは消えます）。</div>
+  <div class="sub">自機の位置とランクを決めて、99個のキューブがどう流れてどこで反応するかを動かして見られます。再生中は<b>キーボードの矢印キー</b>、<b>ゲームパッドの十字キー（スティック）</b>、または<b>図の中に触れてなぞる</b>と自機を動かせます（触れた場所からなぞった分だけ自機が動くので、指を図の下へずらして、自機を指で隠さずに操作できます）（キューブはゲームと同じく、反応した瞬間の自機の位置へ向かいます）。止めているときは図の中をクリック（タップ）すると自機がそこへ移ります。キューブ同士・地形にくっつく動きは省いています（画面の左・上下の端でくっつき、右へ抜けたものは消えます）。</div>
   <div class="ctl" style="margin-top:10px">
     <label>H <select id="sh"></select></label>
     <label>S <select id="ss"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label>
@@ -270,9 +270,11 @@ function step(){
 ['px','py'].forEach(id=>$(id).addEventListener('input',()=>{path.length=tNow+1;path[tNow]={x:+$('px').value,y:+$('py').value};render()}));
 $('tm').addEventListener('input',()=>{const t=+$('tm').value;while(path.length<=t)path.push({...path[path.length-1]});tNow=t;render()});
 function cvPos(e){const r=cv.getBoundingClientRect();return{x:Math.round((e.clientX-r.left)/r.width*352),y:Math.round((e.clientY-r.top)/r.height*240)}}
-cv.addEventListener('pointerdown',e=>{if(!playing)return;touchT=cvPos(e);cv.setPointerCapture(e.pointerId);e.preventDefault()});
-cv.addEventListener('pointermove',e=>{if(touchT)touchT=cvPos(e)});
-['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{touchT=null}));
+// タッチは「なぞった分だけ動く」方式：触れた瞬間の自機の位置を基準に、指を動かした量だけ目標が動く（指を図の外・下へずらしても操作できる）
+let touchA=null;
+cv.addEventListener('pointerdown',e=>{if(!playing)return;const f=cvPos(e),p=path[tNow];touchA={fx:f.x,fy:f.y,sx:p.x,sy:p.y};touchT={x:p.x,y:p.y};cv.setPointerCapture(e.pointerId);e.preventDefault()});
+cv.addEventListener('pointermove',e=>{if(!touchA)return;const f=cvPos(e);touchT={x:Math.max(8,Math.min(344,touchA.sx+(f.x-touchA.fx))),y:Math.max(24,Math.min(224,touchA.sy+(f.y-touchA.fy)))}});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{touchT=null;touchA=null}));
 cv.addEventListener('click',e=>{if(playing)return;const r=cv.getBoundingClientRect();const x=Math.round((e.clientX-r.left)/r.width*352),y=Math.round((e.clientY-r.top)/r.height*240);
   $('px').value=x;$('py').value=y;path.length=tNow+1;path[tNow]={x,y};render()});
 $('play').addEventListener('click',()=>{playing=!playing;$('play').textContent=playing?'❚❚ 止める':'▶ 再生';
