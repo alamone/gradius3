@@ -22,6 +22,8 @@ V_PDU    = $100f03
 V_TUD    = $100f04
 V_TDU    = $100f06
 V_IDLE   = $100f08
+V_LTBL   = $101220          ; 最後に写したエリア表の元（サブ私有RAM。0x101100〜 は元のプログラムが使わない）
+V_CCS    = $101224          ; キューブの色パレットの写しの中身（0=なし 1=色付き 2=元の色）
 FRAMECNT = $203950          ; メインのVBLANKが共有RAMへ写すフレームカウンタ(サブの$100022は途中で止まるため)
 """
 
@@ -29,6 +31,7 @@ SRC = CONSTS + """
         org $37d78
 ; サブ IRQ1(垂直同期, 毎フレーム) の前に割り込ませる。元のハンドラ 0x5c8 へ続ける
 IrqHook:
+        TESTNOIRQ
         movem.l d0-d7/a0-a6,-(a7)
         moveq   #0,d0                   ; 独自エリア表を共有RAMへ: 今の面(0〜9)の分 (ボスラッシュ時は専用表)
         move.b  $201051.l,d0
@@ -46,6 +49,16 @@ sb_s9:  mulu    #192,d0
         bne.s   sb_a0
         lea     BOSSBLOB.l,a0
 sb_a0:
+        ; 表の写しは毎フレームだと重い（サブの処理が遅れて、くっついたキューブの描き込みが間に合わなくなる）。
+        ; メニュー中・表が変わったとき・8フレームに1回だけ写す
+        cmpi.b  #2,TOPSTATE.l
+        bne.s   sb_cpy
+        cmpa.l  V_LTBL.l,a0
+        bne.s   sb_cpy
+        move.w  FRAMECNT.l,d1
+        andi.w  #7,d1
+        bne.w   sb_skip
+sb_cpy: move.l  a0,V_LTBL.l
         lea     $203f40.l,a1
         move.w  #AREACNT,d7
 sb_cp:  move.l  (a0)+,(a1)+
@@ -88,6 +101,7 @@ sb_c2:  move.w  (a0)+,(a1)+
         moveq   #7,d7
 sb_c3:  move.l  (a0)+,(a1)+
         dbf     d7,sb_c3
+sb_skip:
         jsr     Frame.l
         movem.l (a7)+,d0-d7/a0-a6
         jmp     $5c8.l          ; 元の処理へ
@@ -120,11 +134,13 @@ fe_off: tst.b   $203ed1.l           ; 表示中に OFF にされた → 最上�
         move.b  #1,$203ed0.l
         moveq   #0,d1
 fe_set: move.b  d1,$203ed1.l
+        jsr     BrSkip.l
         tst.b   MBS_RUN.l           ; キューブラッシュでは残機が増えない（次に増える点数を 0 = もう増えない にしておく）
         beq.s   fe_x
         cmpi.b  #1,$203f0b.l
         bne.s   fe_x
         clr.l   $201058.l
+        jsr     CrEnd.l
 fe_x:   moveq   #0,d1               ; CUBE COLOR が有効か → $203ed4（メインはこれを見てキューブの色を写す）
         cmpi.b  #2,TOPSTATE.l
         bne.s   fc_s
@@ -178,6 +194,59 @@ fr_np:  clr.b   $100f50.l
 ; ---- キューブラッシュの並び: 毎フレーム、選ばれた H/S/T（R は毎フレーム乱数で選び直す）から
 ;      1個目が出る瞬間に入れるフレームカウンタの値を表から引いて $203e30 に置く（メインの CubeSeed が使う）
 V_CRNG  = $203e32
+; ---- キューブラッシュ: キューブの区間が終わったら（壁が崩れて画面が進み、ボスの場所 0x5b0 に着いたら）
+; ボスには行かずに自機を1機減らす → キューブラッシュの頭（0x58000）から始め直し。残機が無ければゲームオーバー
+; 自機（$201000）の当たり($1a)を立てる。無敵・フォースフィールドでも死ぬよう $203ed2 をメインに見せる
+CrEnd:  cmpi.b  #2,TOPSTATE.l
+        bne.s   ce_clr
+        move.b  $201051.l,d0
+        andi.b  #$0f,d0
+        cmpi.b  #8,d0
+        bne.s   ce_clr
+        cmpi.w  #$5b0,$201052.l
+        bcs.s   ce_clr
+        tst.b   $203ed3.l       ; もう死んだ
+        bne.s   ce_off
+        cmpi.b  #4,$201001.l    ; 死亡中になった → 済み
+        beq.s   ce_done
+        move.b  #1,$203ed2.l
+        andi.b  #$1f,$201069.l  ; フォースフィールドで防がれないように
+        ori.b   #$80,$20101b.l
+        rts
+ce_done: move.b #1,$203ed3.l
+ce_off: clr.b   $203ed2.l
+        rts
+ce_clr: clr.b   $203ed3.l
+        clr.b   $203ed2.l
+        rts
+
+; ---- ボスラッシュ: ボスを倒して画面が動き出したら、面の終わりまで一気に進める（倒した後のスクロールを飛ばして次のボスへ）
+; BRSKIP: 面(0〜9)ごとに [最後のボスの停止位置.l, 面の終わりの位置.l]（0=しない）
+BrSkip: cmpi.b  #2,TOPSTATE.l
+        bne.s   bk_r
+        tst.b   MBS_RUN.l
+        beq.s   bk_r
+        cmpi.b  #2,$203f0b.l
+        bne.s   bk_r
+        moveq   #0,d0
+        move.b  $201051.l,d0
+        andi.b  #$0f,d0
+        cmpi.b  #9,d0
+        bhi.s   bk_r
+        lsl.w   #3,d0
+        lea     BRSKIP.l,a0
+        move.l  0(a0,d0.w),d1   ; ボスの停止位置
+        beq.s   bk_r
+        move.l  4(a0,d0.w),d2   ; 面の終わり
+        move.l  $2038de.l,d0
+        addi.l  #$100,d1
+        cmp.l   d1,d0
+        bls.s   bk_r
+        cmp.l   d2,d0
+        bcc.s   bk_r
+        move.l  d2,$2038de.l
+bk_r:   rts
+
 CubeCalc:
         move.w  V_CRNG.l,d0
         moveq   #0,d1
@@ -226,6 +295,8 @@ def apply(rom):
     abs_ = [mod_main.area_table_blob(st) for st in range(10)]
     ab = abs_[0]
     if len(data) & 1: data += b'\0'
+    dl['BRSKIP'] = DATA_BASE + len(data); data += mod_main.brskip_blob()
+    if len(data) & 1: data += b'\0'
     dl['AREABLOB'] = DATA_BASE + len(data); dl['AREACNT'] = len(ab) // 4 - 1
     data += b''.join(abs_)
     bb = mod_main.boss_area_blob(); assert len(bb) == len(ab)
@@ -258,6 +329,7 @@ def apply(rom):
     consts = ''.join('%s = $%x\n' % (k, v) for k, v in dl.items()) + 'WTYPE = $%x\n' % wt
     src = CONSTS + consts + SRC.replace(CONSTS, '', 1) + mod_menu.source(dl) + mod_edit.src()
     src = src.replace('V_INIT', 'V_INIT') 
+    src = src.replace('TESTNOIRQ', 'cmpi.b  #2,TOPSTATE.l\n        bne.s   ih_go\n        jmp     $5c8.l\nih_go:' if os.environ.get('TESTNOIRQ') else '')
     b, lab = asm68.assemble('V_INIT = $100f12\n' + src if 'V_INIT   =' not in src else src, SUB_FREE)
     assert SUB_FREE + len(b) <= DATA_BASE, hex(SUB_FREE + len(b))
     rom.put('sub', SUB_FREE, b, 'subcore')

@@ -38,8 +38,8 @@ ITEMS = [
     ('       TYPE', 1, 0, 45, 0x37, ['RANDOM'] + ['%02d' % i for i in range(1, 46)], 0),
     ('SHD COLOR', 1, 1, 10, 0x16, ['?', 'BLUE', 'RED', 'GREEN', 'GOLD', 'PURPLE', 'CYAN', 'ORANGE', 'PINK', 'SILVER', 'BLACK'], 1),
     ('HUNTER NEXT', 1, 0, 3, 0x1b, ['DEFAULT', 'TYPE 1', 'TYPE 2', 'TYPE 3'], 0),
-    ('SPEED', 0, 0, 5, 0x0d, None, 0),                  # 開始時のスピード（スピードアップを使った回数）
-    ('CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 0),   # 開始時のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
+    ('SPEED', 0, 0, 5, 0x0d, None, 2),                  # 開始時のスピード（スピードアップを使った回数）
+    ('CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 1),   # 開始時のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
 ]
 # 各項目の画面の行（可視は行2〜29）。面の表の後・CUBE の後に1行ずつ空ける
 ROWS = [2, 3, 5] + list(range(7, 19)) + [20, 21, 22] + [24, 25, 26, 27]   # INVINCIBLE が一番上、最下段は PUSH START
@@ -50,7 +50,7 @@ BANG_ROWS = ['...ff...', '...ff9..', '...ff9..', '...f9...', '....9...', '...ff.
 BANG_GFX = bytes(int(r[i] if r[i] != '.' else '0', 16) << 4 | int(r[i+1] if r[i+1] != '.' else '0', 16) for r in BANG_ROWS for i in range(0, 8, 2))
 # ---- 飛んでくるキューブの色分け（CUBE INFO 表示中）: 反応する位置が左寄りの5か所だけ色を付ける ----
 # 反応する位置 x=158 緑 / 126 黄緑 / 94 黄 / 62 橙 / 30 赤。使うスプライトのパレットは 9面で使われていない 21,22,24,26,30
-CC_PALS = [21, 22, 24, 26, 30, 23, 25, 27, 31]   # 21,22,24,26,30 は9面で未使用。23,25,27,31 はボス戦だけで使う → ラッシュの間だけ借りて、終わったら元に戻す
+CC_PALS = [21, 22, 28, 26, 30, 23, 25, 27, 31]   # 21,22,26,28,30 は9面で未使用（24 はオプションハンターが使う）。23,25,27,31 はボス戦だけで使う → ラッシュの間だけ借りて、終わったら元に戻す
 CC_X    = [254, 222, 190, 158, 126, 94, 62, 30]   # 反応する位置（右から3〜10番目）。右から1・2番目（318・286）は元の色のまま
 CC_TINT = [(0.05, 0.55, 1.0), (0.0, 0.85, 0.95), (0.0, 0.95, 0.55), (0.15, 1.0, 0.2), (0.6, 1.0, 0.1), (1.0, 0.95, 0.1), (1.0, 0.5, 0.05), (1.0, 0.05, 0.08),
            None]                                  # 最後 = 反応しない: 灰色
@@ -207,8 +207,9 @@ V_INIT  = $100f12
 V_REPC  = $100f13
 V_PIN   = $100f14
 V_SIN   = $100f15
-V_HAVE  = $100f16
-V_LBUF  = $100f20          ; 前回値 0x30バイト(MB+8..MB+0x37 の写し) → 0x100f20-0x100f4f
+V_HAVE  = $203ed5          ; 前回値あり（サブの私有RAMは面が始まるときにゲームが消すので、共有RAMの空きに置く）
+V_LBUF  = $203ed8          ; 前回値 MB+8..MB+$2f の写し 40バイト → 0x203ed8-0x203eff
+V_LBUF2 = $203ec8          ; 前回値 MB+$30..MB+$37 の写し 8バイト → 0x203ec8-0x203ecf
 NITEM   = %(nitem)d
 TILEA   = $24c000
 
@@ -474,9 +475,13 @@ MenuInit:
         beq.s   mi_def
         lea     V_LBUF.l,a0
         lea     $203f08.l,a1
-        moveq   #$2f,d7
+        moveq   #$27,d7
 mi_cp:  move.b  (a0)+,(a1)+
         dbf     d7,mi_cp
+        lea     V_LBUF2.l,a0
+        moveq   #7,d7
+mi_cp2: move.b  (a0)+,(a1)+
+        dbf     d7,mi_cp2
         bra.s   mi_scr
 mi_def: lea     DEF.l,a0
         lea     $203f00.l,a1
@@ -571,6 +576,9 @@ ch_draw:
         jsr     LagChk.l
         tst.b   $203ed1.l       ; CUBE INFO が有効なときだけ描く
         beq.w   ch_rts
+        move.w  FRAMECNT.l,d0   ; 描くのは4フレームに1回（毎フレームだとサブの処理が遅れ、くっついたキューブの描き込みが化ける）
+        andi.w  #3,d0
+        bne.w   ch_rts
         jsr     PlusChr.l
         move.w  #26,d0          ; 最上段 col 26〜50 を消す（HI・2P の跡も）
         move.w  #HROW,d1
@@ -892,7 +900,16 @@ mf_nb1: tst.b   V_DIRTY.l
         clr.b   V_DIRTY.l
         jsr     DrawAll.l
 mf_ret: rts
-mf_go:  cmpi.b  #2,$203f0b.l     ; ボスラッシュ: 面1〜10は常にエリアA、EX STAGE は使えないので面1
+mf_go:  lea     $203f08.l,a0     ; 前回値として控える（モードで面・エリアを書き換える前に）
+        lea     V_LBUF.l,a1
+        moveq   #$27,d7
+mf_sv:  move.b  (a0)+,(a1)+
+        dbf     d7,mf_sv
+        lea     V_LBUF2.l,a1
+        moveq   #7,d7
+mf_sv2: move.b  (a0)+,(a1)+
+        dbf     d7,mf_sv2
+        cmpi.b  #2,$203f0b.l     ; ボスラッシュ: 面1〜10は常にエリアA、EX STAGE は使えないので面1
         bne.s   mf_gb
         cmpi.b  #11,$203f08.l
         bne.s   mf_gb1
@@ -921,12 +938,7 @@ mf_g0:
         add.w   d0,d0
         lea     PROGTBL.l,a0
         move.w  0(a0,d0.w),$203f1e.l
-mf_g2:  lea     $203f08.l,a0
-        lea     V_LBUF.l,a1
-        moveq   #$2f,d7
-mf_sv:  move.b  (a0)+,(a1)+
-        dbf     d7,mf_sv
-        cmpi.b  #13,$203f08.l       ; 保存後に 10面ボスラッシュ(13) → 面10 として渡す
+mf_g2:  cmpi.b  #13,$203f08.l       ; 保存後に 10面ボスラッシュ(13) → 面10 として渡す
         bne.s   mf_g3
         move.b  #10,$203f08.l
 mf_g3:  cmpi.b  #11,$203f08.l       ; EX STAGE の B → サラマンダ隠し面(12)
@@ -1032,6 +1044,7 @@ cst_r:  rts
 V_CCAT  = $1011f0          ; スロットごとの色の種類（-1=そのまま, 0〜8）32バイト
 V_CCW   = $1011ea          ; CUBE COLOR を使いたい（サブの Frame が毎フレーム決める）
 V_CCR   = $1011eb          ; 元の色に戻す残りフレーム
+V_CCS   = $101224          ; パレットの写しの中身（0=なし 1=色付き 2=元の色）
 CCN     = 9                ; 借りるパレットの数
 CubeCol:
         moveq   #0,d5           ; 生きているキューブの数
@@ -1082,23 +1095,33 @@ kc_n:   lea     $50(a0),a0
         beq.s   kc_off
         lea     CCPAL.l,a0
         move.b  #3,V_CCR.l
+        moveq   #1,d1
         bra.s   kc_cp
 kc_off: tst.b   V_CCR.l
         beq.s   kc_none
         subq.b  #1,V_CCR.l
         lea     CCORG.l,a0
-kc_cp:  lea     $203cb0.l,a1
+        moveq   #2,d1
+kc_cp:  cmp.b   V_CCS.l,d1      ; 写しの中身が同じなら写さない（毎フレーム写すとサブの処理が遅れる）
+        beq.s   kc_cs
+        move.b  d1,V_CCS.l
+        lea     $203cb0.l,a1
         move.w  #161,d0         ; 9パレット × 18語 − 1
 kc_c:   move.w  (a0)+,(a1)+
         dbf     d0,kc_c
-        move.b  #1,$203ed4.l
+kc_cs:  move.b  #1,$203ed4.l
         rts
 kc_none:
+        clr.b   V_CCS.l
         clr.b   $203ed4.l
         rts
 KC_TH:  dc.w    46,78,110,142,174,206,238,270
 
 RankDisp:                       ; 2段目の右寄せ「RANK:10」（右端 col 50 = T の数字の右端）
+        move.w  FRAMECNT.l,d0   ; 4フレームに1回
+        andi.w  #3,d0
+        cmpi.w  #2,d0
+        bne.s   rd_x
         jsr     PlusChr.l
         move.w  #44,d0
         move.w  #3,d1
@@ -1119,6 +1142,7 @@ rd_v:   move.w  #49,d0
         move.w  #3,d1
         move.b  #ATTRLAB,d2
         jmp     PutStr.l
+rd_x:   rts
 
 V_PST   = $100f50
 V_PSEL  = $100f51
@@ -1126,7 +1150,7 @@ V_PPIN  = $100f52
 V_PSIN  = $100f53
 V_PSAV  = $101100          ; 7行x16桁x2バイト = 224（〜0x1011df）（0x101100〜: 元のサブのプログラムが使っていない範囲）
 MBS_INV = $203f20          ; 無敵（メインの MB+$20）
-V_LINV  = $100f38          ; スタートメニューの前回値の写し（MB+$20 に対応）
+V_LINV  = $203ef0          ; スタートメニューの前回値の写し（MB+$20 に対応）
 PX      = 26
 PY      = 14
 PW      = 16
@@ -1136,7 +1160,7 @@ PSave:  lea     V_PSAV.l,a0
         bra.s   ps_go
 PRest:  lea     V_PSAV.l,a0
         moveq   #1,d0
-ps_go:  moveq   #6,d6
+ps_go:  bsr.w   PCnt6           ; 行数−1（項目数。キューブラッシュ以外は CUBE INFO・CUBE COLOR を出さない）
         move.w  #PY,d1
 pr_row: move.w  d1,d3
         lsl.w   #6,d3
@@ -1165,7 +1189,14 @@ PLine:  move.w  #PX+1,d0
         moveq   #0,d2
         jmp     PutStr.l
 
-PDraw:  moveq   #6,d6
+; d6 = 項目の数（キューブラッシュは6、ほかは4）
+PCnt6:  moveq   #6,d6
+        cmpi.b  #1,$203f0b.l
+        beq.s   pc6_r
+        moveq   #4,d6
+pc6_r:  rts
+
+PDraw:  bsr.s   PCnt6
         move.w  #PY,d1
 pd_cl:  move.w  #PX,d0
         moveq   #PW-1,d7
@@ -1204,8 +1235,9 @@ pd_v:   movem.l d4/a2,-(a7)
         movem.l (a7)+,d4/a2
 pd_nx:  lea     12(a2),a2
         addq.w  #1,d4
-        cmpi.w  #6,d4
-        bcs.s   pd_lp
+        bsr.w   PCnt6
+        cmp.w   d6,d4
+        bcs.w   pd_lp
         rts
 
 ; ---- ポーズ 1フレーム (MBS_PAUS==1 の間) ----
@@ -1233,13 +1265,16 @@ pf_run: move.b  MBS_P1.l,d0
         beq.s   pf_dn
         subq.b  #1,V_PSEL.l
         bpl.s   pf_rd
-        move.b  #5,V_PSEL.l
+        bsr.w   PCnt6
+        subq.b  #1,d6
+        move.b  d6,V_PSEL.l
         bra.s   pf_rd
 pf_dn:  btst    #3,d1           ; 下
         beq.s   pf_lr
         addq.b  #1,V_PSEL.l
-        cmpi.b  #6,V_PSEL.l
-        bcs.s   pf_rd
+        bsr.w   PCnt6
+        cmp.b   V_PSEL.l,d6
+        bhi.s   pf_rd
         clr.b   V_PSEL.l
         bra.s   pf_rd
 pf_lr:  moveq   #0,d0           ; ON/OFF のある行（INVINCIBLE・RANK DISP・CUBE INFO）: 左右・ショットで切り替え

@@ -577,6 +577,9 @@ def stage_areas(st):
     elif st in (0, 4, 5, 6, 7):
         bt = boss_progress()
         bx = (bt[st] << 8) - BRDELTA
+        # 曲の表(0xe052)の「ボスの曲」の地点より手前から始める（過ぎた所から始めるとボスの曲が鳴らない）
+        mt = L(0xe052 + 4*m)
+        bx = min(bx, (L(mt + 16) << 8) - BXPRE)
         if st == 4: add += [MID5, BOSS5]       # 5面はボスラッシュの位置(0xf0000)だと中ボスになるので、中ボスの後から
         else: add.append(bx)
     for x in add:
@@ -667,6 +670,7 @@ def area_table_blob(st, base=0x103f40):
     return b + bytes(0xc0 - len(b))
 
 BRDELTA = int(os.environ.get('BRDELTA', '14000'), 16)   # ボスラッシュ: ボス接近位置のこれだけ手前から（全面で検証済み。0x10000 だと着いた瞬間に面クリアになる面がある）
+BXPRE = int(os.environ.get('BXPRE', '1000'), 16)    # メニューの ❶ボスの手前: ボスの曲が始まる地点よりこれだけ手前
 
 def boss_area_blob(base=0x103f40):
     """ボスラッシュ用エリア表: 各面(4面・10面を除く)の表を「ボス接近位置-BRDELTA」の1件だけにする。
@@ -694,10 +698,14 @@ INV_ADDR = 0xd6a0          # 0xd653〜0xd8f5 の未使用データ領域（エ�
 SRC_INV = CONSTS + """
 MB_INV  = $103f20
 ; Z=0 なら無敵（改造プレイ中かつ INVINCIBLE=ON）
-InvChk: tst.b   MB_RUN.l
+InvChk: tst.b   $103ed2.l       ; キューブラッシュの区間が終わった → 無敵でも1機減らす（サブが立てる）
+        bne.s   ic_f
+        tst.b   MB_RUN.l
         beq.s   ic_r
         tst.b   MB_INV.l
 ic_r:   rts
+ic_f:   cmp.b   d0,d0           ; Z=1（無敵ではない）
+        rts
 ; 0x7bc4 / 0xae22 の move.b #1,$400a2.l を置き換え（ここから先が死亡処理）
 DieA:   bsr.s   InvChk
         bne.s   da_inv
@@ -899,3 +907,23 @@ def apply(rom):
     rom.free_main = [(0xd4aa + len(b), 0xd4aa + 425), (0xd8f6 + len(b2), 0xd8f6 + 532)]
     print('main free: A %d  B %d  C %d' % (425 - len(b), 532 - len(b2), 0x3ffc0 - 0x3fd9a - len(b3)))
     return lab, lab2
+
+
+def brskip_blob():
+    """ボスラッシュ用: 面(0〜9)ごとに [最後のボスの停止位置, 面の終わりの位置]（画面の位置 = 表の位置 − 0x14000）。10面は 0（飛ばさない）"""
+    import struct
+    d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    L = lambda a: struct.unpack('>I', d[a:a+4])[0]
+    smap = d[0x69ce:0x69de]; out = b''
+    for st in range(10):
+        stop = end = 0
+        if st != 9:
+            a = L(0x4f06 + 4*smap[st])
+            while L(a) != 0xffffffff:
+                c = struct.unpack('>H', d[a+4:a+6])[0]
+                if c & 0x80: stop = L(a) - 0x14000
+                elif c & 0x40 and stop: end = L(a) - 0x14000; break
+                a += 6
+        if not (stop and end): stop = end = 0
+        out += struct.pack('>II', stop, end)
+    return out
