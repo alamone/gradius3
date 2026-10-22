@@ -74,6 +74,7 @@ a{color:var(--acc)}
     <button id="next" class="ghost">次の曲 ▶</button>
     <button id="j1" class="ghost">頭へ</button><button id="j2" class="ghost">中盤へ</button>
     <label><input type="checkbox" id="loop" checked> くり返し</label>
+    <label><input type="checkbox" id="auto"> 終わったら次の曲へ</label>
     <label><input type="checkbox" id="mono"> 原音（モノラル）</label>
   </div>
 </div>
@@ -109,7 +110,7 @@ a{color:var(--acc)}
 </div>
 </main>
 <script>
-const SONGS = [{"code": "89", "name": "タイプ選択（テクニカル／ビギナー）（曲番号 89）"}, {"code": "80", "name": "武器選択（WEAPON SELECT）（曲番号 80）"}, {"code": "a0", "name": "1・2・5・7・9面の始まり（曲番号 A0）"}, {"code": "81", "name": "1面・ボス手前（曲番号 81）"}, {"code": "85", "name": "2面・ボス手前（曲番号 85）"}, {"code": "98", "name": "3・6・8面の始まり（曲番号 98）"}, {"code": "99", "name": "3面・ボス手前（曲番号 99）"}, {"code": "97", "name": "4面（高速面）（曲番号 97）"}, {"code": "9b", "name": "6面・ボス手前（曲番号 9B）"}, {"code": "9d", "name": "7面・ボス手前（曲番号 9D）"}, {"code": "8b", "name": "8面・ボス手前（曲番号 8B）"}, {"code": "82", "name": "9面・ボス手前（曲番号 82）"}, {"code": "8d", "name": "10面（曲番号 8D）"}, {"code": "8e", "name": "10面・ボスラッシュ（曲番号 8E）"}, {"code": "95", "name": "10面・ボスラッシュの後（曲番号 95）"}, {"code": "9c", "name": "10面・最終地点（曲番号 9C）"}, {"code": "91", "name": "グラディウス隠し面（曲番号 91）"}, {"code": "93", "name": "サラマンダー隠し面（曲番号 93）"}, {"code": "87", "name": "ゲームオーバー（曲番号 87）"}, {"code": "83", "name": "使われ方未確認（曲番号 83）"}, {"code": "84", "name": "使われ方未確認（曲番号 84）"}, {"code": "86", "name": "使われ方未確認（曲番号 86）"}, {"code": "88", "name": "使われ方未確認（曲番号 88）"}, {"code": "8a", "name": "使われ方未確認（曲番号 8A）"}, {"code": "8c", "name": "使われ方未確認（曲番号 8C）"}, {"code": "8f", "name": "使われ方未確認（曲番号 8F）"}, {"code": "90", "name": "使われ方未確認（曲番号 90）"}, {"code": "92", "name": "使われ方未確認（曲番号 92）"}, {"code": "94", "name": "使われ方未確認（曲番号 94）"}, {"code": "96", "name": "使われ方未確認（曲番号 96）"}, {"code": "9a", "name": "使われ方未確認（曲番号 9A）"}, {"code": "9e", "name": "使われ方未確認（曲番号 9E）"}, {"code": "9f", "name": "使われ方未確認（曲番号 9F）"}, {"code": "a1", "name": "使われ方未確認（曲番号 A1）"}, {"code": "a2", "name": "使われ方未確認（曲番号 A2）"}];
+const SONGS = [{"code": "89", "name": "タイプ選択（テクニカル／ビギナー）（曲番号 89）"}, {"code": "80", "name": "武器選択（WEAPON SELECT）（曲番号 80）"}, {"code": "a0", "name": "1・2・5・7・9面の始まり（曲番号 A0）"}, {"code": "81", "name": "1面・ボス手前（曲番号 81）"}, {"code": "85", "name": "2面・ボス手前（曲番号 85）"}, {"code": "98", "name": "3・6・8面の始まり（曲番号 98）"}, {"code": "99", "name": "3面・ボス手前（曲番号 99）"}, {"code": "97", "name": "4面（高速面）（曲番号 97）"}, {"code": "9b", "name": "6面・ボス手前（曲番号 9B）"}, {"code": "9d", "name": "7面・ボス手前（曲番号 9D）"}, {"code": "8b", "name": "8面・ボス手前（曲番号 8B）"}, {"code": "82", "name": "9面・ボス手前（曲番号 82）"}, {"code": "8d", "name": "10面（曲番号 8D）"}, {"code": "8e", "name": "10面・ボスラッシュ（曲番号 8E）"}, {"code": "95", "name": "10面・ボスラッシュの後（曲番号 95）"}, {"code": "9c", "name": "10面・最終地点（曲番号 9C）"}, {"code": "91", "name": "グラディウス隠し面（曲番号 91）"}, {"code": "93", "name": "サラマンダー隠し面（曲番号 93）"}, {"code": "87", "name": "ゲームオーバー（曲番号 87）"}, {"code": "83", "name": "使われ方未確認（曲番号 83）"}, {"code": "84", "name": "使われ方未確認（曲番号 84）"}, {"code": "86", "name": "使われ方未確認（曲番号 86）"}, {"code": "88", "name": "使われ方未確認（曲番号 88）"}, {"code": "8a", "name": "使われ方未確認（曲番号 8A）"}, {"code": "8c", "name": "使われ方未確認（曲番号 8C）"}, {"code": "8f", "name": "使われ方未確認（曲番号 8F）"}, {"code": "90", "name": "使われ方未確認（曲番号 90）"}, {"code": "92", "name": "使われ方未確認（曲番号 92）"}, {"code": "94", "name": "使われ方未確認（曲番号 94）"}, {"code": "96", "name": "使われ方未確認（曲番号 96）"}, {"code": "9a", "name": "使われ方未確認（曲番号 9A）"}, {"code": "9e", "name": "使われ方未確認（曲番号 9E）"}, {"code": "9f", "name": "使われ方未確認（曲番号 9F）"}, {"code": "a1", "name": "未使用曲（サントラのおしゃべりの曲・曲番号 A1）"}, {"code": "a2", "name": "使われ方未確認（曲番号 A2）"}];
 const PATS = [
   ['原音（モノラル）', null], ['全チャンネル左右交互', 'LRLRLRLR'], ['全チャンネル左右交互（逆）', 'RLRLRLRL'],
   ['ベースとリード中央・他は交互', 'CLRLRCLR'], ['ベースだけ中央・他は交互', 'CLRLRLRL'], ['控えめ（中音2パートだけ左右）', 'CLCRCCCC'],
@@ -193,7 +194,11 @@ async function play(i, offset = 0) {
     s.connect(gl); s.connect(gr); gl.connect(merger, 0, 0); gr.connect(merger, 0, 1);
     s.start(t0, off0); srcs.push(s); gains.push([gl, gr]);
   });
-  srcs[0].onended = () => { playing = false; setNow('stop', `停止: ${SONGS[curSong].name}`, '最後まで再生しました'); };
+  srcs[0].onended = () => {
+    playing = false;
+    if ($('#auto').checked && curSong < SONGS.length - 1) { play(curSong + 1); return; }
+    setNow('stop', `停止: ${SONGS[curSong].name}`, '最後まで再生しました');
+  };
   playing = true; applyGains(); showRecs(); prefetch(i);
   setNow('play', `再生中: ${SONGS[i].name}`, `${i + 1} / ${SONGS.length} 曲目`);
 }
@@ -226,7 +231,9 @@ $('#next').onclick = () => { const i = Math.min(SONGS.length - 1, +$('#song').va
 $('#j1').onclick = () => { if (curSong >= 0) play(curSong, 0); };
 $('#j2').onclick = () => { if (curSong >= 0) play(curSong, dur / 2); };
 $('#bar').onclick = e => { if (curSong < 0) return; const r = $('#bar').getBoundingClientRect(); play(curSong, (e.clientX - r.left) / r.width * dur); };
-$('#loop').onchange = () => { for (const s of srcs) s.loop = $('#loop').checked; };
+// くり返しと「終わったら次の曲へ」はどちらか一方だけ
+$('#loop').onchange = () => { if ($('#loop').checked) $('#auto').checked = false; for (const s of srcs) s.loop = $('#loop').checked; };
+$('#auto').onchange = () => { if ($('#auto').checked) { $('#loop').checked = false; for (const s of srcs) s.loop = false; } };
 setInterval(() => { if (!playing) return; const t = pos(); $('#bari').style.width = (t / dur * 100) + '%'; $('#tm').textContent = (t < dur / 2 ? '頭 ' : '中盤 ') + t.toFixed(1) + '秒'; }, 100);
 
 // ---------- 記録（このブラウザに保存） ----------
