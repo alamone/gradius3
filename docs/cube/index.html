@@ -120,7 +120,7 @@ button{font:inherit;padding:6px 14px;border-radius:8px;border:1px solid var(--ac
 
 <h2>シミュレーター</h2>
 <div class="panel">
-  <div class="sub">自機の位置とランクを決めて、99個のキューブがどう流れてどこで反応するかを動かして見られます。自機は止まっている前提です。図の中をクリック（タップ）すると自機がそこへ移ります。キューブ同士・地形にくっつく動きは省いています（画面の左・上下の端でくっつき、右へ抜けたものは消えます）。</div>
+  <div class="sub">自機の位置とランクを決めて、99個のキューブがどう流れてどこで反応するかを動かして見られます。再生中は<b>キーボードの矢印キー</b>か<b>ゲームパッドの十字キー（スティック）</b>で自機を動かせます（キューブはゲームと同じく、反応した瞬間の自機の位置へ向かいます）。止めているときは図の中をクリック（タップ）すると自機がそこへ移ります。キューブ同士・地形にくっつく動きは省いています（画面の左・上下の端でくっつき、右へ抜けたものは消えます）。</div>
   <div class="ctl" style="margin-top:10px">
     <label>H <select id="sh"></select></label>
     <label>S <select id="ss"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label>
@@ -130,13 +130,15 @@ button{font:inherit;padding:6px 14px;border-radius:8px;border:1px solid var(--ac
   <div class="ctl" style="margin-top:8px">
     <label>自機 x <input id="px" type="number" min="8" max="340" value="111" style="width:4.5em"></label>
     <label>y <input id="py" type="number" min="24" max="224" value="128" style="width:4.5em"></label>
+    <label>自機のスピード <select id="ss2"></select></label>
     <button id="play" type="button">▶ 再生</button>
-    <label>速さ <select id="spd"><option value="1">×1</option><option value="2" selected>×2</option><option value="4">×4</option></select></label>
+    <button id="reset" type="button">最初から</button>
+    <label>再生の速さ <select id="spd"><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select></label>
   </div>
   <input id="tm" type="range" min="0" max="4600" value="0" style="width:100%;margin-top:10px" aria-label="時間">
   <div class="sub num" id="tlab"></div>
-  <div class="chart"><canvas id="cv" width="704" height="480" style="width:100%;max-width:704px;display:block;margin:0 auto;cursor:crosshair"></canvas></div>
-  <div class="key"><span style="color:var(--cube)">■ 流れているところ（このあと反応する）</span><span style="color:var(--ok)">■ 手前で反応</span><span style="color:var(--warn)">■ 後ろから</span><span style="color:var(--sub)">■ 反応しない</span><span>× 反応した位置</span></div>
+  <div class="chart"><canvas id="cv" tabindex="0" width="704" height="480" style="width:100%;max-width:704px;display:block;margin:0 auto;cursor:crosshair"></canvas></div>
+  <div class="key"><span style="color:var(--cube)">■ 右寄りの5か所で反応</span><span style="color:#2ecc40">■ x=158</span><span style="color:#9be22d">■ x=126</span><span style="color:#d4b000">■ x=94</span><span style="color:#ff8a00">■ x=62</span><span style="color:#ff1a1a">■ x=30</span><span style="color:var(--sub)">■ 反応しない</span><span>× 反応した位置／縦線は反応する10か所</span></div>
 </div>
 
 <h2>並びを見る</h2>
@@ -193,62 +195,88 @@ draw();
 
 const W=[64,176,32,224,80,208,160,112,48,128,80,96,144,192,64,16];
 const RSP=[4,4,4,4.5,5,5.5,6,6.5];
+const CAT_X=[158,126,94,62,30];                       // 色を付ける5か所（左寄り）
+const CAT_COL=['#2ecc40','#9be22d','#ffd400','#ff8a00','#ff1a1a'];
 for(let i=1;i<=16;i++)$('sh').add(new Option(String(i),i-1));
 for(let i=1;i<=45;i++)$('st').add(new Option(String(i).padStart(2,'0'),i-1));
-for(let i=0;i<=20;i++)$('rk').add(new Option(i<16?String(i):(i===16?'16以上':null),i));
-[...$('rk').options].forEach(o=>{if(!o.text)o.remove()});
-$('sh').value=4;$('ss').value=1;$('st').value=11;$('rk').value=10;
-let sim=[];
-function build(){
-  const c0=C0[(+$('sh').value*4+ +$('ss').value)*45+ +$('st').value];
-  const r=+$('rk').value, v=r>=16?7:RSP[(r&14)>>1];
-  const px=+$('px').value, py=+$('py').value;
-  sim=D.map((d,i)=>{const n=i+1,w=W[(n>>1)&15],y0=HY[slot((c0+d)&0xffff)];
-    const o={n,f0:d,y0,w};
-    const tl=Math.ceil((350-8)/2);
-    if(w>=tl){o.react=false;o.fs=d+tl;o.xs=350-2*tl;o.ys=y0;return o}
-    o.react=true;o.fr=d+w;o.xr=350-2*w;o.yr=y0;o.behind=o.xr<px;
-    let dx=px-o.xr,dy=py-o.yr,L=Math.hypot(dx,dy)||1;o.vx=dx/L*v;o.vy=dy/L*v;
-    let x=o.xr,y=o.yr,f=o.fr;
-    for(let k=0;k<2000;k++){x+=o.vx;y+=o.vy;f++;
-      if(x>=312){if(x>=368||y<16||y>=304){o.gone=true;break}continue}   // 右端より先ではくっつかず、画面の外へ消える
-      if(x<8||y<24||y>=232)break}
-    o.fs=f;o.xs=x;o.ys=y;return o});
-}
-function posAt(o,t){
-  if(t<o.f0||(o.gone&&t>=o.fs))return null;
-  if(!o.react||t<o.fr){const tt=Math.min(t,o.react?o.fr:o.fs)-o.f0;return{x:350-2*tt,y:o.y0,ph:0,stuck:!o.react&&t>=o.fs}}
-  const tt=Math.min(t,o.fs)-o.fr;return{x:o.xr+o.vx*tt,y:o.yr+o.vy*tt,ph:1,stuck:t>=o.fs};
+for(let i=0;i<=16;i++)$('rk').add(new Option(i<16?String(i):'16以上',i));
+for(let i=0;i<=5;i++)$('ss2').add(new Option(String(i),i));
+$('sh').value=4;$('ss').value=1;$('st').value=11;$('rk').value=10;$('ss2').value=2;
+const TMAX=4600;
+let path=[],tNow=0,playing=false,keys={};
+function cfg(){return{c0:C0[(+$('sh').value*4+ +$('ss').value)*45+ +$('st').value],v:(+$('rk').value>=16?7:RSP[(+$('rk').value&14)>>1])}}
+function catOf(n){const w=W[(n>>1)&15];if(w>=171)return -1;return CAT_X.indexOf(350-2*w)}   // -1:反応しない / 0〜4:色 / それ以外:色なし
+function simulate(T){
+  const {c0,v}=cfg();
+  const cubes=D.map((d,i)=>({n:i+1,f0:d,y:HY[slot((c0+d)&0xffff)],x:350,w:W[((i+1)>>1)&15],st:-1,vx:0,vy:0,rx:null,ry:null}));
+  let hit=false;
+  for(let t=0;t<=T;t++){
+    const sp=path[Math.min(t,path.length-1)];
+    for(const c of cubes){
+      if(t<c.f0||c.st>=2)continue;
+      if(c.st===-1){c.st=0;c.left=c.w;continue}
+      if(c.st===0){c.x-=2;if(c.x<8){c.st=2;continue}
+        if(--c.left<0){c.st=1;c.rx=c.x;c.ry=c.y;const dx=sp.x-c.x,dy=sp.y-c.y,L=Math.hypot(dx,dy)||1;c.vx=dx/L*v;c.vy=dy/L*v}}
+      else if(c.st===1){c.x+=c.vx;c.y+=c.vy;
+        if(c.x>=312){if(c.x>=368||c.y<16||c.y>=304)c.st=3}
+        else if(c.x<8||c.y<24||c.y>=232)c.st=2}
+      if(t===T&&c.st<2&&Math.abs(c.x-sp.x)<12&&Math.abs(c.y-sp.y)<10)hit=true;
+    }
+  }
+  return {cubes,hit};
 }
 const cv=$('cv'),cx=cv.getContext('2d');
 function render(){
-  const t=+$('tm').value, cs=getComputedStyle(document.documentElement), col=k=>cs.getPropertyValue(k).trim();
-  const sx=cv.width/352, sy=cv.height/240;
+  const t=tNow,{cubes,hit}=simulate(t),cs=getComputedStyle(document.documentElement),col=k=>cs.getPropertyValue(k).trim();
+  const sx=cv.width/352,sy=cv.height/240,sp=path[Math.min(t,path.length-1)];
   cx.fillStyle=col('--bg');cx.fillRect(0,0,cv.width,cv.height);
-  cx.strokeStyle=col('--line');cx.lineWidth=1;cx.strokeRect(8*sx,24*sy,(344)*sx,(208)*sy);
-  const px=+$('px').value,py=+$('py').value;
-  let shown=0,stuck=0;
-  for(const o of sim){
-    if(o.react&&t>=o.fr){cx.strokeStyle=o.behind?col('--warn'):col('--ok');cx.beginPath();cx.moveTo((o.xr-4)*sx,(o.yr-4)*sy);cx.lineTo((o.xr+4)*sx,(o.yr+4)*sy);cx.moveTo((o.xr+4)*sx,(o.yr-4)*sy);cx.lineTo((o.xr-4)*sx,(o.yr+4)*sy);cx.stroke()}
-    const p=posAt(o,t);if(!p)continue;
-    const c=!o.react?col('--sub'):(p.ph===0?col('--cube'):(o.behind?col('--warn'):col('--ok')));
-    cx.globalAlpha=p.stuck?0.35:1;cx.fillStyle=c;cx.fillRect((p.x-6)*sx,(p.y-6)*sy,12*sx,12*sy);cx.globalAlpha=1;
-    if(!p.stuck){cx.fillStyle=col('--text');cx.font=`${10*sx}px ui-monospace,monospace`;cx.fillText(String(o.n),(p.x-6)*sx,(p.y-8)*sy);shown++}else stuck++;
+  cx.strokeStyle=col('--line');cx.lineWidth=1;cx.strokeRect(8*sx,24*sy,344*sx,208*sy);
+  cx.globalAlpha=0.35;cx.fillStyle=col('--sub');for(const x of [318,286,254,222,190])cx.fillRect(x*sx-0.5,24*sy,1,208*sy);
+  CAT_X.forEach((x,i)=>{cx.fillStyle=CAT_COL[i];cx.fillRect(x*sx-1,24*sy,2,208*sy)});cx.globalAlpha=1;
+  for(const c of cubes){
+    if(c.st<0||c.st===3)continue;
+    const k=catOf(c.n),fc=k===-1?col('--sub'):(k>=0?CAT_COL[k]:col('--cube'));
+    if(c.rx!==null){cx.strokeStyle=fc;cx.beginPath();cx.moveTo((c.rx-4)*sx,(c.ry-4)*sy);cx.lineTo((c.rx+4)*sx,(c.ry+4)*sy);cx.moveTo((c.rx+4)*sx,(c.ry-4)*sy);cx.lineTo((c.rx-4)*sx,(c.ry+4)*sy);cx.stroke()}
+    cx.globalAlpha=c.st===2?0.3:1;cx.fillStyle=fc;cx.fillRect((c.x-6)*sx,(c.y-6)*sy,12*sx,12*sy);cx.globalAlpha=1;
+    if(c.st<2){cx.fillStyle=col('--text');cx.font=`${10*sx}px ui-monospace,monospace`;cx.fillText(String(c.n),(c.x-6)*sx,(c.y-8)*sy)}
   }
-  cx.fillStyle=col('--text');cx.beginPath();cx.moveTo((px+10)*sx,py*sy);cx.lineTo((px-8)*sx,(py-5)*sy);cx.lineTo((px-8)*sx,(py+5)*sy);cx.closePath();cx.fill();
-  const nx=sim.filter(o=>o.f0<=t).length;
-  $('tlab').textContent=`1個目から ${t} フレーム（約${(t/60).toFixed(1)}秒）　出たキューブ ${nx}個`;
+  cx.fillStyle=hit?'#ff1a1a':col('--text');cx.beginPath();cx.moveTo((sp.x+10)*sx,sp.y*sy);cx.lineTo((sp.x-8)*sx,(sp.y-5)*sy);cx.lineTo((sp.x-8)*sx,(sp.y+5)*sy);cx.closePath();cx.fill();
+  $('tm').value=t;
+  $('tlab').textContent=`1個目から ${t} フレーム（約${(t/60).toFixed(1)}秒）　出たキューブ ${D.filter(d=>d<=t).length}個　自機 x=${Math.round(sp.x)} y=${Math.round(sp.y)}${hit?'　当たり！':''}`;
 }
-function rebuild(){build();render()}
-['sh','ss','st','rk','px','py'].forEach(id=>$(id).addEventListener('input',rebuild));
-$('tm').addEventListener('input',render);
-cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect();$('px').value=Math.round((e.clientX-r.left)/r.width*352);$('py').value=Math.round((e.clientY-r.top)/r.height*240);rebuild()});
-let timer=null;
-$('play').addEventListener('click',()=>{if(timer){clearInterval(timer);timer=null;$('play').textContent='▶ 再生';return}
-  if(+$('tm').value>=4600)$('tm').value=0;$('play').textContent='❚❚ 止める';
-  timer=setInterval(()=>{let t=+$('tm').value+ +$('spd').value;if(t>=4600){t=4600;clearInterval(timer);timer=null;$('play').textContent='▶ 再生'}$('tm').value=t;render()},1000/60)});
+function shipSpeed(){return 1+0.75*(+$('ss2').value)}
+function inputDir(){
+  let dx=0,dy=0;
+  if(keys.ArrowLeft)dx-=1;if(keys.ArrowRight)dx+=1;if(keys.ArrowUp)dy-=1;if(keys.ArrowDown)dy+=1;
+  let gps=[];try{gps=navigator.getGamepads?navigator.getGamepads():[]}catch(e){}
+  for(const g of gps){if(!g)continue;const ax=g.axes[0]||0,ay=g.axes[1]||0,b=i=>g.buttons[i]&&g.buttons[i].pressed;
+    if(ax<-0.4||b(14))dx-=1;if(ax>0.4||b(15))dx+=1;if(ay<-0.4||b(12))dy-=1;if(ay>0.4||b(13))dy+=1;}
+  return [Math.sign(dx),Math.sign(dy)];
+}
+function resetPath(){path=[{x:+$('px').value,y:+$('py').value}];tNow=0}
+function step(){
+  if(!playing)return;
+  for(let i=0;i<+$('spd').value;i++){
+    if(tNow>=TMAX){playing=false;$('play').textContent='▶ 再生';break}
+    const p=path[tNow],[dx,dy]=inputDir(),s=shipSpeed();
+    path.length=tNow+1;
+    path.push({x:Math.max(8,Math.min(344,p.x+dx*s)),y:Math.max(24,Math.min(224,p.y+dy*s))});
+    tNow++;
+  }
+  render();if(playing)requestAnimationFrame(step);
+}
+['sh','ss','st','rk'].forEach(id=>$(id).addEventListener('input',render));
+['px','py'].forEach(id=>$(id).addEventListener('input',()=>{path.length=tNow+1;path[tNow]={x:+$('px').value,y:+$('py').value};render()}));
+$('tm').addEventListener('input',()=>{const t=+$('tm').value;while(path.length<=t)path.push({...path[path.length-1]});tNow=t;render()});
+cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect();const x=Math.round((e.clientX-r.left)/r.width*352),y=Math.round((e.clientY-r.top)/r.height*240);
+  $('px').value=x;$('py').value=y;path.length=tNow+1;path[tNow]={x,y};render()});
+$('play').addEventListener('click',()=>{playing=!playing;$('play').textContent=playing?'❚❚ 止める':'▶ 再生';
+  if(playing){if(tNow>=TMAX)resetPath();requestAnimationFrame(step)}});
+$('reset').addEventListener('click',()=>{playing=false;$('play').textContent='▶ 再生';resetPath();render()});
+window.addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')&&playing){keys[e.key]=true;e.preventDefault()}});
+window.addEventListener('keyup',e=>{if(e.key.startsWith('Arrow'))keys[e.key]=false});
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{render();draw()});
-rebuild();
+resetPath();render();
 </script>
 </body>
 </html>
