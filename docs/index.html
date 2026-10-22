@@ -187,7 +187,7 @@ let DATA = null; const have = new Map(); // crc -> Uint8Array
 function curVer() { return DATA.versions.find(v => v.patches && v.version === $('#ver').value) || DATA.versions[0]; }
 function needList() {
   const v = curVer(); const L = [];
-  for (const f of DATA.set.files) L.push({ label: f.name, crc: f.crc });
+  for (const f of DATA.set.files) if (!v.patches[f.name]) L.push({ label: f.name, crc: f.crc });   // パッチで作るファイルは除く
   for (const [name, p] of Object.entries(v.patches)) L.push({ label: name + '（パッチ元）', crc: p.source_crc });
   return L;
 }
@@ -215,7 +215,7 @@ async function addFiles(files) {
 async function build() {
   const v = curVer(); const files = [];
   try {
-    for (const f of DATA.set.files) files.push([f.name, have.get(f.crc)]);
+    for (const f of DATA.set.files) if (!v.patches[f.name]) files.push([f.name, have.get(f.crc)]);
     for (const [name, p] of Object.entries(v.patches)) {
       const patch = new Uint8Array(await (await fetch(p.file)).arrayBuffer());
       const out = bpsApply(have.get(p.source_crc), patch);

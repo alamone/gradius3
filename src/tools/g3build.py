@@ -22,11 +22,13 @@ class Rom:
         self.main = il(open(F15,'rb').read(), open(E15,'rb').read())
         self.sub = il(open(M09,'rb').read(), open(M08,'rb').read())
         self.main0 = bytes(self.main); self.sub0 = bytes(self.sub)
+        with zipfile.ZipFile(MAMEZIP) as z: self.snd = bytearray(z.read('945_r05.d9'))   # サウンド(Z80)
+        self.snd0 = bytes(self.snd)
         self.used = []   # (cpu, start, end, tag)
         self.fillers = {'main': [], 'sub': []}
 
-    def img(self, cpu): return self.main if cpu == 'main' else self.sub
-    def orig(self, cpu): return self.main0 if cpu == 'main' else self.sub0
+    def img(self, cpu): return {'main': self.main, 'sub': self.sub, 'snd': self.snd}[cpu]
+    def orig(self, cpu): return {'main': self.main0, 'sub': self.sub0, 'snd': self.snd0}[cpu]
 
     def put(self, cpu, addr, data, tag='', expect=None, free_ok=False):
         im = self.img(cpu); o = self.orig(cpu)
@@ -84,6 +86,7 @@ class Rom:
         mf, me = bytes(self.main[0::2]), bytes(self.main[1::2])
         sf, so_ = bytes(self.sub[0::2]), bytes(self.sub[1::2])
         out = {'945_313.f15': mf, '945_312.e15': me, '945_m09.r17': sf, '945_m08.n17': so_}
+        if bytes(self.snd) != self.snd0: out['945_r05.d9'] = bytes(self.snd)
         for n, b in out.items(): open(f'{outdir}/{n}', 'wb').write(b)
         # MAME romset (gradius3) ディレクトリ
         rs = f'{outdir}/mame/gradius3'
@@ -91,6 +94,7 @@ class Rom:
         with zipfile.ZipFile(MAMEZIP) as z: z.extractall(rs)
         open(f'{rs}/945_r13.f15', 'wb').write(mf); open(f'{rs}/945_r12.e15', 'wb').write(me)
         open(f'{rs}/945_m09.r17', 'wb').write(sf); open(f'{rs}/945_m08.n17', 'wb').write(so_)
+        if '945_r05.d9' in out: open(f'{rs}/945_r05.d9', 'wb').write(out['945_r05.d9'])
         return out
 
 def selfcheck(rom):

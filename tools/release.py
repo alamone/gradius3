@@ -14,6 +14,8 @@ with zipfile.ZipFile(setzip) as z:
     setfiles = {n: z.read(n) for n in z.namelist() if not n.endswith('/')}
 g313 = {'f15': open(os.path.join(d313, '945_313.f15'), 'rb').read(), 'e15': open(os.path.join(d313, '945_312.e15'), 'rb').read()}
 mod = {n: open(os.path.join(moddir, n), 'rb').read() for n in ('945_313.f15', '945_312.e15', '945_m09.r17', '945_m08.n17')}
+SND = '945_r05.d9'   # サウンドROM（改造したときだけ出力フォルダにある）
+if os.path.exists(os.path.join(moddir, SND)): mod[SND] = open(os.path.join(moddir, SND), 'rb').read()
 # 出力ファイル名(MAME gradius3) ← (改造ROM, 元にする純正ROM)
 plan = {
     '945_r13.f15': (mod['945_313.f15'], g313['f15']),
@@ -21,6 +23,7 @@ plan = {
     '945_m09.r17': (mod['945_m09.r17'], setfiles['945_m09.r17']),
     '945_m08.n17': (mod['945_m08.n17'], setfiles['945_m08.n17']),
 }
+if SND in mod: plan[SND] = (mod[SND], setfiles[SND])
 outdir = os.path.join(REPO, 'docs', 'patches', ver); os.makedirs(outdir, exist_ok=True)
 patches = {}
 for name, (tgt, src) in plan.items():
@@ -33,7 +36,8 @@ for name, (tgt, src) in plan.items():
 vj = os.path.join(REPO, 'docs', 'versions.json')
 data = json.load(open(vj)) if os.path.exists(vj) else {'versions': []}
 # 出力ROMセットの構成（ファイル名・中身のCRC）。改造4本以外は利用者の純正ファイルをそのまま使う
-data['set'] = {'name': 'gradius3', 'files': [{'name': n, 'crc': crc(b), 'size': len(b)} for n, b in sorted(setfiles.items()) if n not in plan]}
+# サウンドROMは版によって改造したりしなかったりするので一覧に残す（ページ側でパッチのあるファイルは除く）
+data['set'] = {'name': 'gradius3', 'files': [{'name': n, 'crc': crc(b), 'size': len(b)} for n, b in sorted(setfiles.items()) if n not in plan or n == SND]}
 data['required'] = {'313main': {'945_313.f15': crc(g313['f15']), '945_312.e15': crc(g313['e15'])}}
 n = json.load(open(notes))
 # ビルド日時: 改造メインROMの起動画面の文字列（BUILD 年 月 日 時:分:秒）から読む

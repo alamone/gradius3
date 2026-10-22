@@ -89,6 +89,8 @@ hs_k:
         btst    #3,d1
         bne.s   hs_norm
 hs_go:
+        moveq   #-$5f,d7        ; メニューの曲: 未使用曲 A1 を鳴らす（音量はサウンドROM側で半分に）
+        jsr     $2b0c.l
         move.b  d3,MB_REQ.l
         move.b  d2,MB_KIND.l
         clr.b   MB_DONE.l
