@@ -32,6 +32,36 @@ PLUS_ROWS = ['........', '...f....', '...f9...', '.ffffff.', '..9f9999', '...f9.
 PLUS_GFX = bytes(int(r[i] if r[i] != '.' else '0', 16) << 4 | int(r[i+1] if r[i+1] != '.' else '0', 16) for r in PLUS_ROWS for i in range(0, 8, 2))
 BANG_ROWS = ['...ff...', '...ff9..', '...ff9..', '...f9...', '....9...', '...ff...', '...ff9..', '....99..']
 BANG_GFX = bytes(int(r[i] if r[i] != '.' else '0', 16) << 4 | int(r[i+1] if r[i+1] != '.' else '0', 16) for r in BANG_ROWS for i in range(0, 8, 2))
+# ---- 飛んでくるキューブの色分け（CUBE INFO 表示中）: 反応する位置が左寄りの5か所だけ色を付ける ----
+# 反応する位置 x=158 緑 / 126 黄緑 / 94 黄 / 62 橙 / 30 赤。使うスプライトのパレットは 9面で使われていない 21,22,24,26,30
+CC_PALS = [21, 22, 24, 26, 30, 23, 25, 27, 31]   # 21,22,24,26,30 は9面で未使用。23,25,27,31 はボス戦だけで使う → ラッシュの間だけ借りて、終わったら元に戻す
+CC_X    = [254, 222, 190, 158, 126, 94, 62, 30]   # 反応する位置（右から3〜10番目）。右から1・2番目（318・286）は元の色のまま
+CC_TINT = [(0.05, 0.55, 1.0), (0.0, 0.85, 0.95), (0.0, 0.95, 0.55), (0.15, 1.0, 0.2), (0.6, 1.0, 0.1), (1.0, 0.95, 0.1), (1.0, 0.5, 0.05), (1.0, 0.05, 0.08),
+           None]                                  # 最後 = 反応しない: 灰色
+def _stage9_pal():
+    import os
+    pal = open(os.path.join(os.path.dirname(__file__), 'cubecol', 'pal_stage9.bin'), 'rb').read()
+    return [(pal[i*2] << 8) | pal[i*2+1] for i in range(0x200)]
+def cube_tint_palettes():
+    P = _stage9_pal()
+    src = P[29*16:29*16+16]                       # キューブの色（パレット29）
+    out = bytearray()
+    for pl, t in zip(CC_PALS, CC_TINT):
+        out += struct.pack('>I', 0x80000 + pl * 32)
+        for i, w in enumerate(src):
+            if i < 4 or w == 0: out += struct.pack('>H', w); continue
+            r, g, b = (w >> 10) & 31, (w >> 5) & 31, w & 31   # 色は xRRRRRGGGGGBBBBB
+            L = min(31.0, (r * 0.3 + g * 0.59 + b * 0.11) * 1.25)
+            if t is None: nr = ng = nb = min(31, int(L * 0.85 + 0.5))
+            else: nr, ng, nb = (min(31, int(L * tc * 0.85 + c * 0.15 + 0.5)) for tc, c in zip(t, (r, g, b)))
+            out += struct.pack('>H', (w & 0x8000) | (nr << 10) | (ng << 5) | nb)
+    return bytes(out)
+def cube_orig_palettes():
+    P = _stage9_pal()
+    out = bytearray()
+    for pl in CC_PALS:
+        out += struct.pack('>I', 0x80000 + pl * 32) + b''.join(struct.pack('>H', P[pl*16+i]) for i in range(16))
+    return bytes(out)
 ROMAN = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']   # エリア名(英字)
 GRID_COL = 26
 ROMAN_OFS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18]
@@ -78,6 +108,12 @@ def build_data(base):
     for i in range(5): blob.extend(struct.pack('>I', lab['CH_S%d' % i]))
     al(); lab['CS_PTS'] = base + len(blob)
     blob.extend(bytes([0x00, 0x00, 0x10, 0x00]))   # キューブ1個 = 1000点（BCD）
+    al(); lab['CCPAL'] = base + len(blob)
+    blob.extend(cube_tint_palettes())
+    al(); lab['CCORG'] = base + len(blob)
+    blob.extend(cube_orig_palettes())
+    lab['CCCOL'] = base + len(blob)
+    blob.extend(bytes([(p - 16) << 1 for p in CC_PALS]))
     al(); lab['PLUSGFX'] = base + len(blob)
     blob.extend(PLUS_GFX)
     al(); lab['BANGGFX'] = base + len(blob)
@@ -92,11 +128,13 @@ def build_data(base):
     put('PS_R1', b' RANK DISP\0')
     put('PS_Q0', b'>CUBE INFO\0')
     put('PS_Q1', b' CUBE INFO\0')
+    put('PS_K0', b'>CUBE COLOR\0')
+    put('PS_K1', b' CUBE COLOR\0')
     put('PS_ON', b'ON \0')
     put('PS_OFF', b'OFF\0')
     # ポーズの項目: 選択中の文字列.l 通常の文字列.l ON/OFF の場所.l(0=なし)
     al(); lab['PTAB'] = base + len(blob)
-    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_Q0', 'PS_Q1', 0x203f0c)]:
+    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_Q0', 'PS_Q1', 0x203f0c), ('PS_K0', 'PS_K1', 0x203f34)]:
         blob.extend(struct.pack('>III', lab[a], lab[b], f))
     # 項目記述子 12B: labelptr.l type.b min.b max.b mboff.b pad.b strtab.l
     al(); lab['ITM'] = base + len(blob)
@@ -388,6 +426,7 @@ mi_dl:  moveq   #0,d0
         bra.s   mi_dl
 mi_scr: clr.b   $203f0e.l       ; RANK DISP・CUBE INFO はポーズで切り替える（始めは OFF）
         clr.b   $203f0c.l
+        clr.b   $203f34.l       ; CUBE COLOR
         jsr     ClrAll.l
         jsr     MbgInit.l
         lea     HELP2.l,a0
@@ -562,11 +601,11 @@ ch_rts: rts
 ;      最初にずれたキューブの番号を V_LAG に残し、"LAG nn" を H の左に表示する
 HROW    = 2                ; キューブの表示の段（最上段）
 ATTRLAB = $c0              ; 見出しの色: パレット6（メインがプレイ中に暗めの灰色を入れる。ゲームでは未使用）
-V_LAGI  = $1011c0          ; 最後に調べた出現番号
-V_LAG   = $1011c2          ; 最初にずれたキューブの番号 (0 = ずれなし)
-V_LAGF  = $1011c4          ; ずれの累計（フレーム）
-V_SHL   = $1011c6
-V_RKL   = $1011c8          ; RANK の表示を出しているか（OFF にしたら消す）          ; メニューのシールド色の見本: 最後に入れた色
+V_LAGI  = $1011e0          ; 最後に調べた出現番号
+V_LAG   = $1011e2          ; 最初にずれたキューブの番号 (0 = ずれなし)
+V_LAGF  = $1011e4          ; ずれの累計（フレーム）
+V_SHL   = $1011e6
+V_RKL   = $1011e8          ; RANK の表示を出しているか（OFF にしたら消す）          ; メニューのシールド色の見本: 最後に入れた色
 LagChk:
         cmpi.w  #$ffff,$203e3c.l
         bne.s   lc_go
@@ -832,7 +871,7 @@ mf_cancel:
 PAUSE = """
 ; ---- 装備コマンドの回数計算 (改造プレイ中、毎フレーム) ----
 ; 目標: START=スピード2・ミサイル・レーザー・オプション4・バリア / SHOT+START=レーザーの代わりにダブル
-;       MISSILE+START=スピード2・ミサイル・オプション2
+;       MISSILE+START=レーザー・ダブルなし（ノーマルショット）のフル装備 / SHOT+MISSILE+START=スピード2・ミサイル・オプション2
 ; 結果: MB+$24(1P) / +$2c(2P) に [SPEED,MISSILE,DOUBLE,LASER,OPTION,SHIELD の使用回数, スピードを下げる印]
 CmdCalc:
         lea     $201000.l,a0
@@ -859,12 +898,16 @@ cc2:    move.b  d1,1(a1)
         clr.b   3(a1)
         clr.b   5(a1)
         moveq   #2,d3
-        btst    #5,d2
-        bne.s   cc_op
+        move.b  d2,d4
+        andi.b  #$30,d4
+        cmpi.b  #$30,d4         ; ショット＋ミサイル＋START: スピード2・ミサイル・オプション2
+        beq.s   cc_op
         moveq   #4,d3
+        cmpi.b  #$20,d4         ; ミサイル＋START: ノーマルショットのフル装備（レーザー・ダブルなし）
+        beq.s   cc_sh
         btst    #4,d2
         beq.s   cc_l
-        move.b  #1,2(a1)
+        move.b  #1,2(a1)        ; ショット＋START: レーザーの代わりにダブル
         bra.s   cc_sh
 cc_l:   move.b  #1,3(a1)
 cc_sh:  tst.b   $2b(a0)
@@ -900,6 +943,78 @@ cst_l:  dc.w    $c509           ; abcd -(a1),-(a2)
         move.b  #1,$203ed0.l    ; メインに点数の描き直しを頼む
 cst_r:  rts
 
+; ---- 飛んでくるキューブの色分け（CUBE INFO 表示中・毎フレーム）----
+; 反応前（$2a=0）は「今の x − 残り待ち時間×2」= 反応する x から色を決めて覚える。反応後は覚えた色のまま。
+; 色はスプライトの色番号（オブジェクト $4 の bit1-4）を差し替える。パレット本体は共有RAM $202000〜 に置き、メインが写す
+V_CCAT  = $1011f0          ; スロットごとの色の種類（-1=そのまま, 0〜8）32バイト
+V_CCW   = $1011ea          ; CUBE COLOR を使いたい（サブの Frame が毎フレーム決める）
+V_CCR   = $1011eb          ; 元の色に戻す残りフレーム
+CCN     = 9                ; 借りるパレットの数
+CubeCol:
+        moveq   #0,d5           ; 生きているキューブの数
+        lea     $202320.l,a0
+        lea     V_CCAT.l,a2
+        lea     CCCOL.l,a3
+        moveq   #31,d6
+kc_l:   tst.b   (a0)
+        beq.w   kc_n
+        cmpi.w  #$3301,$28(a0)
+        bne.w   kc_n
+        addq.w  #1,d5
+        tst.b   V_CCW.l
+        beq.w   kc_n
+        tst.b   $2a(a0)
+        bne.s   kc_set
+        move.l  8(a0),d0
+        sub.l   $2038de.l,d0
+        asr.l   #8,d0
+        move.w  $3a(a0),d1
+        add.w   d1,d1
+        sub.w   d1,d0           ; 反応する x（8 未満 = 反応しない）
+        moveq   #8,d2
+        cmpi.w  #8,d0
+        blt.s   kc_k
+        lea     KC_TH.l,a4      ; 区切り: 46,78,110,142,174,206,238,270 → 7〜0、それ以上は色なし
+        moveq   #7,d2
+kc_t:   cmp.w   (a4)+,d0
+        blt.s   kc_k
+        subq.w  #1,d2
+        bpl.s   kc_t
+kc_k:   move.b  d2,(a2)
+kc_set: move.b  (a2),d2
+        bmi.s   kc_n
+        ext.w   d2
+        move.b  0(a3,d2.w),d3
+        move.b  4(a0),d4
+        andi.b  #$e1,d4
+        or.b    d3,d4
+        move.b  d4,4(a0)
+kc_n:   lea     $50(a0),a0
+        addq.l  #1,a2
+        dbf     d6,kc_l
+        ; パレット: 使う間は色付きの9つ、やめたら数フレームだけ元の色を置く（メインが $103cb0〜 を写す）
+        tst.b   V_CCW.l
+        beq.s   kc_off
+        tst.w   d5
+        beq.s   kc_off
+        lea     CCPAL.l,a0
+        move.b  #3,V_CCR.l
+        bra.s   kc_cp
+kc_off: tst.b   V_CCR.l
+        beq.s   kc_none
+        subq.b  #1,V_CCR.l
+        lea     CCORG.l,a0
+kc_cp:  lea     $203cb0.l,a1
+        move.w  #161,d0         ; 9パレット × 18語 − 1
+kc_c:   move.w  (a0)+,(a1)+
+        dbf     d0,kc_c
+        move.b  #1,$203ed4.l
+        rts
+kc_none:
+        clr.b   $203ed4.l
+        rts
+KC_TH:  dc.w    46,78,110,142,174,206,238,270
+
 RankDisp:                       ; 2段目の右寄せ「RANK:10」（右端 col 50 = T の数字の右端）
         jsr     PlusChr.l
         move.w  #44,d0
@@ -926,7 +1041,7 @@ V_PST   = $100f50
 V_PSEL  = $100f51
 V_PPIN  = $100f52
 V_PSIN  = $100f53
-V_PSAV  = $101100          ; 6行x16桁x2バイト = 192（0x101100〜: 元のサブのプログラムが使っていない範囲）
+V_PSAV  = $101100          ; 7行x16桁x2バイト = 224（〜0x1011df）（0x101100〜: 元のサブのプログラムが使っていない範囲）
 MBS_INV = $203f20          ; 無敵（メインの MB+$20）
 V_LINV  = $100f38          ; スタートメニューの前回値の写し（MB+$20 に対応）
 PX      = 26
@@ -938,7 +1053,7 @@ PSave:  lea     V_PSAV.l,a0
         bra.s   ps_go
 PRest:  lea     V_PSAV.l,a0
         moveq   #1,d0
-ps_go:  moveq   #5,d6
+ps_go:  moveq   #6,d6
         move.w  #PY,d1
 pr_row: move.w  d1,d3
         lsl.w   #6,d3
@@ -967,7 +1082,7 @@ PLine:  move.w  #PX+1,d0
         moveq   #0,d2
         jmp     PutStr.l
 
-PDraw:  moveq   #5,d6
+PDraw:  moveq   #6,d6
         move.w  #PY,d1
 pd_cl:  move.w  #PX,d0
         moveq   #PW-1,d7
@@ -1006,12 +1121,12 @@ pd_v:   movem.l d4/a2,-(a7)
         movem.l (a7)+,d4/a2
 pd_nx:  lea     12(a2),a2
         addq.w  #1,d4
-        cmpi.w  #5,d4
+        cmpi.w  #6,d4
         bcs.s   pd_lp
         rts
 
 ; ---- ポーズ 1フレーム (MBS_PAUS==1 の間) ----
-; 上下: CONTINUE / GAME OVER / INVINCIBLE / RANK DISP / CUBE INFO。ON/OFF の行では 左右・ショットで ON/OFF。START か ショットで決定
+; 上下: CONTINUE / GAME OVER / INVINCIBLE / RANK DISP / CUBE INFO / CUBE COLOR。ON/OFF の行では 左右・ショットで ON/OFF。START か ショットで決定
 PauseFrame:
         tst.b   V_PST.l
         bne.s   pf_run
@@ -1035,12 +1150,12 @@ pf_run: move.b  MBS_P1.l,d0
         beq.s   pf_dn
         subq.b  #1,V_PSEL.l
         bpl.s   pf_rd
-        move.b  #4,V_PSEL.l
+        move.b  #5,V_PSEL.l
         bra.s   pf_rd
 pf_dn:  btst    #3,d1           ; 下
         beq.s   pf_lr
         addq.b  #1,V_PSEL.l
-        cmpi.b  #5,V_PSEL.l
+        cmpi.b  #6,V_PSEL.l
         bcs.s   pf_rd
         clr.b   V_PSEL.l
         bra.s   pf_rd

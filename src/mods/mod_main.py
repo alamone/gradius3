@@ -46,7 +46,10 @@ StubIn:
         move.b  $c8001.l,d0
         not.b   d0
         move.b  d0,MB_SYS.l
-        tst.b   $103ed0.l       ; サブからスコアの描き直しの依頼（CUBE INFO を OFF にした／キューブがくっついて点が入った）
+        cmpi.b  #1,MB_PAUS.l    ; ポーズ中はフレームカウンタを進めない（キューブの並びがポーズでずれないように）
+        bne.s   si_np
+        subq.w  #1,$40032.l
+si_np:  tst.b   $103ed0.l       ; サブからスコアの描き直しの依頼（CUBE INFO を OFF にした／キューブがくっついて点が入った）
         beq.s   ms_nr
         clr.b   $103ed0.l
         movem.l d0-d7/a0-a6,-(a7)
@@ -188,13 +191,7 @@ SetArea:                        ; 進行度はサブCPUがビルド時の表か�
         move.w  d6,$1010d2.l
 sa_ret: rts
 
-; 状態1(ゲーム初期化)の副状態2(タイプ選択画面)の代わり: 改造モード時は選択画面を飛ばす
-SkipType:
-        tst.b   MB_RUN.l
-        bne.s   sk_mod
-        jmp     $3710.l
-sk_mod:                         ; 改造プレイもテクニカル/ビギナー選択を表示する（ビギナーは選べない: TypeBeg/TypeGrey）
-        jmp     $3710.l
+; （タイプ選択画面の差し替え SkipType は、改造プレイでも純正どおり表示するようになったので外した）
 sk_set: cmpi.b  #1,MB_MODE.l    ; 残機はディップスイッチどおり。キューブラッシュはそれに +4（遊んでいない側＝残機0 には足さない）
         bne.s   sk_sr
         tst.b   $50(a0)
@@ -338,6 +335,15 @@ HudPal: tst.b   MB_RUN.l
         beq.s   hp_r
         move.w  #$5252,$800de.l
         move.w  #$10a9,$800d2.l
+        tst.b   $103ed4.l       ; CUBE COLOR 有効: 飛んでくるキューブの色（サブが共有RAMに置いた5色分のパレット）を写す
+        beq.s   hp_r
+        lea     $103cb0.l,a0    ; 共有RAMの未使用域（0x103cb0〜0x103df3: パレット9つ分）
+        moveq   #8,d2
+hp_p:   movea.l (a0)+,a1
+        moveq   #15,d1
+hp_w:   move.w  (a0)+,(a1)+
+        dbf     d1,hp_w
+        dbf     d2,hp_p
 hp_r:   rts
 
 ; ---- 敵出現表ポインタ ($42e00) の補正 (0x154aa の move.l a6,$42e00 を置換) ----
@@ -795,7 +801,6 @@ def apply(rom):
     assert len(b2) <= 532, len(b2)
     rom.put('main', 0xd8f6, b2, 'stubsB')
     rom.put('main', 0x154aa, bytes.fromhex('4eb9') + lab2['EvPtr'].to_bytes(4, 'big'), 'evptr', expect=bytes.fromhex('23ce00042e00'))
-    rom.put('main', 0x3658, lab2['SkipType'].to_bytes(4, 'big'), 'skiptype', expect=bytes.fromhex('00003710'))
     import struct
     d313 = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
     gw = []

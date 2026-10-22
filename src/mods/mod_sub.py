@@ -114,7 +114,18 @@ fe_set: move.b  d1,$203ed1.l
         cmpi.b  #1,$203f0b.l
         bne.s   fe_x
         clr.l   $201058.l
-fe_x:
+fe_x:   moveq   #0,d1               ; CUBE COLOR が有効か → $203ed4（メインはこれを見てキューブの色を写す）
+        cmpi.b  #2,TOPSTATE.l
+        bne.s   fc_s
+        tst.b   MBS_RUN.l
+        beq.s   fc_s
+        tst.l   $2038de.l
+        beq.s   fc_s
+        cmpi.b  #1,$203f0b.l
+        bne.s   fc_s
+        move.b  $203f34.l,d1
+fc_s:   move.b  d1,V_CCW.l
+        jsr     CubeCol.l
         cmpi.b  #2,TOPSTATE.l
         beq.w   fr_ingame
         tst.b   MBS_REQ.l

@@ -120,7 +120,7 @@ button{font:inherit;padding:6px 14px;border-radius:8px;border:1px solid var(--ac
 
 <h2>シミュレーター</h2>
 <div class="panel">
-  <div class="sub">自機の位置とランクを決めて、99個のキューブがどう流れてどこで反応するかを動かして見られます。再生中は<b>キーボードの矢印キー</b>か<b>ゲームパッドの十字キー（スティック）</b>で自機を動かせます（キューブはゲームと同じく、反応した瞬間の自機の位置へ向かいます）。止めているときは図の中をクリック（タップ）すると自機がそこへ移ります。キューブ同士・地形にくっつく動きは省いています（画面の左・上下の端でくっつき、右へ抜けたものは消えます）。</div>
+  <div class="sub">自機の位置とランクを決めて、99個のキューブがどう流れてどこで反応するかを動かして見られます。再生中は<b>キーボードの矢印キー</b>、<b>ゲームパッドの十字キー（スティック）</b>、または<b>図の中を指でなぞる</b>と自機を動かせます（指で触れている場所へ自機が向かいます）（キューブはゲームと同じく、反応した瞬間の自機の位置へ向かいます）。止めているときは図の中をクリック（タップ）すると自機がそこへ移ります。キューブ同士・地形にくっつく動きは省いています（画面の左・上下の端でくっつき、右へ抜けたものは消えます）。</div>
   <div class="ctl" style="margin-top:10px">
     <label>H <select id="sh"></select></label>
     <label>S <select id="ss"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label>
@@ -137,8 +137,8 @@ button{font:inherit;padding:6px 14px;border-radius:8px;border:1px solid var(--ac
   </div>
   <input id="tm" type="range" min="0" max="4600" value="0" style="width:100%;margin-top:10px" aria-label="時間">
   <div class="sub num" id="tlab"></div>
-  <div class="chart"><canvas id="cv" tabindex="0" width="704" height="480" style="width:100%;max-width:704px;display:block;margin:0 auto;cursor:crosshair"></canvas></div>
-  <div class="key"><span style="color:var(--cube)">■ 右寄りの5か所で反応</span><span style="color:#2ecc40">■ x=158</span><span style="color:#9be22d">■ x=126</span><span style="color:#d4b000">■ x=94</span><span style="color:#ff8a00">■ x=62</span><span style="color:#ff1a1a">■ x=30</span><span style="color:var(--sub)">■ 反応しない</span><span>× 反応した位置／縦線は反応する10か所</span></div>
+  <div class="chart"><canvas id="cv" tabindex="0" width="704" height="480" style="touch-action:none;width:100%;max-width:704px;display:block;margin:0 auto;cursor:crosshair"></canvas></div>
+  <div class="key"><span style="color:var(--cube)">■ 右寄りの2か所（318・286）</span><span style="color:#1e8cff">■ 254</span><span style="color:#00b8d4">■ 222</span><span style="color:#00c080">■ 190</span><span style="color:#2ecc40">■ x=158</span><span style="color:#9be22d">■ x=126</span><span style="color:#d4b000">■ x=94</span><span style="color:#ff8a00">■ x=62</span><span style="color:#ff1a1a">■ x=30</span><span style="color:var(--sub)">■ 反応しない</span><span>× 反応した位置／縦線は反応する10か所</span></div>
 </div>
 
 <h2>並びを見る</h2>
@@ -195,15 +195,15 @@ draw();
 
 const W=[64,176,32,224,80,208,160,112,48,128,80,96,144,192,64,16];
 const RSP=[4,4,4,4.5,5,5.5,6,6.5];
-const CAT_X=[158,126,94,62,30];                       // 色を付ける5か所（左寄り）
-const CAT_COL=['#2ecc40','#9be22d','#ffd400','#ff8a00','#ff1a1a'];
+const CAT_X=[254,222,190,158,126,94,62,30];           // 色を付ける8か所（右から3〜10番目）
+const CAT_COL=['#1e8cff','#00c8e6','#00d98c','#2ecc40','#9be22d','#ffd400','#ff8a00','#ff1a1a'];
 for(let i=1;i<=16;i++)$('sh').add(new Option(String(i),i-1));
 for(let i=1;i<=45;i++)$('st').add(new Option(String(i).padStart(2,'0'),i-1));
 for(let i=0;i<=16;i++)$('rk').add(new Option(i<16?String(i):'16以上',i));
 for(let i=0;i<=5;i++)$('ss2').add(new Option(String(i),i));
 $('sh').value=4;$('ss').value=1;$('st').value=11;$('rk').value=10;$('ss2').value=2;
 const TMAX=4600;
-let path=[],tNow=0,playing=false,keys={};
+let path=[],tNow=0,playing=false,keys={},touchT=null;
 function cfg(){return{c0:C0[(+$('sh').value*4+ +$('ss').value)*45+ +$('st').value],v:(+$('rk').value>=16?7:RSP[(+$('rk').value&14)>>1])}}
 function catOf(n){const w=W[(n>>1)&15];if(w>=171)return -1;return CAT_X.indexOf(350-2*w)}   // -1:反応しない / 0〜4:色 / それ以外:色なし
 function simulate(T){
@@ -231,7 +231,7 @@ function render(){
   const sx=cv.width/352,sy=cv.height/240,sp=path[Math.min(t,path.length-1)];
   cx.fillStyle=col('--bg');cx.fillRect(0,0,cv.width,cv.height);
   cx.strokeStyle=col('--line');cx.lineWidth=1;cx.strokeRect(8*sx,24*sy,344*sx,208*sy);
-  cx.globalAlpha=0.35;cx.fillStyle=col('--sub');for(const x of [318,286,254,222,190])cx.fillRect(x*sx-0.5,24*sy,1,208*sy);
+  cx.globalAlpha=0.35;cx.fillStyle=col('--sub');for(const x of [318,286])cx.fillRect(x*sx-0.5,24*sy,1,208*sy);
   CAT_X.forEach((x,i)=>{cx.fillStyle=CAT_COL[i];cx.fillRect(x*sx-1,24*sy,2,208*sy)});cx.globalAlpha=1;
   for(const c of cubes){
     if(c.st<0||c.st===3)continue;
@@ -248,6 +248,7 @@ function shipSpeed(){return 1+0.75*(+$('ss2').value)}
 function inputDir(){
   let dx=0,dy=0;
   if(keys.ArrowLeft)dx-=1;if(keys.ArrowRight)dx+=1;if(keys.ArrowUp)dy-=1;if(keys.ArrowDown)dy+=1;
+  if(touchT){const p=path[tNow],tx=touchT.x-p.x,ty=touchT.y-p.y;if(tx<-2)dx-=1;if(tx>2)dx+=1;if(ty<-2)dy-=1;if(ty>2)dy+=1}
   let gps=[];try{gps=navigator.getGamepads?navigator.getGamepads():[]}catch(e){}
   for(const g of gps){if(!g)continue;const ax=g.axes[0]||0,ay=g.axes[1]||0,b=i=>g.buttons[i]&&g.buttons[i].pressed;
     if(ax<-0.4||b(14))dx-=1;if(ax>0.4||b(15))dx+=1;if(ay<-0.4||b(12))dy-=1;if(ay>0.4||b(13))dy+=1;}
@@ -268,7 +269,11 @@ function step(){
 ['sh','ss','st','rk'].forEach(id=>$(id).addEventListener('input',render));
 ['px','py'].forEach(id=>$(id).addEventListener('input',()=>{path.length=tNow+1;path[tNow]={x:+$('px').value,y:+$('py').value};render()}));
 $('tm').addEventListener('input',()=>{const t=+$('tm').value;while(path.length<=t)path.push({...path[path.length-1]});tNow=t;render()});
-cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect();const x=Math.round((e.clientX-r.left)/r.width*352),y=Math.round((e.clientY-r.top)/r.height*240);
+function cvPos(e){const r=cv.getBoundingClientRect();return{x:Math.round((e.clientX-r.left)/r.width*352),y:Math.round((e.clientY-r.top)/r.height*240)}}
+cv.addEventListener('pointerdown',e=>{if(!playing)return;touchT=cvPos(e);cv.setPointerCapture(e.pointerId);e.preventDefault()});
+cv.addEventListener('pointermove',e=>{if(touchT)touchT=cvPos(e)});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>{touchT=null}));
+cv.addEventListener('click',e=>{if(playing)return;const r=cv.getBoundingClientRect();const x=Math.round((e.clientX-r.left)/r.width*352),y=Math.round((e.clientY-r.top)/r.height*240);
   $('px').value=x;$('py').value=y;path.length=tNow+1;path[tNow]={x,y};render()});
 $('play').addEventListener('click',()=>{playing=!playing;$('play').textContent=playing?'❚❚ 止める':'▶ 再生';
   if(playing){if(tNow>=TMAX)resetPath();requestAnimationFrame(step)}});
