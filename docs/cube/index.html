@@ -138,7 +138,7 @@ button{font:inherit;padding:6px 14px;border-radius:8px;border:1px solid var(--ac
   <input id="tm" type="range" min="0" max="4600" value="0" style="width:100%;margin-top:10px" aria-label="時間">
   <div class="sub num" id="tlab"></div>
   <div class="chart"><canvas id="cv" tabindex="0" width="704" height="480" style="touch-action:none;width:100%;max-width:704px;display:block;margin:0 auto;cursor:crosshair"></canvas></div>
-  <div id="pad" style="touch-action:none;user-select:none;-webkit-user-select:none;margin-top:8px;height:150px;border:1px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:13px;text-align:center;padding:0 12px">タッチ操作用のパッド：再生中にここをなぞると、なぞった分だけ自機が動きます（図の中をなぞっても同じ）</div>
+  <div id="pad" style="touch-action:none;user-select:none;-webkit-user-select:none;margin-top:8px;height:240px;border:1px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:13px;text-align:center;padding:0 12px">タッチ操作用のパッド：再生中にここをなぞると、なぞった分だけ自機が動きます（図の中をなぞっても同じ）</div>
   <div class="key"><span style="color:#5aaee8">■ 右寄りの2か所（318・286）</span><span style="color:#1e8cff">■ 254</span><span style="color:#00b8d4">■ 222</span><span style="color:#00c080">■ 190</span><span style="color:#2ecc40">■ x=158</span><span style="color:#9be22d">■ x=126</span><span style="color:#d4b000">■ x=94</span><span style="color:#ff8a00">■ x=62</span><span style="color:#ff1a1a">■ x=30</span><span style="color:var(--sub)">■ 反応しない</span><span>× 反応した位置／縦線は反応する10か所</span></div>
 </div>
 
@@ -207,7 +207,7 @@ $('sh').value=4;$('ss').value=1;$('st').value=11;$('rk').value=10;$('ss2').value
 const TMAX=4600;
 let path=[],tNow=0,playing=false,keys={},touchT=null;
 function cfg(){return{c0:C0[(+$('sh').value*4+ +$('ss').value)*45+ +$('st').value],v:(+$('rk').value>=16?7:RSP[(+$('rk').value&14)>>1])}}
-function catOf(n){const w=W[(n>>1)&15];if(w>=171)return -1;return CAT_X.indexOf(350-2*w)}   // -1:反応しない / 0〜4:色 / それ以外:色なし
+function catOf(n){const w=W[(n>>1)&15];if(w>=171)return -1;const k=CAT_X.indexOf(350-2*w);return k<0?-2:k}   // -1:反応しない / 0〜4:色 / それ以外:色なし
 function simulate(T){
   const {c0,v}=cfg();
   const cubes=D.map((d,i)=>({n:i+1,f0:d,y:HY[slot((c0+d)&0xffff)],x:350,w:W[((i+1)>>1)&15],st:-1,vx:0,vy:0,rx:null,ry:null}));

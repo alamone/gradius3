@@ -21,12 +21,11 @@ ITEMS = [
     ('       TYPE', 1, 0, 45, 0x37, ['RANDOM'] + ['%02d' % i for i in range(1, 46)], 0),
     ('SHD COLOR', 1, 1, 10, 0x16, ['?', 'BLUE', 'RED', 'GREEN', 'GOLD', 'PURPLE', 'CYAN', 'ORANGE', 'PINK', 'SILVER', 'BLACK'], 1),
     ('HUNTER NEXT', 1, 0, 3, 0x1b, ['DEFAULT', 'TYPE 1', 'TYPE 2', 'TYPE 3'], 0),
-    ('HUNTER TIME', 0, 0, 99, 0x1c, None, 0),
     ('SPEED', 0, 0, 5, 0x0d, None, 0),                  # 開始時のスピード（スピードアップを使った回数）
     ('CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 0),   # 開始時のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
 ]
 # 各項目の画面の行（可視は行2〜29）。面の表の後・CUBE の後に1行ずつ空ける
-ROWS = [2, 3, 5] + list(range(7, 19)) + [20, 21, 22] + [24, 25, 26, 27, 28]   # INVINCIBLE が一番上、最下段は PUSH START
+ROWS = [2, 3, 5] + list(range(7, 19)) + [20, 21, 22] + [24, 25, 26, 27]   # INVINCIBLE が一番上、最下段は PUSH START
 assert len(ROWS) == len(ITEMS)
 PLUS_ROWS = ['........', '...f....', '...f9...', '.ffffff.', '..9f9999', '...f9...', '....9...', '........']   # ゲームの文字と同じ傾き・影
 PLUS_GFX = bytes(int(r[i] if r[i] != '.' else '0', 16) << 4 | int(r[i+1] if r[i+1] != '.' else '0', 16) for r in PLUS_ROWS for i in range(0, 8, 2))

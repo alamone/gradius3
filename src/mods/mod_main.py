@@ -298,17 +298,18 @@ lk_act: clr.b   (a0)
         rts
 
 
+; スコア表示(0x180a: 2P→HI→1P の順に3つ描く)の入口: キューブラッシュで CUBE INFO を ON にしている間は 1P だけ描く（HI・2P の場所にキューブの情報）
+ScoreHk: tst.b  $103ed1.l       ; サブが「CUBE INFO 表示中」としたとき
+        bne.s   sk_1p
+        jmp     $180a.l
+sk_1p:  moveq   #0,d0
+        jmp     $180e.l
 ; ---- 開始時のハンターの設定（PlayHook から） ----
 PendB:  move.b  $103f1b.l,d0    ; HUNTER NEXT (0=そのまま, 1..3 → $42e73=0..2)
         beq.s   pb_h1
         subq.b  #1,d0
         move.b  d0,$42e73.l
-pb_h1:  moveq   #0,d0           ; HUNTER TIME (0=そのまま, n → $42e70=n*60: オプション1個で n 秒)
-        move.b  $103f1c.l,d0
-        beq.s   pb_r
-        mulu    #60,d0
-        move.w  d0,$42e70.l
-pb_r:   rts
+pb_h1:  rts                     ; （HUNTER TIME は廃止。装備コマンドの後の1回目を出さない方式に）
 
 ; ---- キューブラッシュ（改造プレイ）の点数はハイスコア・ランキングに入れない ----
 CkCR:   tst.b   MB_RUN.l        ; 戻り: eq = キューブラッシュの改造プレイ
@@ -729,12 +730,6 @@ pc_l:   move.w  (a0)+,(a1)+
         dbf     d0,pc_l
 pc_r:   rts
 ; 0x1d24 の jsr $326e（CREDIT の表示）を置き換え: 隠しメニュー表示中（トップ状態3）は出さない
-; スコア表示(0x180a: 2P→HI→1P の順に3つ描く)の入口: キューブラッシュで CUBE INFO を ON にしている間は 1P だけ描く（HI・2P の場所にキューブの情報）
-ScoreHk: tst.b  $103ed1.l       ; サブが「CUBE INFO 表示中」としたとき
-        bne.s   sk_1p
-        jmp     $180a.l
-sk_1p:  moveq   #0,d0
-        jmp     $180e.l
 CredHook: cmpi.b #3,$40005.l
         beq.s   ch_r
         jmp     $326e.l
@@ -781,12 +776,14 @@ NextPos: jsr    $695c.l
         jmp     $4ce8.l
 np_r:   rts
 ; 装備コマンドの残り回数（無敵中は無制限 $ff として返す）
-CmdCnt: tst.b   MB_INV.l
+CmdCnt: tst.b   MB_INV.l        ; d1 = 残り回数（$ff=無制限。無敵中も無制限）。0 でなければ装備コマンドを使う
         beq.s   cc_n
         moveq   #-1,d1
-        rts
+        bra.s   cc_s
 cc_n:   move.b  $103f22.l,d1
-        rts
+        beq.s   cc_r
+cc_s:   move.w  #7200,$42e70.l  ; オプションハンター: 装備コマンドで付けた後の1回目は出さない（純正の初期値 3600 の2回分。出ないので種類も進まない）
+cc_r:   rts
 """
 
 def apply(rom):
@@ -827,7 +824,7 @@ def apply(rom):
     rom.put('main', 0x4cfc, bytes.fromhex('4eb9') + lab3['AreaTbl'].to_bytes(4, 'big'), 'areatbl', expect=bytes.fromhex('4df9000054fe'))
     rom.put('main', 0x28ec + 2*4, lab3['StageHook'].to_bytes(4, 'big'), 'stagehook', expect=bytes.fromhex('00003790'))
     rom.put('main', 0x28ec + 5*4, lab3['PlayHook'].to_bytes(4, 'big'), 'playhook', expect=bytes.fromhex('00003a24'))
-    srca = SRC_A.replace('PALCOPY', '$%x' % li['PalCopy']).replace('SCOREHK', '$%x' % li['ScoreHk']).replace('HUDPAL', '$%x' % lab2['HudPal']).replace('CUBESEED2', '$%x' % li['CubeSeed2']).replace('CUBESEEDBODY_UNUSED', ('        move.w  #$%x,$40032.l' % ((int(os.environ['CUBESLOT']) << 2) << 8)) if os.environ.get('CUBESLOT') else '''        move.w  $103e30.l,$40032.l''').replace('LOCKCALL', 'move.b  #1,MB_UNLK.l     ; 解除/ロックのコマンドは一時停止中: 常に解除' if LOCK_SUSPEND else 'jsr     Lock.l')
+    srca = SRC_A.replace('PALCOPY', '$%x' % li['PalCopy']).replace('SCOREHK', '$%x' % lab2['ScoreHk']).replace('HUDPAL', '$%x' % lab2['HudPal']).replace('CUBESEED2', '$%x' % li['CubeSeed2']).replace('CUBESEEDBODY_UNUSED', ('        move.w  #$%x,$40032.l' % ((int(os.environ['CUBESLOT']) << 2) << 8)) if os.environ.get('CUBESLOT') else '''        move.w  $103e30.l,$40032.l''').replace('LOCKCALL', 'move.b  #1,MB_UNLK.l     ; 解除/ロックのコマンドは一時停止中: 常に解除' if LOCK_SUSPEND else 'jsr     Lock.l')
     b, lab = asm68.assemble(('Lock = $%x\n' % lab2['Lock']) + srca, 0xd4aa)
     assert len(b) <= 425, len(b)
     rom.put('main', 0xd4aa, b, 'stubsA')
@@ -845,9 +842,9 @@ def apply(rom):
     rom.put('main', 0x6a90, bytes.fromhex('4eb9') + li['TypeGrey'].to_bytes(4, 'big'), 'type-grey', expect=bytes.fromhex('4eb90000e824'))
     rom.put('main', 0x197e, bytes.fromhex('4eb9') + lab2['HiHk'].to_bytes(4, 'big'), 'hi-cube', expect=bytes.fromhex('beb900040058'))
     rom.put('main', 0x226c4, bytes.fromhex('4eb9') + lab2['RankHk'].to_bytes(4, 'big'), 'rank-cube', expect=bytes.fromhex('203900101054'))
-    rom.put('main', 0x15b6, li['ScoreHk'].to_bytes(4, 'big'), 'score-tbl', expect=bytes.fromhex('0000180a'))
-    rom.put('main', 0x1932, li['ScoreHk'].to_bytes(4, 'big'), 'score-1p', expect=bytes.fromhex('0000180a'))
-    rom.put('main', 0x1954, li['ScoreHk'].to_bytes(4, 'big'), 'score-2p', expect=bytes.fromhex('0000180a'))
+    rom.put('main', 0x15b6, lab2['ScoreHk'].to_bytes(4, 'big'), 'score-tbl', expect=bytes.fromhex('0000180a'))
+    rom.put('main', 0x1932, lab2['ScoreHk'].to_bytes(4, 'big'), 'score-1p', expect=bytes.fromhex('0000180a'))
+    rom.put('main', 0x1954, lab2['ScoreHk'].to_bytes(4, 'big'), 'score-2p', expect=bytes.fromhex('0000180a'))
     rom.put('main', 0x1d24, bytes.fromhex('4eb9') + li['CredHook'].to_bytes(4, 'big'), 'credit-hide', expect=bytes.fromhex('4eb90000326e'))
     rom.put('main', 0x692a, bytes.fromhex('4eb9') + li['NextPos'].to_bytes(4, 'big'), 'bossrush-pos', expect=bytes.fromhex('4eb90000695c'))
     rom.put('main', 0x3c7a, bytes.fromhex('4eb9') + li['NextStg'].to_bytes(4, 'big'), 'bossrush-next', expect=bytes.fromhex('427900101052'))
