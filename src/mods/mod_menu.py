@@ -63,9 +63,10 @@ def cube_tint_palettes():
     src = P[29*16:29*16+16]                       # キューブの色（パレット29）
     out = bytearray()
     for pl, t in zip(CC_PALS, CC_TINT):
-        out += struct.pack('>I', 0x80000 + pl * 32)
+        out += struct.pack('>I', 0x80000 + pl * 32 + 8)      # 0〜3番の色は変えないので 4番から（バッファを小さくするため）
         for i, w in enumerate(src):
-            if i < 4 or w == 0: out += struct.pack('>H', w); continue
+            if i < 4: continue
+            if w == 0: out += struct.pack('>H', w); continue
             r, g, b = (w >> 10) & 31, (w >> 5) & 31, w & 31   # 色は xRRRRRGGGGGBBBBB
             L = min(31.0, (r * 0.3 + g * 0.59 + b * 0.11) * 1.25)
             if t is None: nr = ng = nb = min(31, int(L * 0.85 + 0.5))
@@ -76,7 +77,7 @@ def cube_orig_palettes():
     P = _stage9_pal()
     out = bytearray()
     for pl in CC_PALS:
-        out += struct.pack('>I', 0x80000 + pl * 32) + b''.join(struct.pack('>H', P[pl*16+i]) for i in range(16))
+        out += struct.pack('>I', 0x80000 + pl * 32 + 8) + b''.join(struct.pack('>H', P[pl*16+i]) for i in range(4, 16))
     return bytes(out)
 ROMAN = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']   # エリア名(英字)
 # エリアの英字を「白抜き」（塗った四角から文字を抜く）で、すき間なしに並べる。
@@ -471,6 +472,8 @@ dg_r:   rts
 
 ; ---- メニュー初期化 ----
 MenuInit:
+        clr.b   $203ed4.l       ; キューブの色のパレットを写さない（バッファはメニューの借りた文字の控えと重なる）
+        clr.b   V_CCS.l         ; 次に使うときはバッファを書き直す
         cmpi.b  #2,MBS_REQ.l
         bne.s   mi_def
         tst.b   V_HAVE.l
@@ -1023,9 +1026,8 @@ cc3:    move.b  d3,4(a1)
 ; ---- キューブが壁・ほかのキューブにくっついた瞬間（サブ 0xafc4 の move.b #1,$26(a0) の置き換え）----
 ;      キューブラッシュ（改造プレイ）なら 1P の点数に 1000点を足す。点数はゲームの加算処理を通さないので、
 ;      ハイスコア・残機の増加には関わらない（メインの HiHk / RankHk / 次の増加点 0 でも止めてある）
-CubeStick:
-        move.b  #1,$26(a0)
-        tst.b   MBS_RUN.l
+CubeStick:                      ; くっついた印($26)は最後に立てる（立てた瞬間からメインがオブジェクトを片付け始めるので、
+        tst.b   MBS_RUN.l       ;  その後すぐ元の処理がオブジェクトの絵の番号を読めるように）
         beq.s   cst_r
         cmpi.b  #1,$203f0b.l
         bne.s   cst_r
@@ -1039,7 +1041,8 @@ cst_l:  dc.w    $c509           ; abcd -(a1),-(a2)
         dbf     d0,cst_l
         movem.l (a7)+,d0/a1-a2
         move.b  #1,$203ed0.l    ; メインに点数の描き直しを頼む
-cst_r:  rts
+cst_r:  move.b  #1,$26(a0)
+        rts
 
 ; ---- 飛んでくるキューブの色分け（CUBE INFO 表示中・毎フレーム）----
 ; 反応前（$2a=0）は「今の x − 残り待ち時間×2」= 反応する x から色を決めて覚える。反応後は覚えた色のまま。
@@ -1108,8 +1111,8 @@ kc_off: tst.b   V_CCR.l
 kc_cp:  cmp.b   V_CCS.l,d1      ; 写しの中身が同じなら写さない（毎フレーム写すとサブの処理が遅れる）
         beq.s   kc_cs
         move.b  d1,V_CCS.l
-        lea     $203cb0.l,a1
-        move.w  #161,d0         ; 9パレット × 18語 − 1
+        lea     $203cf0.l,a1    ; （0x203cb0〜 は死んだ・始め直すときにゲームが使うので使わない）
+        move.w  #125,d0         ; 9パレット × (2+12)語 − 1
 kc_c:   move.w  (a0)+,(a1)+
         dbf     d0,kc_c
 kc_cs:  move.b  #1,$203ed4.l

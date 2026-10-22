@@ -254,9 +254,13 @@ bk_r:   rts
 V_HUSED = $101228               ; このキューブラッシュで1体出した
 V_HALLOW = $10122c              ; 出してよいハンターの場所
 HuntCtl: cmpi.b #2,TOPSTATE.l
-        bne.s   hu_r
+        bne.w   hu_r
+        move.w  FRAMECNT.l,d0   ; 4フレームに1回（ハンターは出てから15フレームはこの種類のまま）
+        andi.w  #3,d0
+        cmpi.w  #1,d0
+        bne.w   hu_r
         tst.l   $2038de.l
-        beq.s   hu_r
+        beq.w   hu_r
         tst.w   $203e36.l       ; まだ1個目のキューブが出ていない（始め直し）→ 数え直す
         bne.s   hu_1
         clr.b   V_HUSED.l

@@ -340,10 +340,10 @@ HudPal: tst.b   MB_RUN.l
         move.w  #$10a9,$800d2.l
         tst.b   $103ed4.l       ; CUBE COLOR 有効: 飛んでくるキューブの色（サブが共有RAMに置いた5色分のパレット）を写す
         beq.s   hp_r
-        lea     $103cb0.l,a0    ; 共有RAMの未使用域（0x103cb0〜0x103df3: パレット9つ分）
+        lea     $103cf0.l,a0    ; 共有RAMの未使用域（0x103cf0〜0x103deb: パレット9つ分の 4〜15番の色。0x103cb0〜 は死んだときにゲームが使う）
         moveq   #8,d2
 hp_p:   movea.l (a0)+,a1
-        moveq   #15,d1
+        moveq   #11,d1
 hp_w:   move.w  (a0)+,(a1)+
         dbf     d1,hp_w
         dbf     d2,hp_p
