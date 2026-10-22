@@ -22,7 +22,7 @@ td,th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;vertic
 .ok{color:var(--ok)}.ng{color:var(--ng)}.warn{color:var(--warn)}
 button{font:inherit;padding:10px 18px;border-radius:8px;border:1px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer}
 button:disabled{opacity:.4;cursor:not-allowed}
-select{font:inherit;padding:6px;border-radius:6px;background:var(--panel);color:var(--text);border:1px solid var(--line)}
+select{max-width:100%;font:inherit;padding:6px;border-radius:6px;background:var(--panel);color:var(--text);border:1px solid var(--line)}
 ul{margin:6px 0;padding-left:22px}
 details{margin:8px 0}
 summary{cursor:pointer;font-weight:600}
@@ -47,6 +47,37 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 <h2>キューブラッシュの解析</h2>
 <a class="bigl" href="cube/index.html"><b>▶ キューブラッシュの解析結果はこちら</b><span>高さの決まり方・2880通りの並び（H／S／T）・処理落ちによるずれ（LAG）・くっつく判定。H・S・T を選んで99個の並びを見られます</span></a>
 
+<h2>使い方（ゲーム内）</h2>
+<div class="panel">
+<h3 style="margin:0 0 6px;font-size:15px">隠しメニューに入る</h3>
+<ul>
+<li>クレジットを入れて、<b>レバー上＋START</b> で既定値のメニュー、<b>レバー下＋START</b> で前回の設定のメニューに入ります。レバーを入れずに START なら純正どおりに始まります。</li>
+<li>解除／ロックのコマンド（ゲーム中でないとき：<b>レバー上＋A → 両方離す → レバー下＋A → 両方離す</b> で解除、下から始めて上で終えるとロック。各段階3秒以内。300秒放置で自動ロック）は、<b>今は一時停止中</b>です。常に解除された状態なので、コマンドなしでメニューに入れます。</li>
+</ul>
+<h3 style="margin:14px 0 6px;font-size:15px">メニュー</h3>
+<ul>
+<li>上下で項目を選び、左右で値を変え、<b>START で開始</b>します（メニューからデモには戻りません）。開始後はタイプ選択（ビギナーは選べません）と装備選択の画面になります。</li>
+<li>項目：INVINCIBLE（無敵）／MODE（NORMAL・CUBE RUSH・BOSS RUSH）／LOOP（周回）／面とエリアの表／CUBE HEIGHT・SHIFT・TYPE（キューブラッシュの並び）／SHD COLOR（シールドの色）／HUNTER NEXT・HUNTER TIME（オプションハンター）／SPEED（開始時のスピード）／CAPSULE（開始時のカプセルゲージの位置）。</li>
+</ul>
+<h3 style="margin:14px 0 6px;font-size:15px">プレイ中の装備コマンド（START を短く押す）</h3>
+<ul>
+<li><b>START</b>：スピード2・ミサイル・レーザー・オプション4・シールド</li>
+<li><b>ショット＋START</b>：レーザーの代わりにダブル</li>
+<li><b>ミサイル＋START</b>：ノーマルショットのフル装備（レーザー・ダブルなし）</li>
+<li><b>ショット＋ミサイル＋START</b>：スピード2・ミサイル・オプション2</li>
+<li>NORMAL は1ゲーム1回、キューブラッシュ・ボスラッシュと無敵中は何回でも使えます。装備は足すだけなので、レーザー・ダブルを持っている状態からノーマルショットには戻りません。</li>
+</ul>
+<h3 style="margin:14px 0 6px;font-size:15px">ポーズメニュー（START を約1秒押し続ける）</h3>
+<ul>
+<li>上下で選び、ON/OFF の項目は左右かショットで切り替え、START（またはショット）で再開します。ポーズ中はゲームのタイマーも止まるので、キューブの並びはずれません。</li>
+<li><b>CONTINUE</b>（再開）／<b>GAME OVER</b>（やめる）／<b>INVINCIBLE</b>（無敵）／<b>RANK DISP</b>（ランクを表示）／<b>CUBE INFO</b>（キューブラッシュの並び・ずれを表示。ハイスコアと 2P の場所に出ます）／<b>CUBE COLOR</b>（飛んでくるキューブを反応する位置で色分け）。RANK DISP・CUBE INFO・CUBE COLOR は、メニューから始めるたびに OFF に戻ります。</li>
+</ul>
+<h3 style="margin:14px 0 6px;font-size:15px">キューブラッシュ</h3>
+<ul>
+<li>残機はディップスイッチの残機＋4。キューブが1個くっつくたびに 1000点（ハイスコア・ランキング・残機の増加には影響しません）。</li>
+</ul>
+</div>
+
 <h2>最新版</h2>
 <div id="latest" class="panel">読み込み中…</div>
 
@@ -68,15 +99,6 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 <h2>更新履歴</h2>
 <div id="history"></div>
 
-<h2>使い方（ゲーム内）</h2>
-<div class="panel">
-<ul>
-<li>ゲーム中でないとき：<b>レバー上＋A（押す順番は自由）→ 両方離す → レバー下＋A → 両方離す</b> で隠しメニュー解除。下から始めて上で終えるとロック。各段階3秒以内。300秒放置で自動ロック。</li>
-<li>解除中にクレジットを入れて <b>上＋START</b> で既定値、<b>下＋START</b> で前回の設定のメニュー。レバーを入れずにSTARTなら純正どおり。</li>
-<li>メニューは上下で選択、左右で変更、STARTで開始、SHOT2（または BACK TO DEMO）でデモに戻る。開始後は装備選択画面になります。</li>
-<li>改造モードのプレイ中：<b>START</b>＝装備（スピード2・ミサイル・レーザー・オプション4・バリア）、<b>SHOT＋START</b>＝レーザーの代わりにダブル、<b>MISSILE＋START</b>＝スピード2・ミサイル・オプション2。NORMALは1ゲーム1回、キューブ/ボスラッシュは無制限。<b>START長押し</b>でポーズ（CONTINUE / GAME OVER）。</li>
-</ul>
-</div>
 <div class="sub" style="margin-top:24px">Gradius III は KONAMI の著作物です。本ページは非公式の改造パッチで、純正ROMをお持ちの方が個人で利用するためのものです。</div>
 </main>
 
