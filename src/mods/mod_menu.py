@@ -80,27 +80,38 @@ LN_HY   = [208, 192, 176, 160, 144, 128, 112, 96, 80, 64, 48, 32]   # キュー�
 LN_TILE = 0xf00                                       # 使う文字の番号（9面では使われていない 0xf00〜0xf09）
 LN_ROWS = range(5, 28)                                # 縦線の段（スコア・ランク・位置の表示とパワーアップゲージの段は避ける）
 def _ln_col(x): return (x + 5 + 96) >> 3              # 画面の x = キューブの x + 5、文字の面の桁 = (画面の x + 96) / 8
+def _tile(pix):
+    """pix: 8x8 の色番号 → 4bpp の32バイト"""
+    return bytes((pix[r][i] << 4) | pix[r][i + 1] for r in range(8) for i in range(0, 8, 2))
+def _vpix(kind, idx):
+    """縦線の形: kind 1=粗い点線(4段に1つ) 2=細かい点線(1段おき) 3=実線（上下の端の印用）"""
+    p = [[0] * 8 for _ in range(8)]
+    for r in range(8):
+        if kind == 3 or (kind == 2 and r % 2 == 0) or (kind == 1 and r % 4 == 0): p[r][3] = idx
+    return p
+def _hpix(kind):
+    """横線の形（いちばん上の段・色15の灰色）: 1=粗い点線(4ドットに1つ) 2=つながった線（暗い色9で薄く） 3=左端の印 4=右端の印"""
+    p = [[0] * 8 for _ in range(8)]
+    for i in range(8):
+        if (kind == 1 and i % 4 == 0) or (kind == 3 and i <= 5) or (kind == 4 and i >= 2): p[0][i] = 15
+        if kind == 2: p[0][i] = 9                     # 線: つながった線を暗い灰色（色9）で薄く
+    return p
 def line_tiles():
+    """文字 0xf00〜0xf42: 縦 (V-1)*9+k / 横 27〜30 / 縦と横の交わり 31+((V-1)*2+(H-1))*9+k"""
     out = bytearray()
-    for idx in LN_IDX:                                # 縦の点線: 8ドットの3番目、1段おき
-        for r in range(8):
-            row = [0] * 8
-            if r % 2 == 0: row[3] = idx
-            out += bytes((row[i] << 4) | row[i + 1] for i in range(0, 8, 2))
-    for r in range(8):                                # 高さの印: いちばん上の段に横線（右寄り6ドット）
-        row = [15 if (r == 0 and i >= 2) else 0 for i in range(8)]
-        out += bytes((row[i] << 4) | row[i + 1] for i in range(0, 8, 2))
+    for v in (1, 2, 3):
+        for k in range(9): out += _tile(_vpix(v, LN_IDX[k]))
+    for hk in (1, 2, 3, 4): out += _tile(_hpix(hk))
+    for v in (1, 2):
+        for hh in (1, 2):
+            for k in range(9):
+                a, b = _vpix(v, LN_IDX[k]), _hpix(hh)
+                out += _tile([[a[r][i] or b[r][i] for i in range(8)] for r in range(8)])
+    out += bytes(32)   # 0xf43 = 透明（描いたかの目印）
+    assert len(out) == 68 * 32
     return bytes(out)
-def line_cells():
-    # [セルのずれ.w, 文字の番号の下位.b, 属性.b]（属性 = パレット6(0xc0) + 番号の上位 0xf → (bit0=1, bit2-4=7) = 0xdd）
-    out = bytearray()
-    for k, x in enumerate(LN_X):
-        c = _ln_col(x)
-        for r in LN_ROWS: out += struct.pack('>HBB', (r * 64 + c) * 2, (LN_TILE + k) & 0xff, 0xdd)
-    for y in LN_HY:
-        r = (240 - y + 16) >> 3                       # 画面の y = 240 − 高さ
-        out += struct.pack('>HBB', (r * 64 + 51) * 2, (LN_TILE + 9) & 0xff, 0xdd)
-    return bytes(out) + b'\xff\xff\xff\xff'
+def line_cols():
+    return bytes(_ln_col(x) for x in LN_X) + b'\0'
 def line_pal():
     # パレット6 の 6〜15番（メインが毎フレーム写す）: 6,7,8 = 色1〜3 / 9 = 見出しの暗い色 / 10〜14 = 色4〜8 / 15 = 見出しの灰色
     cols = []
@@ -194,7 +205,7 @@ def build_data(base):
     lab['CCCOL'] = base + len(blob)
     blob.extend(bytes([(p - 16) << 1 for p in CC_PALS]))
     al(); lab['LNGFX'] = base + len(blob); blob.extend(line_tiles())
-    al(); lab['LNTAB'] = base + len(blob); blob.extend(line_cells())
+    al(); lab['LNCOL'] = base + len(blob); blob.extend(line_cols())
     al(); lab['LNPAL'] = base + len(blob); blob.extend(line_pal())
     al(); lab['PLUSGFX'] = base + len(blob)
     blob.extend(PLUS_GFX)
@@ -214,16 +225,22 @@ def build_data(base):
     put('PS_K1', b' CUBE COLOR\0')
     put('PS_P0', b'>POS DISP\0')
     put('PS_P1', b' POS DISP\0')
-    put('PS_L0', b'>CUBE LINE\0')
-    put('PS_L1', b' CUBE LINE\0')
     put('PS_U0', b'>CUBE HUNTER\0')
     put('PS_U1', b' CUBE HUNTER\0')
     put('PS_ON', b'ON \0')
     put('PS_OFF', b'OFF\0')
     # ポーズの項目: 選択中の文字列.l 通常の文字列.l ON/OFF の場所.l(0=なし)
+    put('PS_V0', b'>CUBE LINE V\0')
+    put('PS_V1', b' CUBE LINE V\0')
+    put('PS_H0', b'>CUBE LINE H\0')
+    put('PS_H1', b' CUBE LINE H\0')
+    put('LV_0', b'OFF  \0'); put('LV_1', b'ROUGH\0'); put('LV_2', b'FINE \0'); put('LV_3', b'EDGE \0'); put('LH_2', b'LINE \0')
+    al(); lab['LVTAB'] = base + len(blob); blob.extend(struct.pack('>IIIII', 4, lab['LV_0'], lab['LV_1'], lab['LV_2'], lab['LV_3']))
+    al(); lab['LHTAB'] = base + len(blob); blob.extend(struct.pack('>IIIII', 4, lab['LV_0'], lab['LV_1'], lab['LH_2'], lab['LV_3']))
     al(); lab['PTAB'] = base + len(blob)
-    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_P0', 'PS_P1', 0x203f2b), ('PS_Q0', 'PS_Q1', 0x203f0c), ('PS_K0', 'PS_K1', 0x203f34), ('PS_L0', 'PS_L1', 0x203f1c), ('PS_U0', 'PS_U1', 0x203f33)]:
-        blob.extend(struct.pack('>III', lab[a], lab[b], f))
+    # ポーズの項目 16B: 選択中の文字列.l 通常の文字列.l 値の場所.l(0=なし) 値の表.l(0=ON/OFF, それ以外=[数.l, 文字列.l...])
+    for a, b, f, vt in [('PS_C0', 'PS_C1', 0, 0), ('PS_G0', 'PS_G1', 0, 0), ('PS_I0', 'PS_I1', 0x203f20, 0), ('PS_R0', 'PS_R1', 0x203f0e, 0), ('PS_P0', 'PS_P1', 0x203f2b, 0), ('PS_Q0', 'PS_Q1', 0x203f0c, 0), ('PS_K0', 'PS_K1', 0x203f34, 0), ('PS_V0', 'PS_V1', 0x203f1c, 'LVTAB'), ('PS_H0', 'PS_H1', 0x203f3b, 'LHTAB'), ('PS_U0', 'PS_U1', 0x203f33, 0)]:
+        blob.extend(struct.pack('>IIII', lab[a], lab[b], f, lab[vt] if vt else 0))
     # 項目記述子 12B: labelptr.l type.b min.b max.b mboff.b pad.b strtab.l
     al(); lab['ITM'] = base + len(blob)
     for i, it in enumerate(ITEMS):
@@ -556,7 +573,8 @@ mi_ah:  move.b  (a0),(a1)+
         dbf     d0,mi_ah
         clr.b   $203f0e.l       ; RANK DISP・CUBE INFO はポーズで切り替える（始めは OFF）
         clr.b   $203f2b.l       ; POS DISP
-        clr.b   $203f1c.l       ; CUBE LINE
+        clr.b   $203f1c.l       ; CUBE LINE V
+        clr.b   $203f3b.l       ; CUBE LINE H
         clr.b   $203f0c.l
         clr.b   $203f34.l       ; CUBE COLOR
         clr.b   $203f33.l       ; CUBE HUNTER（始めは OFF = 出さない）
@@ -1273,66 +1291,147 @@ ph_d:   move.b  d7,(a0)+
         jmp     PutStr.l
 po_x:   rts
 
-; ---- CUBE LINE（キューブラッシュ・ポーズで切り替え）: 16フレームに1回、文字と縦線・高さの印を描き直す。OFF にしたら消す
-V_LNL   = $101232
+; ---- CUBE LINE（キューブラッシュ・ポーズで切り替え）: V = 縦（反応する位置）/ H = 横（高さ）
+;      値 0=OFF 1=粗い点線 2=細かい点線(縦)・線(横) 3=端だけ（縦は上下の端、横は左右の端）
+;      描いた組み合わせを覚えておき、変わったとき・ゲームに消されたときだけ描き直す（毎回描くとサブの処理が重くなる）
+V_LNL   = $101232               ; 描いてある組み合わせ+1（0 = 何も描いていない）
+LNROW0  = 5                     ; 縦線の段 5〜27（スコア・ランク・位置の段とゲージの段は避ける）
+LNROW1  = 27
 CubeLine:
         cmpi.b  #1,$203f0b.l
         bne.w   ln_r
         cmpi.b  #1,MBS_PAUS.l   ; ポーズ中は描かない（ポーズの窓と重なるので）
         beq.w   ln_r
-        tst.b   $203f1c.l
-        bne.s   ln_on
-        tst.b   V_LNL.l
+        moveq   #0,d3
+        move.b  $203f1c.l,d3    ; V
+        lsl.b   #4,d3
+        or.b    $203f3b.l,d3    ; H
+        addq.b  #1,d3           ; 組み合わせ+1
+        cmp.b   V_LNL.l,d3
+        bne.s   ln_new
+        cmpi.b  #1,d3           ; 両方 OFF で消してある
         beq.w   ln_r
-        clr.b   V_LNL.l
-        moveq   #0,d4           ; 消す
-        bra.s   ln_draw
-ln_on:  tst.b   V_LNL.l         ; 描いてあるなら、消されていないかだけ見る（毎回描き直すとサブの処理が重くなる）
-        beq.s   ln_go
-        lea     LNTAB.l,a0
-        lea     TILEA.l,a2
-        adda.w  (a0),a2
-        move.b  2(a0),d0
-        cmp.b   $4001(a2),d0    ; 1つ目の場所の文字が違う（ゲームが文字の面を消した）
-        bne.s   ln_go
-        cmpi.b  #$06,$29e001.l  ; 文字の形が違う（ゲームが文字を読み込み直した）
-        bne.s   ln_go
-        bra.w   ln_r
-ln_go:  move.b  #1,V_LNL.l
-        lea     LNGFX.l,a0      ; 文字の形（0xf00〜0xf09）
+        cmpi.b  #$43,$250de7.l  ; 消されていないか: 右下（段27・桁51）の目印の文字（透明な 0xf43）
+        bne.s   ln_new
+        cmpi.b  #$ff,$29e3a0.l  ; 文字の形も残っているか（左端の印の文字 0xf1d の1バイト目）
+        beq.w   ln_r
+ln_new: move.b  d3,V_LNL.l
+        lea     LNGFX.l,a0      ; 文字の形 0xf00〜0xf42
         lea     $29e000.l,a1
-        moveq   #79,d0
+        move.w  #543,d0       ; 68文字 x 8ロング
 ln_g:   move.l  (a0)+,(a1)+
         dbf     d0,ln_g
-        moveq   #1,d4
-ln_draw: lea    LNTAB.l,a0
-        lea     TILEA.l,a2
-ln_l:   move.w  (a0)+,d1
-        cmpi.w  #$ffff,d1
-        beq.w   ln_r
-        move.w  (a0)+,d2
-        lea     0(a2,d1.w),a1
+        ; 場所をいったん空白に（段 5〜28, 桁 12〜51）
+        lea     $24c298.l,a1     ; 段5・桁12
+        moveq   #23,d0          ; 24段
+ln_cr:  moveq   #39,d1          ; 40桁
+        movea.l a1,a2
+ln_cc:  clr.b   1(a2)
+        move.b  #$10,$4001(a2)
+        addq.l  #2,a2
+        dbf     d1,ln_cc
+        lea     128(a1),a1
+        dbf     d0,ln_cr
+        ; 横（高さ12通り = 段 6,8,..,28）
+        move.b  $203f3b.l,d4
+        beq.s   ln_v
+        moveq   #6,d0
+ln_hr:  cmpi.b  #3,d4
+        bne.s   ln_hf
+        moveq   #12,d1
+        moveq   #29,d2
+        bsr.w   LnPut
+        moveq   #51,d1
+        moveq   #30,d2
+        bsr.w   LnPut
+        bra.s   ln_hn
+ln_hf:  moveq   #26,d2          ; 27=粗い 28=線
+        add.b   d4,d2
+        moveq   #12,d1
+ln_hc:  bsr.w   LnPut
+        addq.w  #1,d1
+        cmpi.w  #52,d1
+        bcs.s   ln_hc
+ln_hn:  addq.w  #2,d0
+        cmpi.w  #30,d0
+        bcs.s   ln_hr
+        ; 縦（9か所）
+ln_v:   move.b  $203f1c.l,d5
+        beq.w   ln_mk
+        lea     LNCOL.l,a3
+        moveq   #0,d6           ; k
+ln_vk:  moveq   #0,d1
+        move.b  0(a3,d6.w),d1
+        beq.w   ln_mk
+        cmpi.b  #3,d5
+        bne.s   ln_vf
+        moveq   #18,d2          ; 端だけ: 実線を上下の段に
+        add.w   d6,d2
+        moveq   #5,d0
+        bsr.w   LnPut
+        moveq   #27,d0
+        bsr.w   LnPut
+        bra.s   ln_vn
+ln_vf:  moveq   #5,d0
+ln_vr:  moveq   #0,d2
+        move.b  d5,d2           ; 縦だけ: (V-1)*9+k
+        subq.w  #1,d2
+        mulu    #9,d2
+        add.w   d6,d2
+        btst    #0,d0           ; 横の段（偶数の段 6〜28）と交わる → 交わりの文字
+        bne.s   ln_vp
+        cmpi.w  #6,d0
+        bcs.s   ln_vp
         tst.b   d4
-        beq.s   ln_c
-        move.b  d2,1(a1)        ; 属性
-        lsr.w   #8,d2
-        move.b  d2,$4001(a1)    ; 文字の番号
-        bra.s   ln_l
-ln_c:   clr.b   1(a1)
-        move.b  #$10,$4001(a1)  ; 空白
-        bra.s   ln_l
+        beq.s   ln_vp
+        cmpi.b  #3,d4
+        beq.s   ln_vp
+        moveq   #0,d2           ; 31+((V-1)*2+(H-1))*9+k
+        move.b  d5,d2
+        subq.w  #1,d2
+        add.w   d2,d2
+        add.b   d4,d2
+        subq.w  #1,d2
+        mulu    #9,d2
+        add.w   d6,d2
+        addi.w  #31,d2
+ln_vp:  bsr.w   LnPut
+        addq.w  #1,d0
+        cmpi.w  #28,d0
+        bcs.s   ln_vr
+ln_vn:  addq.w  #1,d6
+        bra.s   ln_vk
+ln_mk:  cmpi.b  #1,d3           ; 確認の目印（何か描いたときだけ）: 右下（段27・桁51）に透明な文字 0xf43
+        beq.s   ln_r
+        moveq   #27,d0
+        moveq   #51,d1
+        moveq   #$43,d2
+        bsr.w   LnPut
+        bra.s   ln_r
+; d0=段 d1=桁 d2=文字(0xf00+) を描く
+LnPut:  bsr.s   LnAdr
+        move.b  #$dd,1(a1)      ; パレット6 + 番号の上位 0xf
+        move.b  d2,$4001(a1)
+        rts
+LnAdr:  move.w  d0,d7
+        lsl.w   #6,d7
+        add.w   d1,d7
+        add.w   d7,d7
+        lea     TILEA.l,a1
+        adda.w  d7,a1
+        rts
 ln_r:   rts
 
 V_PST   = $100f50
 V_PSEL  = $100f51
 V_PPIN  = $100f52
 V_PSIN  = $100f53
-V_PSAV  = $101300          ; 10行x18桁x2バイト = 360（〜0x101467）（ポーズの間だけ使う。プレイ中は元のプログラムが使っていない範囲）
+V_PSAV  = $101300          ; 11行x21桁x2バイト = 462（〜0x1014cd）（ポーズの間だけ使う。プレイ中は元のプログラムが使っていない範囲）
 MBS_INV = $203f20          ; 無敵（メインの MB+$20）
 V_LINV  = $203ef0          ; スタートメニューの前回値の写し（MB+$20 に対応）
 PX      = 26
 PY      = 14
-PW      = 18
+PW      = 21
 ; ---- ポーズ窓: 保存/復元 (layer A, 行PY..PY+3, 桁PX..PX+PW-1) ----
 PSave:  lea     V_PSAV.l,a0
         moveq   #0,d0
@@ -1368,8 +1467,8 @@ PLine:  move.w  #PX+1,d0
         moveq   #0,d2
         jmp     PutStr.l
 
-; d6 = 項目の数（キューブラッシュは9、ほかは5）
-PCnt6:  moveq   #9,d6
+; d6 = 項目の数（キューブラッシュは10、ほかは5）
+PCnt6:  moveq   #10,d6
         cmpi.b  #1,$203f0b.l
         beq.s   pc6_r
         moveq   #5,d6
@@ -1401,7 +1500,15 @@ pd_u:   movem.l d4/a2,-(a7)
         move.l  8(a2),d0
         beq.s   pd_nx
         movea.l d0,a3
-        lea     PS_OFF.l,a0
+        move.l  12(a2),d0       ; 値の表があれば、その文字列
+        beq.s   pd_oo
+        movea.l d0,a0
+        moveq   #0,d0
+        move.b  (a3),d0
+        lsl.w   #2,d0
+        movea.l 4(a0,d0.w),a0
+        bra.s   pd_v
+pd_oo:  lea     PS_OFF.l,a0
         tst.b   (a3)
         beq.s   pd_v
         lea     PS_ON.l,a0
@@ -1412,7 +1519,7 @@ pd_v:   movem.l d4/a2,-(a7)
         moveq   #0,d2
         jsr     PutStr.l
         movem.l (a7)+,d4/a2
-pd_nx:  lea     12(a2),a2
+pd_nx:  lea     16(a2),a2
         addq.w  #1,d4
         bsr.w   PCnt6
         cmp.w   d6,d4
@@ -1443,7 +1550,7 @@ pf_run: move.b  MBS_P1.l,d0
         btst    #2,d1           ; 上
         beq.s   pf_dn
         subq.b  #1,V_PSEL.l
-        bpl.s   pf_rd
+        bpl.w   pf_rd
         bsr.w   PCnt6
         subq.b  #1,d6
         move.b  d6,V_PSEL.l
@@ -1458,15 +1565,34 @@ pf_dn:  btst    #3,d1           ; 下
         bra.s   pf_rd
 pf_lr:  moveq   #0,d0           ; ON/OFF のある行（INVINCIBLE・RANK DISP・CUBE INFO）: 左右・ショットで切り替え
         move.b  V_PSEL.l,d0
-        mulu    #12,d0
+        mulu    #16,d0
         lea     PTAB.l,a0
+        move.l  12(a0,d0.w),d3  ; 値の表
         move.l  8(a0,d0.w),d0
         beq.s   pf_nm
         move.b  d1,d2
         andi.b  #$13,d2
         beq.s   pf_nm
         movea.l d0,a0
+        tst.l   d3
+        bne.s   pf_mv
         eori.b  #1,(a0)
+        bra.s   pf_sv
+pf_mv:  movea.l d3,a1           ; いくつかの値: 右・ショット = 次、左 = 前（端で一周）
+        move.b  (a0),d2
+        btst    #0,d1
+        beq.s   pf_up
+        subq.b  #1,d2
+        bpl.s   pf_st
+        move.b  3(a1),d2
+        subq.b  #1,d2
+        bra.s   pf_st
+pf_up:  addq.b  #1,d2
+        cmp.b   3(a1),d2
+        bcs.s   pf_st
+        moveq   #0,d2
+pf_st:  move.b  d2,(a0)
+pf_sv:
         move.b  MBS_INV.l,V_LINV.l
 pf_rd:  movem.l d1/d5,-(a7)
         jsr     PDraw.l
