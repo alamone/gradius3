@@ -73,6 +73,43 @@ def cube_tint_palettes():
             else: nr, ng, nb = (min(31, int(L * tc * 0.85 + c * 0.15 + 0.5)) for tc, c in zip(t, (r, g, b)))
             out += struct.pack('>H', (w & 0x8000) | (nr << 10) | (ng << 5) | nb)
     return bytes(out)
+# ---- CUBE LINE: 反応する位置の縦の点線と、高さの印（文字の面 = 一番手前。色はパレット6の空き番号）----
+LN_X    = [254, 222, 190, 158, 126, 94, 62, 30, 286]   # 反応する位置（キューブの x）: 色1〜8 と、右から2番目（286。右端の318は画面の外）
+LN_IDX  = [6, 7, 8, 10, 11, 12, 13, 14, 15]           # パレット6の色番号（9 と 15 は見出しの灰色。286 の線は 15 の灰色）
+LN_HY   = [208, 192, 176, 160, 144, 128, 112, 96, 80, 64, 48, 32]   # キューブの高さ（12通り）
+LN_TILE = 0xf00                                       # 使う文字の番号（9面では使われていない 0xf00〜0xf09）
+LN_ROWS = range(5, 28)                                # 縦線の段（スコア・ランク・位置の表示とパワーアップゲージの段は避ける）
+def _ln_col(x): return (x + 5 + 96) >> 3              # 画面の x = キューブの x + 5、文字の面の桁 = (画面の x + 96) / 8
+def line_tiles():
+    out = bytearray()
+    for idx in LN_IDX:                                # 縦の点線: 8ドットの3番目、1段おき
+        for r in range(8):
+            row = [0] * 8
+            if r % 2 == 0: row[3] = idx
+            out += bytes((row[i] << 4) | row[i + 1] for i in range(0, 8, 2))
+    for r in range(8):                                # 高さの印: いちばん上の段に横線（右寄り6ドット）
+        row = [15 if (r == 0 and i >= 2) else 0 for i in range(8)]
+        out += bytes((row[i] << 4) | row[i + 1] for i in range(0, 8, 2))
+    return bytes(out)
+def line_cells():
+    # [セルのずれ.w, 文字の番号の下位.b, 属性.b]（属性 = パレット6(0xc0) + 番号の上位 0xf → (bit0=1, bit2-4=7) = 0xdd）
+    out = bytearray()
+    for k, x in enumerate(LN_X):
+        c = _ln_col(x)
+        for r in LN_ROWS: out += struct.pack('>HBB', (r * 64 + c) * 2, (LN_TILE + k) & 0xff, 0xdd)
+    for y in LN_HY:
+        r = (240 - y + 16) >> 3                       # 画面の y = 240 − 高さ
+        out += struct.pack('>HBB', (r * 64 + 51) * 2, (LN_TILE + 9) & 0xff, 0xdd)
+    return bytes(out) + b'\xff\xff\xff\xff'
+def line_pal():
+    # パレット6 の 6〜15番（メインが毎フレーム写す）: 6,7,8 = 色1〜3 / 9 = 見出しの暗い色 / 10〜14 = 色4〜8 / 15 = 見出しの灰色
+    cols = []
+    for t in CC_TINT[:8]:
+        r, g, b = (min(31, int(c * 31 + 0.5)) for c in t)
+        cols.append((r << 10) | (g << 5) | b)
+    w = cols[0:3] + [0x10a9] + cols[3:8] + [0x5252]
+    return b''.join(struct.pack('>H', v) for v in w)
+
 def cube_orig_palettes():
     P = _stage9_pal()
     out = bytearray()
@@ -156,6 +193,9 @@ def build_data(base):
     blob.extend(cube_orig_palettes())
     lab['CCCOL'] = base + len(blob)
     blob.extend(bytes([(p - 16) << 1 for p in CC_PALS]))
+    al(); lab['LNGFX'] = base + len(blob); blob.extend(line_tiles())
+    al(); lab['LNTAB'] = base + len(blob); blob.extend(line_cells())
+    al(); lab['LNPAL'] = base + len(blob); blob.extend(line_pal())
     al(); lab['PLUSGFX'] = base + len(blob)
     blob.extend(PLUS_GFX)
     al(); lab['BANGGFX'] = base + len(blob)
@@ -174,13 +214,15 @@ def build_data(base):
     put('PS_K1', b' CUBE COLOR\0')
     put('PS_P0', b'>POS DISP\0')
     put('PS_P1', b' POS DISP\0')
+    put('PS_L0', b'>CUBE LINE\0')
+    put('PS_L1', b' CUBE LINE\0')
     put('PS_U0', b'>CUBE HUNTER\0')
     put('PS_U1', b' CUBE HUNTER\0')
     put('PS_ON', b'ON \0')
     put('PS_OFF', b'OFF\0')
     # ポーズの項目: 選択中の文字列.l 通常の文字列.l ON/OFF の場所.l(0=なし)
     al(); lab['PTAB'] = base + len(blob)
-    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_P0', 'PS_P1', 0x203f2b), ('PS_Q0', 'PS_Q1', 0x203f0c), ('PS_K0', 'PS_K1', 0x203f34), ('PS_U0', 'PS_U1', 0x203f33)]:
+    for a, b, f in [('PS_C0', 'PS_C1', 0), ('PS_G0', 'PS_G1', 0), ('PS_I0', 'PS_I1', 0x203f20), ('PS_R0', 'PS_R1', 0x203f0e), ('PS_P0', 'PS_P1', 0x203f2b), ('PS_Q0', 'PS_Q1', 0x203f0c), ('PS_K0', 'PS_K1', 0x203f34), ('PS_L0', 'PS_L1', 0x203f1c), ('PS_U0', 'PS_U1', 0x203f33)]:
         blob.extend(struct.pack('>III', lab[a], lab[b], f))
     # 項目記述子 12B: labelptr.l type.b min.b max.b mboff.b pad.b strtab.l
     al(); lab['ITM'] = base + len(blob)
@@ -514,6 +556,7 @@ mi_ah:  move.b  (a0),(a1)+
         dbf     d0,mi_ah
         clr.b   $203f0e.l       ; RANK DISP・CUBE INFO はポーズで切り替える（始めは OFF）
         clr.b   $203f2b.l       ; POS DISP
+        clr.b   $203f1c.l       ; CUBE LINE
         clr.b   $203f0c.l
         clr.b   $203f34.l       ; CUBE COLOR
         clr.b   $203f33.l       ; CUBE HUNTER（始めは OFF = 出さない）
@@ -1032,7 +1075,11 @@ cc3:    move.b  d3,4(a1)
 ;      キューブラッシュ（改造プレイ）なら 1P の点数に 1000点を足す。点数はゲームの加算処理を通さないので、
 ;      ハイスコア・残機の増加には関わらない（メインの HiHk / RankHk / 次の増加点 0 でも止めてある）
 CubeStick:                      ; くっついた印($26)は最後に立てる（立てた瞬間からメインがオブジェクトを片付け始めるので、
-        tst.b   MBS_RUN.l       ;  その後すぐ元の処理がオブジェクトの絵の番号を読めるように）
+        tst.b   (a0)            ;  その前に絵の番号を読む）。メインがもう片付けたオブジェクトなら何もしない（描くと化ける）
+        beq.s   cst_x
+        cmpi.w  #$3301,$28(a0)
+        bne.s   cst_x
+        tst.b   MBS_RUN.l
         beq.s   cst_r
         cmpi.b  #1,$203f0b.l
         bne.s   cst_r
@@ -1046,7 +1093,20 @@ cst_l:  dc.w    $c509           ; abcd -(a1),-(a2)
         dbf     d0,cst_l
         movem.l (a7)+,d0/a1-a2
         move.b  #1,$203ed0.l    ; メインに点数の描き直しを頼む
-cst_r:  move.b  #1,$26(a0)
+cst_r:  move.l  d2,d6           ; 元の 0xafca〜0xafe4 をここで先にやる: 絵の番号を読んでから「くっついた」印を立てる
+        move.l  d3,d7           ;  （印を立てた瞬間からメインがオブジェクトを片付け始めるので、読む前に消されないように）
+        move.w  #1,d4
+        moveq   #0,d5
+        move.w  2(a0),d5
+        andi.w  #$1fff,d5
+        beq.s   cst_x           ; 絵の番号が 0 = 読む直前にメインが片付けた → 描かない（描くと化ける）
+        lsl.l   #7,d5
+        ori.l   #$400000,d5
+        movea.l d5,a5
+        move.b  #1,$26(a0)
+        addi.l  #$1c,(a7)       ; 戻り先を 0xafe6（jsr $7dae）へ
+        rts
+cst_x:  addi.l  #$22,(a7)       ; 戻り先を 0xafec（rts）へ: 描かない
         rts
 
 ; ---- 飛んでくるキューブの色分け（CUBE INFO 表示中・毎フレーム）----
@@ -1213,6 +1273,56 @@ ph_d:   move.b  d7,(a0)+
         jmp     PutStr.l
 po_x:   rts
 
+; ---- CUBE LINE（キューブラッシュ・ポーズで切り替え）: 16フレームに1回、文字と縦線・高さの印を描き直す。OFF にしたら消す
+V_LNL   = $101232
+CubeLine:
+        cmpi.b  #1,$203f0b.l
+        bne.w   ln_r
+        cmpi.b  #1,MBS_PAUS.l   ; ポーズ中は描かない（ポーズの窓と重なるので）
+        beq.w   ln_r
+        tst.b   $203f1c.l
+        bne.s   ln_on
+        tst.b   V_LNL.l
+        beq.w   ln_r
+        clr.b   V_LNL.l
+        moveq   #0,d4           ; 消す
+        bra.s   ln_draw
+ln_on:  tst.b   V_LNL.l         ; 描いてあるなら、消されていないかだけ見る（毎回描き直すとサブの処理が重くなる）
+        beq.s   ln_go
+        lea     LNTAB.l,a0
+        lea     TILEA.l,a2
+        adda.w  (a0),a2
+        move.b  2(a0),d0
+        cmp.b   $4001(a2),d0    ; 1つ目の場所の文字が違う（ゲームが文字の面を消した）
+        bne.s   ln_go
+        cmpi.b  #$06,$29e001.l  ; 文字の形が違う（ゲームが文字を読み込み直した）
+        bne.s   ln_go
+        bra.w   ln_r
+ln_go:  move.b  #1,V_LNL.l
+        lea     LNGFX.l,a0      ; 文字の形（0xf00〜0xf09）
+        lea     $29e000.l,a1
+        moveq   #79,d0
+ln_g:   move.l  (a0)+,(a1)+
+        dbf     d0,ln_g
+        moveq   #1,d4
+ln_draw: lea    LNTAB.l,a0
+        lea     TILEA.l,a2
+ln_l:   move.w  (a0)+,d1
+        cmpi.w  #$ffff,d1
+        beq.w   ln_r
+        move.w  (a0)+,d2
+        lea     0(a2,d1.w),a1
+        tst.b   d4
+        beq.s   ln_c
+        move.b  d2,1(a1)        ; 属性
+        lsr.w   #8,d2
+        move.b  d2,$4001(a1)    ; 文字の番号
+        bra.s   ln_l
+ln_c:   clr.b   1(a1)
+        move.b  #$10,$4001(a1)  ; 空白
+        bra.s   ln_l
+ln_r:   rts
+
 V_PST   = $100f50
 V_PSEL  = $100f51
 V_PPIN  = $100f52
@@ -1258,8 +1368,8 @@ PLine:  move.w  #PX+1,d0
         moveq   #0,d2
         jmp     PutStr.l
 
-; d6 = 項目の数（キューブラッシュは8、ほかは5）
-PCnt6:  moveq   #8,d6
+; d6 = 項目の数（キューブラッシュは9、ほかは5）
+PCnt6:  moveq   #9,d6
         cmpi.b  #1,$203f0b.l
         beq.s   pc6_r
         moveq   #5,d6

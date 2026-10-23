@@ -108,6 +108,11 @@ sb_skip:
 
 ; ---- 毎フレーム ----  (解除/ロック/自動ロックはメインCPU側で処理)
 Frame:
+        lea     LNPAL.l,a0      ; パレット6 の 6〜15番（CUBE LINE の色と見出しの色）→ 共有RAM $103dec（メインが毎フレーム写す）
+        lea     $203dec.l,a1
+        moveq   #4,d0
+fr_lp:  move.l  (a0)+,(a1)+
+        dbf     d0,fr_lp
         move.w  $203e32.l,d0    ; キューブの RANDOM 用の乱数: 電源投入から毎フレーム進める（デモ・メニュー中も）
         mulu    #25173,d0
         addi.w  #13849,d0
@@ -179,6 +184,7 @@ fr_ingame:
         tst.l   $2038de.l       ; 面が始まってから（武器選択などの画面では出さない）
         beq.w   fr_nr
         jsr     CubeHud.l
+        jsr     CubeLine.l
         tst.b   $203f0e.l       ; RANK DISP（ポーズで切り替え。OFF にしたら消す）
         bne.s   fr_rk
         tst.b   V_RKL.l
@@ -348,7 +354,7 @@ cu_t:   subq.w  #1,d2
         rts
 """
 
-DATA_BASE = 0x39400
+DATA_BASE = 0x39800
 WTYPE_BYTES = bytes([1,3,1, 3,1,4, 4,2,2, 2,4,3])   # TYPE A..D -> (missile, double, laser)
 
 def apply(rom):

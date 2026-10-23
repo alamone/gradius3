@@ -336,8 +336,11 @@ rh_r:   rts
 ; 見出しの暗めの色（F面パレット6・ゲームでは未使用）: 改造プレイ中は毎フレーム入れる
 HudPal: tst.b   MB_RUN.l
         beq.s   hp_r
-        move.w  #$5252,$800de.l
-        move.w  #$10a9,$800d2.l
+        lea     $103dec.l,a0    ; パレット6 の 6〜15番（見出しの灰色・CUBE LINE の色。サブが共有RAMに置く）
+        lea     $800cc.l,a1
+        moveq   #9,d1
+hp_6:   move.w  (a0)+,(a1)+
+        dbf     d1,hp_6
         tst.b   $103ed4.l       ; CUBE COLOR 有効: 飛んでくるキューブの色（サブが共有RAMに置いた5色分のパレット）を写す
         beq.s   hp_r
         lea     $103cf0.l,a0    ; 共有RAMの未使用域（0x103cf0〜0x103deb: パレット9つ分の 4〜15番の色。0x103cb0〜 は死んだときにゲームが使う）
