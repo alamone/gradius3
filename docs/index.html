@@ -102,9 +102,11 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
   <div class="sub">ROMはお使いのブラウザの中だけで処理され、どこにも送信されません。元の gradius3.zip / gradius3j.zip は上書きしないよう、別の場所に控えてください。MAMEは「チェックサム不一致」の警告を出しますが動作します。</div>
   <p>版：<select id="ver"></select>　出力するセット：<select id="setname"><option value="gradius3j">gradius3j（新しいMAME（0.289 など）：Japan, version 3＝313版）</option><option value="gradius3">gradius3（World, version R）</option><option value="gradius3j-old">gradius3j（古いMAME：Japan, program code S）</option></select></p>
   <div id="drop">ここにファイルをドロップ（またはクリックして選択）<input id="file" type="file" multiple hidden></div>
-  <table id="need" style="margin-top:12px"></table>
+  <p class="sub" id="memo" style="margin:8px 0 0">一度選んだ純正ROMは、このブラウザの中に覚えておきます（次からは選び直さなくても「zip を作成」だけで作れます。どこにも送信されません）。 <button id="forget" type="button" hidden style="background:transparent;color:var(--sub);border:1px solid var(--line);padding:2px 8px;font-size:12px;margin-top:4px">覚えたROMを消す</button></p>
   <p><button id="build" disabled>zip を作成</button></p>
   <div id="log"></div>
+  <details id="needbox" style="margin-top:10px"><summary>必要なファイルの一覧</summary><table id="need" style="margin-top:8px"></table></details>
+  <div class="sub" style="margin-top:6px">スマホ（Android）で同じ名前の zip がすでにあると「gradius3j (1).zip」のような名前で保存され、MAME が読みません。先に古い zip を消してから作成してください。</div>
 </div>
 
 <h2>更新履歴</h2>
@@ -204,19 +206,39 @@ function refresh() {
     return `<tr><td>${esc(x.label)}</td><td><code>${x.crc}</code></td><td class="${h ? 'ok' : 'ng'}">${h ? 'OK' : '未'}</td></tr>`;
   }).join('');
   $('#build').disabled = ok !== L.length;
+  $('#needbox').open = ok !== L.length;
   $('#log').textContent = ok === L.length ? 'すべてそろいました。' : `${ok} / ${L.length} 件そろっています。`;
 }
+// ---- 純正ROMをこのブラウザに覚える（IndexedDB。使えないときは何もしない） ----
+const DBN = 'g3rom', ST = 'files';
+function idb() { return new Promise((ok, ng) => { try { const r = indexedDB.open(DBN, 1); r.onupgradeneeded = () => r.result.createObjectStore(ST); r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); } catch (e) { ng(e); } }); }
+async function idbAll() { try { const db = await idb(); return await new Promise((ok, ng) => { const out = []; const c = db.transaction(ST).objectStore(ST).openCursor(); c.onsuccess = () => { const k = c.result; if (k) { out.push([k.key, new Uint8Array(k.value)]); k.continue(); } else ok(out); }; c.onerror = () => ng(c.error); }); } catch (e) { return []; } }
+async function idbPut(crc, u8) { try { const db = await idb(); await new Promise((ok, ng) => { const t = db.transaction(ST, 'readwrite'); t.objectStore(ST).put(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.length), crc); t.oncomplete = ok; t.onerror = () => ng(t.error); }); } catch (e) {} }
+async function idbClear() { try { const db = await idb(); await new Promise((ok, ng) => { const t = db.transaction(ST, 'readwrite'); t.objectStore(ST).clear(); t.oncomplete = ok; t.onerror = () => ng(t.error); }); } catch (e) {} }
+let saved = 0;
+function wanted() {     // 覚えるのは、どれかの版で使うファイルだけ
+  const s = new Set();
+  if (!DATA) return null;
+  for (const f of DATA.set.files) s.add(f.crc);
+  for (const v of DATA.versions) for (const p of Object.values(v.patches || {})) s.add(p.source_crc);
+  return s;
+}
+function memoUi() { $('#forget').hidden = saved === 0; if (saved) $('#forget').textContent = `覚えたROMを消す（${saved} 件）`; }
 async function addBytes(name, u8) {
   if (u8.length > 4 && u8[0] === 0x50 && u8[1] === 0x4b) {          // zip（入れ子も展開）
     try { for (const [n, b] of await unzip(u8)) await addBytes(n, b);
       return; } catch (e) { /* zipでなければ通常ファイル扱い */ }
   }
-  if (u8.length <= 0x100000) have.set(crc32(u8), u8);
+  if (u8.length <= 0x100000) {
+    const c = crc32(u8), w = wanted();
+    if (!have.has(c) && (!w || w.has(c))) { have.set(c, u8); await idbPut(c, u8); saved++; }
+    else if (!have.has(c)) have.set(c, u8);
+  }
 }
 async function addFiles(files) {
   $('#log').textContent = '読み込み中…';
   for (const f of files) await addBytes(f.name, new Uint8Array(await f.arrayBuffer()));
-  refresh();
+  memoUi(); refresh();
 }
 async function build() {
   const v = curVer(); const files = [];
@@ -256,7 +278,10 @@ function verHtml(v, open) {
   $('#latest').innerHTML = verHtml(L, true);
   $('#history').innerHTML = DATA.versions.map((v, i) => `<div class="panel">${verHtml(v, i === 0)}</div>`).join('');
   $('#ver').innerHTML = DATA.versions.filter(v => v.patches).map(v => `<option value="${esc(v.version)}">v${esc(v.version)}（${esc(v.build ? 'ビルド ' + v.build : v.date)}）</option>`).join('');
-  $('#ver').onchange = refresh; refresh();
+  $('#ver').onchange = refresh;
+  for (const [c, u8] of await idbAll()) { have.set(c, u8); saved++; }   // 前に覚えた純正ROM
+  memoUi(); refresh();
+  if (saved) $('#log').textContent += '（このブラウザに覚えた純正ROMを使っています）';
 })();
 const drop = $('#drop');
 drop.onclick = () => $('#file').click();
@@ -265,6 +290,7 @@ drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
 drop.ondragleave = () => drop.classList.remove('on');
 drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); addFiles(e.dataTransfer.files); };
 $('#build').onclick = build;
+$('#forget').onclick = async () => { await idbClear(); have.clear(); saved = 0; memoUi(); refresh(); $('#log').textContent = '覚えたROMを消しました。'; };
 
 </script>
 </body>
