@@ -1,0 +1,82 @@
+name: テストプレイの報告
+description: 不具合・気づいたこと・要望を報告する
+title: "[テスト] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        テストプレイありがとうございます。わかる範囲で書いてください（全部埋めなくても大丈夫です）。
+        GitHub のボタンや一部の文字は英語ですが、入力する欄はすべて日本語です。
+        - 一番上の **Title**（タイトル）：「[テスト] 」の後に、ひとことで内容を（例: 5面の中ボスでボスの曲にならない）
+        - 下の各欄をわかる範囲で書いて、最後に一番下の緑のボタン（**Create** または **Submit new issue**）で送信
+  - type: dropdown
+    id: kind
+    attributes:
+      label: 報告の種類
+      options:
+        - 不具合
+        - 気づいたこと・感想
+        - 要望
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版
+      description: 配布ページのボタンから開くと入力済みになります
+      placeholder: v0.4.16
+    validations:
+      required: true
+  - type: dropdown
+    id: env
+    attributes:
+      label: 遊んだ環境
+      options:
+        - MAME（パソコン）
+        - MAME4droid（Android）
+        - その他のエミュレーター
+        - 実機（基板）
+    validations:
+      required: true
+  - type: input
+    id: envdetail
+    attributes:
+      label: 環境の詳しいこと（わかれば）
+      placeholder: 例）MAME 0.289 / Windows 11 / PS5 コントローラー
+  - type: dropdown
+    id: mode
+    attributes:
+      label: モード
+      options:
+        - NORMAL（メニューから開始）
+        - CUBE RUSH（キューブラッシュ）
+        - BOSS RUSH（ボスラッシュ）
+        - 純正どおりの開始（メニューを使わない）
+        - メニュー・ポーズ画面そのもの
+        - その他・わからない
+  - type: input
+    id: stage
+    attributes:
+      label: 面・エリア
+      placeholder: 例）5面 ❷ ／ 9面 キューブの途中
+  - type: textarea
+    id: what
+    attributes:
+      label: 何が起きたか
+      description: 起きたこと、本来はどうなってほしいか
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 起こし方（再現手順）
+      description: どうすると起きるか。毎回起きるか、たまにか
+      placeholder: |
+        1. メニューで MODE を CUBE RUSH にして開始
+        2. ポーズで CUBE LINE H を LINE に
+        3. …
+  - type: textarea
+    id: media
+    attributes:
+      label: スクリーンショット・動画
+      description: ここに画像や動画のファイルをドラッグ（スマホは下の「Paste, drop, or click to add files」から選択）。動画は 10MB まで。大きいときは YouTube などのリンクで
