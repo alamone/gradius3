@@ -1,6 +1,6 @@
 # グラディウスIII 改造ROM パッチ（純正313ベース・非公式）
 
-- 配布ページ（パッチ当て・更新履歴）: https://pikadrum.github.io/gradius3/
+- 配布ページ（パッチ当て・更新履歴）: https://hknroms.github.io/gradius3/
 - このリポジトリには **ROMデータは含まれていません**。`docs/patches/` は純正ROMとの差分（BPS形式）だけです。
 - お手持ちの純正ROM（MAME用 gradius3 一式＋313版メイン2本）を配布ページにドロップすると、MAMEの roms フォルダにそのまま入れられる `gradius3.zip` が作られます（処理はブラウザ内のみ）。
 
