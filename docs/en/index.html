@@ -39,9 +39,26 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 .cg-key{font-size:12px;color:var(--sub)}
 .lang{text-align:right;font-size:13px;margin-bottom:6px}.lang a{color:var(--acc)}
 .bigl:hover{background:color-mix(in srgb,var(--acc) 20%,transparent)}
+/* 会員承認ゲート */
+#site-content{display:none}
+#auth-gate{max-width:520px;margin:10vh auto;padding:24px 18px;text-align:center}
+#auth-gate h1{margin-bottom:14px}
+#auth-gate p{color:var(--sub)}
+#auth-gate button{margin:10px 5px}
+#auth-status{white-space:pre-wrap}
+#member-bar{display:none;max-width:860px;margin:12px auto 0;padding:0 16px;text-align:right;font-size:13px;color:var(--sub)}
+#member-bar button{padding:4px 10px;font-size:12px;margin-left:10px}
 </style>
 </head>
 <body>
+<section id="auth-gate" class="panel" aria-live="polite">
+  <h1>Gradius III ROM Patch</h1>
+  <p id="auth-status">Checking sign-in status…</p>
+  <button id="google-login" type="button" hidden>Sign in with Google / Apply</button>
+  <button id="auth-logout" type="button" hidden>Sign out</button>
+</section>
+<div id="member-bar"><span id="member-name"></span><button id="member-logout" type="button">Sign out</button></div>
+<main id="site-content">
 <main>
 <div class="lang"><a href="../">日本語</a> ｜ <b>English</b></div>
 <h1>Gradius III Mod ROM Patch</h1>
@@ -300,6 +317,91 @@ drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); addFiles(e
 $('#build').onclick = build;
 $('#forget').onclick = async () => { await idbClear(); have.clear(); saved = 0; memoUi(); refresh(); $('#log').textContent = 'Saved ROMs have been forgotten.'; };
 
+</script>
+</main>
+<script type="module">
+// Firebase Web SDK（GitHub Pages向け。npm不要）
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAVuANsHQGEDSEujscNoCXWlixBKAAIw1U",
+  authDomain: "gradius3-login-41798.firebaseapp.com",
+  projectId: "gradius3-login-41798",
+  storageBucket: "gradius3-login-41798.firebasestorage.app",
+  messagingSenderId: "570590177142",
+  appId: "1:570590177142:web:8db75cac44711a158e7c57"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+const gate = document.getElementById('auth-gate');
+const status = document.getElementById('auth-status');
+const loginButton = document.getElementById('google-login');
+const logoutButton = document.getElementById('auth-logout');
+const memberBar = document.getElementById('member-bar');
+const memberName = document.getElementById('member-name');
+const site = document.getElementById('site-content');
+let unsubscribe = null;
+let authSequence = 0;
+function showGate(message, allowLogin = false, allowLogout = false) {
+  gate.style.display = 'block';
+  site.style.display = 'none';
+  memberBar.style.display = 'none';
+  status.textContent = message;
+  loginButton.hidden = !allowLogin;
+  logoutButton.hidden = !allowLogout;
+}
+function showSite(user) {
+  gate.style.display = 'none';
+  site.style.display = 'block';
+  memberBar.style.display = 'block';
+  memberName.textContent = (user.displayName || user.email || 'Member') + '';
+}
+loginButton.addEventListener('click', async () => {
+  loginButton.disabled = true;
+  try { await signInWithPopup(auth, provider); }
+  catch (e) { showGate('Google sign-in failed. Check pop-up permissions and Firebase authorized domains.\n' + e.code, true); }
+  finally { loginButton.disabled = false; }
+});
+async function logout() {
+  try { await signOut(auth); }
+  catch (e) { showGate('Sign-out failed: ' + e.code, false, true); }
+}
+logoutButton.addEventListener('click', logout);
+document.getElementById('member-logout').addEventListener('click', logout);
+onAuthStateChanged(auth, async (user) => {
+  const sequence = ++authSequence;
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  if (!user) { showGate('Google sign-in and administrator approval are required. Your first sign-in submits an application.', true); return; }
+  showGate('Checking approval status…', false, true);
+  const userRef = doc(db, 'users', user.uid);
+  try {
+    const snap = await getDoc(userRef);
+    if (sequence !== authSequence) return;
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        uid: user.uid,
+        name: user.displayName || '',
+        email: user.email || '',
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+    }
+    if (sequence !== authSequence) return;
+    unsubscribe = onSnapshot(userRef, (current) => {
+      if (sequence !== authSequence) return;
+      const state = current.data()?.status;
+      if (state === 'approved') showSite(user);
+      else if (state === 'rejected') showGate('Your request has not been approved. Please contact the administrator.', false, true);
+      else showGate('Application received.\nWaiting for administrator approval.', false, true);
+    }, (error) => showGate('Unable to check approval status. Check Firestore rules.\n' + error.code, false, true));
+  } catch (e) {
+    if (sequence === authSequence) showGate('Unable to submit application. Check Firestore rules.\n' + e.code, false, true);
+  }
+});
 </script>
 </body>
 </html>
