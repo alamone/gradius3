@@ -54,9 +54,26 @@ a{color:var(--acc)}
 .mini span{width:16px;height:16px;border-radius:3px;font-size:10px;line-height:16px;text-align:center;background:color-mix(in srgb,var(--sub) 35%,transparent)}
 .mini .L{background:color-mix(in srgb,var(--acc) 55%,transparent)} .mini .R{background:color-mix(in srgb,var(--r) 60%,transparent)}
 .mini .M{width:auto;padding:0 6px}
+/* 会員承認ゲート */
+#site-content{display:none}
+#auth-gate{max-width:520px;margin:10vh auto;padding:24px 18px;text-align:center}
+#auth-gate h1{margin-bottom:14px}
+#auth-gate p{color:var(--sub)}
+#auth-gate button{margin:10px 5px}
+#auth-status{white-space:pre-wrap}
+#member-bar{display:none;max-width:860px;margin:12px auto 0;padding:0 16px;text-align:right;font-size:13px;color:var(--sub)}
+#member-bar button{padding:4px 10px;font-size:12px;margin-left:10px}
 </style>
 </head>
 <body>
+<section id="auth-gate" class="panel" aria-live="polite">
+  <h1>グラディウスIII 改造ROM パッチ</h1>
+  <p id="auth-status">ログイン状態を確認しています…</p>
+  <button id="google-login" type="button" hidden>Googleでログイン・利用申請</button>
+  <button id="auth-logout" type="button" hidden>ログアウト</button>
+</section>
+<div id="member-bar"><span id="member-name"></span><button id="member-logout" type="button">ログアウト</button></div>
+<main id="site-content">
 <main>
 <div class="small" style="text-align:right;margin-bottom:4px"><b>日本語</b> ｜ <a href="../en/stereo/sim.html">English</a></div>
 <h1>ステレオ振り分けシミュレーター</h1>
@@ -313,6 +330,91 @@ $('#imp').onchange = async e => {
 };
 
 refresh(); drawStars(); showRecs(); fetchRaw(0);
+</script>
+</main>
+<script type="module">
+// Firebase Web SDK（GitHub Pages向け。npm不要）
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc, onSnapshot, serverTimestamp } from 'https://www.gstatic.com/firebasejs/11.10.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAVuANsHQGEDSEujscNoCXWlixBKAAIw1U",
+  authDomain: "gradius3-login-41798.firebaseapp.com",
+  projectId: "gradius3-login-41798",
+  storageBucket: "gradius3-login-41798.firebasestorage.app",
+  messagingSenderId: "570590177142",
+  appId: "1:570590177142:web:8db75cac44711a158e7c57"
+};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const provider = new GoogleAuthProvider();
+const gate = document.getElementById('auth-gate');
+const status = document.getElementById('auth-status');
+const loginButton = document.getElementById('google-login');
+const logoutButton = document.getElementById('auth-logout');
+const memberBar = document.getElementById('member-bar');
+const memberName = document.getElementById('member-name');
+const site = document.getElementById('site-content');
+let unsubscribe = null;
+let authSequence = 0;
+function showGate(message, allowLogin = false, allowLogout = false) {
+  gate.style.display = 'block';
+  site.style.display = 'none';
+  memberBar.style.display = 'none';
+  status.textContent = message;
+  loginButton.hidden = !allowLogin;
+  logoutButton.hidden = !allowLogout;
+}
+function showSite(user) {
+  gate.style.display = 'none';
+  site.style.display = 'block';
+  memberBar.style.display = 'block';
+  memberName.textContent = (user.displayName || user.email || '利用者') + ' さん';
+}
+loginButton.addEventListener('click', async () => {
+  loginButton.disabled = true;
+  try { await signInWithPopup(auth, provider); }
+  catch (e) { showGate('Googleログインに失敗しました。ブラウザのポップアップ設定とFirebaseの承認済みドメインを確認してください。\n' + e.code, true); }
+  finally { loginButton.disabled = false; }
+});
+async function logout() {
+  try { await signOut(auth); }
+  catch (e) { showGate('ログアウトに失敗しました: ' + e.code, false, true); }
+}
+logoutButton.addEventListener('click', logout);
+document.getElementById('member-logout').addEventListener('click', logout);
+onAuthStateChanged(auth, async (user) => {
+  const sequence = ++authSequence;
+  if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+  if (!user) { showGate('利用にはGoogleアカウントでのログインと管理者の承認が必要です。初回ログインで利用申請されます。', true); return; }
+  showGate('承認状態を確認しています…', false, true);
+  const userRef = doc(db, 'users', user.uid);
+  try {
+    const snap = await getDoc(userRef);
+    if (sequence !== authSequence) return;
+    if (!snap.exists()) {
+      await setDoc(userRef, {
+        uid: user.uid,
+        name: user.displayName || '',
+        email: user.email || '',
+        status: 'pending',
+        createdAt: serverTimestamp()
+      });
+    }
+    if (sequence !== authSequence) return;
+    unsubscribe = onSnapshot(userRef, (current) => {
+      if (sequence !== authSequence) return;
+      const state = current.data()?.status;
+      if (state === 'approved') showSite(user);
+      else if (state === 'rejected') showGate('申請は承認されていません。管理者にお問い合わせください。', false, true);
+      else showGate('利用申請を受け付けました。\n現在、管理者の承認待ちです。承認されるとこの画面から利用できます。', false, true);
+    }, (error) => showGate('承認状態を取得できませんでした。Firestoreのルールを確認してください。\n' + error.code, false, true));
+  } catch (e) {
+    if (sequence === authSequence) showGate('利用申請を登録できませんでした。Firestoreのルールを確認してください。\n' + e.code, false, true);
+  }
+});
 </script>
 </body>
 </html>
