@@ -31,7 +31,7 @@ select,input{font:inherit;padding:5px 6px;border-radius:6px;background:var(--pan
 .seq span{display:inline-block;min-width:2.2em;text-align:center;border-radius:4px}
 .seq span.chg{background:color-mix(in srgb,var(--ng) 25%,transparent);color:var(--ng)}
 .key{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--sub);margin-top:6px}
-.back{font-size:13px}
+.back{font-size:13px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
 .big{font-size:20px;font-weight:700}
 .grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
 .stat{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
@@ -41,7 +41,7 @@ button{font:inherit;padding:6px 14px;border-radius:8px;border:1px solid var(--ac
 </head>
 <body>
 <main>
-<div class="back"><a href="../index.html">← パッチのページへ戻る</a></div>
+<div class="back"><a href="../index.html">← パッチのページへ戻る</a><span><b>日本語</b> ｜ <a href="../en/cube/index.html">English</a></span></div>
 <h1>キューブラッシュ解析</h1>
 <div class="sub">グラディウスIII（アーケード 313版）9面のキューブラッシュで、キューブの高さがどう決まるかをプログラムと実機相当（MAME）の動きから調べた結果です。改造ROMの CUBE HEIGHT / SHIFT / TYPE と CUBE INFO はこの結果をもとに作っています。</div>
 

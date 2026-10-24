@@ -57,6 +57,30 @@
      "target_crc": "273411a3",
      "size": 324
     }
+   },
+   "en": {
+    "title": "CUBE LINE with 3 patterns each for vertical and horizontal",
+    "changes": [
+     "Split the pause menu's CUBE LINE into CUBE LINE V (vertical = reacting position) and CUBE LINE H (horizontal = height). Left/Right cycles OFF → ROUGH → FINE (LINE for horizontal) → EDGE",
+     "Vertical: ROUGH = coarse dots / FINE = the previous fine dots / EDGE = short marks at the top and bottom edges only (all in the same colors as CUBE COLOR)",
+     "Horizontal: ROUGH = coarse dots / LINE = a faint continuous line from edge to edge (one color) / EDGE = short marks at the left and right edges only",
+     "One press from OFF gives ROUGH (coarse dots) for both vertical and horizontal. Resets to OFF each time you start from the menu"
+    ],
+    "verified": [
+     "Each combination of the 3 vertical × 3 horizontal patterns and OFF displays correctly, and the lines disappear when set to OFF",
+     "Pressing Left/Right in the pause menu cycles through the values (Right from OFF gives ROUGH, Left gives EDGE), and closing the pause menu redraws with the chosen pattern",
+     "The lines are redrawn after dying and restarting, and do not appear on the screen after game over"
+    ],
+    "known": [
+     "Stage 3 ❶ (before the boss): after the screen stops, the upside-down volcano enemies continue for a while before the boss appears (progress while stopped depends on time, so it cannot be skipped by moving the start point later)",
+     "Stage 5 ❷ is inside the section where the screen stops for the mid-boss, so the mid-boss appears / the boss music does not play (under investigation)",
+     "When starting from the menu at an area in the middle of a stage, the background colors are garbled only while the START screen is shown (does not happen when restarting after dying; under investigation)",
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
    }
   },
   {
@@ -115,6 +139,29 @@
      "target_crc": "273411a3",
      "size": 324
     }
+   },
+   "en": {
+    "title": "CUBE LINE in the pause menu (dotted lines at the cube reacting positions and height marks)",
+    "changes": [
+     "CUBE LINE in the pause menu (Cube Rush only): shows vertical dotted lines in the same colors as CUBE COLOR at the positions where cubes react (the second position from the right is gray), and marks for the 12 possible heights at the right edge of the screen. Resets to OFF each time you start from the menu",
+     "Further fixed garbled stuck cubes (the \"stuck\" flag is set after reading the graphic number, and cubes that have already been cleaned up are not drawn)"
+    ],
+    "verified": [
+     "Turning CUBE LINE ON shows the dotted lines and height marks, turning it OFF removes them, and they do not overlap the pause window",
+     "With CUBE COLOR, CUBE INFO, RANK DISP, POS DISP and CUBE LINE all ON, ran 3 times with different start timings and stuck cubes were never garbled",
+     "In normal play the label colors of RANK DISP and POS DISP do not change",
+     "Pressing START without the joystick starts the game exactly like the original"
+    ],
+    "known": [
+     "Stage 3 ❶ (before the boss): after the screen stops, the upside-down volcano enemies continue for a while before the boss appears (progress while stopped depends on time, so it cannot be skipped by moving the start point later)",
+     "Stage 5 ❷ is inside the section where the screen stops for the mid-boss, so the mid-boss appears / the boss music does not play (under investigation)",
+     "When starting from the menu at an area in the middle of a stage, the background colors are garbled only while the START screen is shown (does not happen when restarting after dying; under investigation)",
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
    }
   },
   {
@@ -143,7 +190,32 @@
     "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "Cube Rush restart timing, gauge fixed on SPEED / POS DISP in the pause menu",
+    "changes": [
+     "Cube Rush: now restarts about 2 seconds after the section ends and the screen stops (around when the fragments of the broken wall have disappeared)",
+     "Cube Rush: the power-up gauge is fixed on SPEED UP (it stays on SPEED UP after use; up to speed 5)",
+     "POS DISP in the pause menu: shows the screen position \"X:05A0 Y:0000\" on the line below RANK (the game's progress value; X:1CA0 means position 0x1ca000). Resets to OFF each time you start from the menu",
+     "Changed the initial value of CUBE HUNTER in the pause menu to OFF"
+    ],
+    "verified": [
+     "In Cube Rush, about 2 seconds after the screen stops, one life is lost and the game restarts from the beginning of the Cube Rush (before the boss is visible)",
+     "In Cube Rush, each power-up press increases speed, the gauge stays on SPEED UP, and it stops at speed 5",
+     "Turning POS DISP ON shows X and Y below RANK",
+     "Pressing START without the joystick starts the game exactly like the original"
+    ],
+    "known": [
+     "Stage 3 ❶ (before the boss): after the screen stops, the upside-down volcano enemies continue for a while before the boss appears (progress while stopped depends on time, so it cannot be skipped by moving the start point later)",
+     "Stage 5 ❷ is inside the section where the screen stops for the mid-boss, so the mid-boss appears / the boss music does not play (under investigation)",
+     "When starting from the menu at an area in the middle of a stage, the background colors are garbled only while the START screen is shown (does not happen when restarting after dying; under investigation)",
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.13",
@@ -170,7 +242,31 @@
     "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "Fixed jumping to stage 3 when Cube Rush restarts with CUBE COLOR on / fixed garbled stuck cubes",
+    "changes": [
+     "Fixed a bug where, with CUBE COLOR ON, restarting after the Cube Rush section ended (or after dying) started partway through stage 3 (moved the saved colors to a place that does not overlap the area the game uses when you die)",
+     "Fixed the real cause of stuck cubes sometimes turning into capsule-like shapes (the stuck flag was set first during the routine that adds 1000 points, so the object could be cleaned up before it was drawn)",
+     "The Option Hunter watcher (CUBE HUNTER) now runs once every 4 frames (lighter processing)"
+    ],
+    "verified": [
+     "With CUBE COLOR, CUBE INFO and RANK DISP ON, running to the end of the section restarts from the beginning of the stage 9 Cube Rush (does not jump to stage 3)",
+     "With the same settings, ran 4 times with different start timings and the drawing of stuck cubes was never garbled",
+     "CUBE HUNTER ON (only the first one appears) and OFF (none appear)",
+     "Pressing START without the joystick starts the game exactly like the original"
+    ],
+    "known": [
+     "Stage 3 ❶ (before the boss): after the screen stops, the upside-down volcano enemies continue for a while before the boss appears (progress while stopped depends on time, so it cannot be skipped by moving the start point later)",
+     "Stage 5 ❷ is inside the section where the screen stops for the mid-boss, so the mid-boss appears / the boss music does not play (under investigation)",
+     "When starting from the menu at an area in the middle of a stage, the background colors are garbled only while the START screen is shown (does not happen when restarting after dying; under investigation)",
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.12",
@@ -193,7 +289,27 @@
     "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "No death sound or music stop on restart after the Cube Rush section",
+    "changes": [
+     "Cube Rush: on restart when the cube section ends, the death sound (explosion) and the music stop sound are no longer played (changed to join the restart flow without using a collision). One life is still lost"
+    ],
+    "verified": [
+     "When the Cube Rush section ends, one life is lost without an explosion or death sound, and the game restarts from the beginning of the Cube Rush (0x58000) with cubes appearing",
+     "Pressing START without the joystick starts the game exactly like the original"
+    ],
+    "known": [
+     "Stage 3 ❶ (before the boss): after the screen stops, the upside-down volcano enemies continue for a while before the boss appears (progress while stopped depends on time, so it cannot be skipped by moving the start point later)",
+     "Stage 5 ❷ is inside the section where the screen stops for the mid-boss, so the mid-boss appears / the boss music does not play (under investigation)",
+     "When starting from the menu at an area in the middle of a stage, the background colors are garbled only while the START screen is shown (does not happen when restarting after dying; under investigation)",
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.11",
@@ -220,7 +336,31 @@
     "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "Restart without the death sequence after the Cube Rush section / CUBE HUNTER in the pause menu",
+    "changes": [
+     "Cube Rush: the ship's explosion sequence is no longer shown on restart when the cube section ends (one life is still lost)",
+     "CUBE HUNTER in the pause menu (Cube Rush only): ON = only the first Option Hunter appears per Cube Rush run / OFF = none appear. Returns to ON each time you start from the menu",
+     "Widened the pause menu window slightly (more space between item names and ON/OFF)"
+    ],
+    "verified": [
+     "When the Cube Rush section ends, one life is lost without an explosion, and the game restarts at the beginning of the Cube Rush from the START screen",
+     "With CUBE HUNTER ON the first one appears and the second does not; with OFF not even the first appears",
+     "The pause menu display, and the screen returning to normal after it closes",
+     "Pressing START without the joystick starts the game exactly like the original"
+    ],
+    "known": [
+     "Stage 3 ❶ (before the boss): after the screen stops, the upside-down volcano enemies continue for a while before the boss appears (progress while stopped depends on time, so it cannot be skipped by moving the start point later)",
+     "Stage 5 ❷ is inside the section where the screen stops for the mid-boss, so the mid-boss appears / the boss music does not play (under investigation)",
+     "When starting from the menu at an area in the middle of a stage, the background colors are garbled only while the START screen is shown (does not happen when restarting after dying; under investigation)",
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.10",
@@ -255,7 +395,39 @@
     "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "Restart with one life lost after the Cube Rush section / Boss Rush goes straight to the next boss after a kill / garbled color fix",
+    "changes": [
+     "Cube Rush: when the cube section ends, instead of going on to the stage 9 boss, one life is lost and the game restarts from the beginning of the Cube Rush (a life is lost even while invincible; game over when you run out)",
+     "Boss Rush: skips the scrolling after a boss is defeated and goes straight to the next boss",
+     "Fixed stuck cubes sometimes turning into capsule-like shapes when CUBE COLOR is ON (lightened the sub CPU's per-frame processing; CUBE INFO and RANK DISP are now redrawn once every 4 frames)",
+     "Fixed garbled Option Hunter colors when CUBE COLOR is ON (changed the borrowed colors to ones the Hunter does not use)",
+     "Pause menu: CUBE INFO and CUBE COLOR are not shown outside Cube Rush",
+     "Menu defaults: SPEED is 2, CAPSULE is SPEEDUP",
+     "Fixed Down + START (menu with previous settings) not carrying over the previous settings (they were saved in a place that gets cleared during the game)",
+     "Stages 1, 6, 7 and 8 ❶ now start slightly before the point where the boss music begins (so the boss music plays when you start)"
+    ],
+    "verified": [
+     "With CUBE COLOR, CUBE INFO and RANK DISP ON, ran Cube Rush to the end and the drawing of stuck cubes was not garbled",
+     "When the Cube Rush section ends, one life is lost and the game restarts from the beginning of the Cube Rush",
+     "In Boss Rush, defeating the stage 1 boss immediately takes you to just before the stage 2 boss",
+     "The pause menu has 4 items in normal play and 6 items in Cube Rush",
+     "Starting from stage 1 ❶, the boss music plays shortly after",
+     "After game over, Down + START keeps the previously chosen stage",
+     "Pressing START without the joystick starts the game exactly like the original"
+    ],
+    "known": [
+     "Stage 3 ❶ (before the boss): after the screen stops, the upside-down volcano enemies continue for a while before the boss appears (progress while stopped depends on time, so it cannot be skipped by moving the start point later)",
+     "Stage 5 ❷ is inside the section where the screen stops for the mid-boss, so the mid-boss appears / the boss music does not play (under investigation)",
+     "When starting from the menu at an area in the middle of a stage, the background colors are garbled only while the START screen is shown (does not happen when restarting after dying; under investigation)",
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.9",
@@ -276,7 +448,25 @@
     "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "An unused song (song number A1) plays in the menu",
+    "changes": [
+     "Entering the hidden menu now plays a song not used in the game (song number A1, the track played during the talk on the soundtrack), at half its original volume",
+     "The sound ROM (945_r05.d9) is now modified too, so there are 5 patches (they are included automatically in the zip built on this page)"
+    ],
+    "verified": [
+     "Entering the menu plays A1, at about half the volume of the unmodified version (measured about 47%)",
+     "Pressing START without the joystick starts the game exactly like the original (and the sound startup check passes)"
+    ],
+    "known": [
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.8",
@@ -302,7 +492,30 @@
     "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "Rebuilt the menu's area table (start points such as before the boss can be chosen with circled numbers)",
+    "changes": [
+     "Rebuilt the menu's stage and area table. Letters (A, B, …) are the starts of the original areas; circled numbers (❶–❹) are added start points",
+     "Stages 1, 3, 6, 7 and 8: ❶ starts just before the boss",
+     "Stage 5: ❶ starts before the mid-boss and ❷ before the boss",
+     "Stage 9: ❶ and ❷ are the former B and C positions",
+     "Stage 10: A–H are packed to the left; ❶ is where you head down after the boss rush, ❷ is entering the crab after the mid-boss, ❸ is before the final boss, and ❹ is the escape",
+     "Circled number colors: normally white on blue, white on red under the cursor, and when unavailable, blue with the same color as unavailable letters"
+    ],
+    "verified": [
+     "Choosing stage 5 ❶ and ❷, stage 10 ❷, ❸ and ❹, or stage 1 ❶ and pressing START starts from that position",
+     "The text display returns to normal after leaving the menu",
+     "Pressing START without the joystick starts the game exactly like the original"
+    ],
+    "known": [
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.7",
@@ -322,7 +535,24 @@
     "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "No first Option Hunter after the power-up command / removed HUNTER TIME",
+    "changes": [
+     "After using the power-up command, the first Option Hunter no longer appears (it does not count as having appeared, so the next one is the type chosen in HUNTER NEXT). With 4 Options, the chosen type appears about 30 seconds after powering up",
+     "Removed HUNTER TIME (time until the Hunter appears) from the menu"
+    ],
+    "verified": [
+     "Using the power-up command in loop 2 with 4 Options, no Hunter appears after about 15 seconds; the HUNTER NEXT type (default: the first) appears after about 30 seconds",
+     "HUNTER TIME no longer appears in the menu"
+    ],
+    "known": [
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.6",
@@ -345,7 +575,27 @@
     "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "Color incoming cubes by reacting position (CUBE COLOR in the pause menu) / pausing no longer shifts the cube sequence / changed the power-up command combinations",
+    "changes": [
+     "Added CUBE COLOR (default OFF) to the pause menu. When ON, incoming cubes in Cube Rush are colored by the position where they react (1st and 2nd from the right keep their original color; from the 3rd: blue → light blue → teal → green → yellow-green → yellow → orange → red; cubes that do not react are gray). The color is applied from the moment the cube appears and does not change until it sticks",
+     "The coloring also borrows a color slot used only in boss fights, so the original colors are restored when the rush ends (or when it is set to OFF)",
+     "The frame timer now stops while paused. Previously the cube sequence shifted by the amount of time spent paused",
+     "Changed the power-up command combinations: START = full power-up with Laser, Shot + START = full power-up with Double, Missile + START = full power-up with the normal shot (Speed ×2, Missile, 4 Options, Shield), Shot + Missile + START = Speed ×2, Missile, 2 Options"
+    ],
+    "verified": [
+     "With CUBE COLOR ON, ran Cube Rush to the end; every color and gray was applied, and the boss after the rush appeared in its original colors",
+     "Pausing for about 220 frames causes no LAG, and the sequence stays as calculated",
+     "Missile + START gives the power-ups",
+     "RAM/ROM check at startup"
+    ],
+    "known": [
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.5",
@@ -387,7 +637,46 @@
     "キューブの並びは処理落ちがないときの法則。処理落ちで出る間隔がずれると、そこから先は計算と変わる（純正と同じ）",
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "Choose the Cube Rush sequence / show the sequence and drift during play / menu layout and background / adjusted the start points of the stage 10 boss rush",
+    "changes": [
+     "The Cube Rush sequence can now be chosen with CUBE HEIGHT (1–16), SHIFT (A–D) and TYPE (01–45): 16 × 4 × 45 = 2880 sequences that follow the original rule (the timer at the moment the first cube appears decides the sequence of 99 cubes). From the second cube on, it proceeds as in the original",
+     "Each of the 3 items has RANDOM. All default to RANDOM, and when all three are RANDOM the game behaves exactly like the original (nothing is changed)",
+     "Removed the former CUBE PATTERN (0–99)",
+     "Turning CUBE INFO ON in the pause menu during Cube Rush shows \"CUBE:37 H:05 S:B T:12\" (current cube number and sequence) in the high score and 2P score areas. With RANDOM, it shows \"?\" before the first cube appears. Turning it OFF restores the high score and 2P display. Default OFF. Labels are dim and numbers bright",
+     "If slowdown makes the sequence differ from the calculation, the second line shows \"LAG:12+0005\" (number of the first cube whose sequence changed + total frames of drift, updated each time a cube appears). Small drift that does not change the sequence is not shown",
+     "Moved RANK DISP from the start menu to the pause menu (default OFF). It is shown as \"RANK:10\" at the right end of the second line (aligned with the right end of the T number)",
+     "The pause menu now has 5 items (CONTINUE / GAME OVER / INVINCIBLE / RANK DISP / CUBE INFO)",
+     "Cube Rush lives are now the DIP switch setting + 4 (7 lives with the 3-life setting)",
+     "In Cube Rush, each cube that sticks gives 1000 points. This does not affect the high score, rankings or extra lives",
+     "Added SPEED (speed at start, 0–5) and CAPSULE (power-up gauge position at start, OFF / SPEEDUP to !) to the start menu",
+     "Changed the menu layout: removed the heading, the CREDIT display and the LIVES item (lives follow the DIP switches), moved INVINCIBLE to the top, added a blank line between MODE, LOOP, the stage table and CUBE, and put PUSH START at the bottom. STAGE 1–10 numbers are right-aligned",
+     "A color sample of the free shield (one round ball) is shown to the right of SHD COLOR (it changes immediately to the chosen color)",
+     "The menu background shows a darkened scene of the stage 3 boss (Big Core Mk III) firing reflecting lasers (boss, laser and ship sprites only; colors return to normal when the game starts)",
+     "Removed the menu's START item, BACK TO DEMO, and returning with SHOT2 (once in the menu, START always starts the game)",
+     "Moved the start points of BOSS RUSH A–E (bosses 2–6 of the stage 10 boss rush) back to about 10 seconds before each boss"
+    ],
+    "verified": [
+     "With H5, SB, T12 the 99 heights follow the calculated sequence, and the sequence is the same even if you wait a different time in the menu",
+     "Specifying only H and leaving the rest RANDOM gives the specified first height, with a different sequence each time",
+     "For each of BOSS RUSH A–E, the corresponding boss appears after starting",
+     "With H5, SB, T12 and CUBE INFO ON, the top line shows \"H:5 S:B T:12\"; turning it OFF redraws the HI and 2P scores. It does not appear on the weapon select screen",
+     "Deliberately shifting the timer shows \"LAG:\" and the shifted number",
+     "The SHD COLOR sample changes to the chosen color, and the shield (BLUE) after the game starts has the same color as the original",
+     "The menu background is shown, and when the game starts the colors and screen return to the same as v0.4.4",
+     "Normal play without entering the menu has the same screen as v0.4.4 (2 bytes in an unused area of shared RAM are used for random numbers)",
+     "Turning RANK DISP ON/OFF in the pause menu shows/erases it. Cube Rush has 7 lives with the 3-life setting. In normal play the HI and 2P scores are shown",
+     "In Cube Rush each stuck cube adds 1000 points; going past 20000 and 90000 points does not add lives, and the high score does not change. After game over you are not entered in the rankings (in normal mode you are)",
+     "Starting with SPEED 3 and CAPSULE LASER gives speed level 3 and the gauge at the LASER position at the start",
+     "RAM/ROM check at startup: all OK"
+    ],
+    "known": [
+     "The cube sequence follows the rule when there is no slowdown. If slowdown shifts the appearance interval, the sequence differs from the calculation from that point on (same as the original)",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.4",
@@ -408,7 +697,25 @@
    "known": [
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "Boss Rush with bosses only on every stage / fixed the colors of the Technical select screen",
+    "changes": [
+     "Boss Rush: fixed so that stage 2 onward also start just before each stage's boss (previously only the first stage started before the boss, and the following stages played normally from the beginning). Stage 4 is skipped, and stage 10 starts at the beginning of the boss rush",
+     "Moved the Boss Rush start points to about 16 seconds before each stage's boss (previously about 25 seconds). On many stages the boss appears right after the start. Stage 9 starts from the latter half of the cube zone",
+     "Technical / Beginner select screen: fixed the colors inside the Technical frame being dark. For Beginner only the frame line is gray"
+    ],
+    "verified": [
+     "Boss Rush proceeds through stages 1 → 2 → 3 → 5 → 6 → 7 → 8 → 9 → 10 starting before each boss (checked all the way through with invincibility and autofire)",
+     "Checked the start point on each stage: moving it any earlier makes some stages count as cleared the moment you arrive, so this position is used",
+     "The Technical frame has the same colors as the original",
+     "RAM/ROM check at startup: all OK"
+    ],
+    "known": [
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.3",
@@ -431,7 +738,27 @@
    "known": [
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
-   ]
+   ],
+   "en": {
+    "title": "Restored the Technical select screen (Beginner cannot be chosen) / invincibility in the pause menu / suspended the unlock command",
+    "changes": [
+     "Modded play now also shows the Technical / Beginner select screen and the weapon select screen after the start menu (the select screen music also plays). Beginner is gray and cannot be chosen",
+     "Added INVINCIBLE (invincibility ON/OFF) to the pause menu. Shows the current state and toggles with Left/Right or Shot. Linked to the start menu value",
+     "While invincible, the power-up command can be used any number of times",
+     "Suspended the unlock / lock command (stopped, not removed). Meanwhile it is always unlocked, and you can enter the menu with Up or Down + START"
+    ],
+    "verified": [
+     "Menu confirm → Technical select (cannot move to Beginner; gray) → weapon select → starts from the chosen stage and area (stage 10 B)",
+     "Turning INVINCIBLE ON in the pause menu keeps you invincible after resuming, and the remaining power-up command count does not decrease",
+     "You can enter the menu without the unlock command",
+     "Normal play while locked (without entering the menu) has the same screen and shared RAM as v0.4.2 (only the 1-byte unlock flag differs)",
+     "RAM/ROM check at startup: all OK"
+    ],
+    "known": [
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   }
   },
   {
    "version": "0.4.2",
@@ -451,7 +778,24 @@
    "known": [
     "無敵中は壁の中に入り込める",
     "3面I は 0x1ca000（ビッグコアMkIIIの少し手前）から開始"
-   ]
+   ],
+   "en": {
+    "title": "Added invincibility (INVINCIBLE) to the start menu (a temporary item)",
+    "changes": [
+     "Added INVINCIBLE (OFF / ON) to the start menu. When ON, you are not destroyed by enemies, bullets or terrain (modded play only)",
+     "This item is temporary and may be removed in the future"
+    ],
+    "verified": [
+     "ON: on stage 1, stage 4 (3D maze) and stage 10, hitting enemies or walls does not cost a life and you keep going",
+     "OFF: you are destroyed as before",
+     "Normal play while locked has the same screen and shared RAM as v0.4.1 (only one extra call level in the death routine)",
+     "RAM/ROM check at startup: all OK"
+    ],
+    "known": [
+     "While invincible you can go inside walls",
+     "Stage 3 I starts at 0x1ca000 (slightly before Big Core Mk III)"
+    ]
+   }
   },
   {
    "version": "0.4.1",
@@ -473,7 +817,26 @@
    "known": [
     "3面I は 0x1ca000（ビッグコアMkIIIの少し手前）から開始",
     "エリアの数・メニューの表記は今後見直し予定"
-   ]
+   ],
+   "en": {
+    "title": "Redefined the start point coordinates on our own basis",
+    "changes": [
+     "Unified the start points of each boss in the stage 10 boss rush to \"about 6 seconds of scrolling before the boss appears\" (bosses 1–6 = 0x16000 / 0x26000 / 0x3a000 / 0x4e000 / 0x62000 / 0x76000). The bosses appear a little earlier than before",
+     "Changed stage 10 B (after the boss rush) to 0x7a000 and stage 10 J (before the final boss) to 0x25c000",
+     "Changed stage 9 B (before the cube zone; the Cube Rush start point) to 0x58000 and stage 9 C (before the boss) to 0x5c000",
+     "Cleaned up the descriptions in the source and version history"
+    ],
+    "verified": [
+     "For each of BOSS RUSH A–E, the corresponding boss appears after starting",
+     "Starting from stage 10 B and J and stage 9 B and C gives the same flow (terrain, cubes, boss) as before the change",
+     "The only changes to the main ROM are the build date/time on the startup screen and the ROM checksum correction (normal play while locked is the same as v0.4.0)",
+     "RAM/ROM check at startup: all OK"
+    ],
+    "known": [
+     "Stage 3 I starts at 0x1ca000 (slightly before Big Core Mk III)",
+     "The number of areas and the menu labels will be reviewed in the future"
+    ]
+   }
   },
   {
    "version": "0.4.0",
@@ -496,7 +859,27 @@
     "DOUBLE と NORMAL LASER の絵は、ゲーム本来の表記どおり「NORMAL」と書かれている",
     "左右切り替えの処理（56バイト）はメインROM内の未使用データ領域に配置",
     "3面I は 0x1ca000（ビッグコアMkIIIの少し手前）から開始"
-   ]
+   ],
+   "en": {
+    "title": "Added type A–D exclusive weapons to the edit screen / unused cells in the menu are shown dark",
+    "changes": [
+     "On the edit screen in modded play, type A–D exclusive weapons can also be chosen: PHOTON TORPEDO, SPREAD BOMB and 2WAY for MISSILE, DOUBLE for DOUBLE, and NORMAL LASER for LASER",
+     "The additions are on the second page of each column. Left/Right switches between page 1 and page 2, and Up/Down selects within the page. Page 2 shows the same weapon pictures as the type select screen",
+     "Menu stage and area table: in CUBE RUSH everything, and in BOSS RUSH the EX STAGE and B onward of stages 1–10, are shown in a dark color (unused cells). In BOSS RUSH stages 1–10 always start from A",
+     "The version field on the patch page shows the build date and time (to the second)"
+    ],
+    "verified": [
+     "Choosing an added weapon and starting puts that weapon in the gauge (combinations such as 2WAY, DOUBLE and NORMAL LASER)",
+     "Left/Right switches pages. In columns without a page 2 and in normal play, Left/Right does nothing",
+     "The edit screen in normal play has the same screen and behavior as the original. Normal play while locked behaves the same as v0.3.1",
+     "RAM/ROM check at startup: all OK"
+    ],
+    "known": [
+     "The pictures for DOUBLE and NORMAL LASER say \"NORMAL\", as in the game's original labels",
+     "The Left/Right switching routine (56 bytes) is placed in an unused data area of the main ROM",
+     "Stage 3 I starts at 0x1ca000 (slightly before Big Core Mk III)"
+    ]
+   }
   },
   {
    "version": "0.3.1",
@@ -517,7 +900,26 @@
     "MAME 0.289 実機での確認はまだ（手元は 0.270 で確認。セット名とファイル名は 0.289 でも同じはず）",
     "3面I は 0x1ca000（ビッグコアMkIIIの少し手前）から開始",
     "エディット画面の拡張は未対応。メインROMの空きがほぼない"
-   ]
+   ],
+   "en": {
+    "title": "Fixed the unlock command check / build a zip that runs as Japan (gradius3j)",
+    "changes": [
+     "Changed the unlock / lock command to \"Up + A (in any order) → release both → Down + A → release both\" (lock starts with Down and ends with Up; each step within 3 seconds)",
+     "Fix: previously it was only accepted if the joystick and A were pressed at the exact same moment, so in actual play it sometimes could not be unlocked",
+     "The output set can now be chosen on the patch page: gradius3j (runs in MAME as Japan, program code S) / gradius3 (World, program code R). The modded ROM contents are the same"
+    ],
+    "verified": [
+     "It unlocks whether you press joystick → A, A → joystick, or release one first, and Up + START shows the menu",
+     "Up + A alone does not unlock (START works as in the original) / the reverse order locks",
+     "Runs as gradius3j, the RAM/ROM check at startup is all OK, and it works up to the menu",
+     "Normal play while locked behaves the same as v0.3.0"
+    ],
+    "known": [
+     "Not yet checked on actual MAME 0.289 (checked locally on 0.270; the set name and file names should be the same on 0.289)",
+     "Stage 3 I starts at 0x1ca000 (slightly before Big Core Mk III)",
+     "The edit screen extension is not implemented. There is almost no free space left in the main ROM"
+    ]
+   }
   },
   {
    "version": "0.3.0",
@@ -544,7 +946,32 @@
     "3面I は 0x1ca000 から開始（その手前の敵が少し出る）",
     "改造プレイでは3面MkIII手前・10面ボスラッシュ各ボス手前も復活地点になる",
     "エディット画面の拡張は未対応。メインROMの空きがほぼない"
-   ]
+   ],
+   "en": {
+    "title": "Changed the stage and area select layout / separate checkpoints for stage 10 bosses / build date and time on the startup screen",
+    "changes": [
+     "Organized stage and area select into rows for STAGE 1–10, BOSS RUSH and EX STAGE. Areas are shown with letters (A, B, C, …)",
+     "Number of areas: stage 1: 4 / stage 2: 5 / stage 3: 9 / stage 4: 1 / stage 5: 5 / stage 6: 4 / stage 7: 3 / stage 8: 4 / stage 9: 3 / stage 10: 10 / BOSS RUSH: 5 / EX STAGE: 2",
+     "Stage 3 I = before Big Core Mk III (the switch to the boss fight happens as in the original)",
+     "Stage 9 B = before the cube zone (0x59000; Cube Rush also starts here), C = before the boss (0x5b000)",
+     "Stage 10 B = right after the boss rush, J = before the final boss. BOSS RUSH A–E = before bosses 2–6 of the stage 10 boss rush",
+     "EX STAGE A = Gradius hidden stage, B = Salamander hidden stage",
+     "When starting the stage 10 boss rush from a boss partway through, the position in the enemy spawn table is corrected so that boss appears correctly (modded play only)",
+     "On stage 10 in modded play, the point before each boss in the boss rush is also a respawn point (a checkpoint per boss). Stage 10 with MODE = BOSS RUSH starts before boss 1",
+     "The build date and time (BUILD year month day hh:mm:ss) are shown below the RAM ROM CHECK screen at startup"
+    ],
+    "verified": [
+     "Start positions of all areas (stage 3 I, stage 9 B and C, stage 10 B and J, BOSS RUSH A–E, EX STAGE A and B, Cube Rush)",
+     "BOSS RUSH A–E each bring out a different boss in the correct order",
+     "RAM/ROM check at startup: all OK (with the build date/time line)",
+     "Normal play while locked behaves the same as v0.2.0"
+    ],
+    "known": [
+     "Stage 3 I starts at 0x1ca000 (a few enemies before it appear)",
+     "In modded play, before Mk III on stage 3 and before each boss in the stage 10 boss rush are also respawn points",
+     "The edit screen extension is not implemented. There is almost no free space left in the main ROM"
+    ]
+   }
   },
   {
    "version": "0.2.0",
@@ -576,7 +1003,37 @@
     "キューブの出現の高さは固定できるが、出現後の動きや撃ち返しは処理落ちの具合で変わることがある",
     "10面の地下の復活地点・10面ボスの個別区切り・エディット画面の拡張は未対応",
     "メインROMの空きがほぼなくなったため、今後の機能追加では整理が必要"
-   ]
+   ],
+   "en": {
+    "title": "Power-up command, menu cleanup, fixed cube pattern",
+    "changes": [
+     "After the menu, the game goes to the original weapon select screen (WEAPON SELECT) without showing the Technical / Beginner select (Beginner cannot be chosen)",
+     "Cleaned up the menu items: removed BEGINNER, WEAPON, EDIT, SHIELD and the starting equipment items (now 12 items)",
+     "MODE has three options: NORMAL / CUBE RUSH / BOSS RUSH. The hidden stages moved to the STAGE choices (GRADIUS / SALAMANDER). After a hidden stage you return to before the final boss of stage 10 (same as the original)",
+     "Power-up command during play: START = Speed ×2, Missile, Laser, 4 Options, Barrier / SHOT + START = Double instead of Laser / MISSILE + START = Speed ×2, Missile, 2 Options. The power-up gauge is set to SPEED UP",
+     "Power-up command uses: once per game in NORMAL (including hidden stages), unlimited in CUBE RUSH and BOSS RUSH",
+     "Pause is now a long press of START (about 1 second)",
+     "New item CUBE PATTERN: 0 = as in the original, 1–99 = fixes the sequence of cube appearance heights (the same sequence on each start and restart)",
+     "Changed the idle time before auto-lock from 60 seconds to 300 seconds",
+     "Renamed the menu's CANCEL to \"BACK TO DEMO\" (SHOT2 also returns to the demo; the credit is not used up)",
+     "Fix: when the attract mode looped, the frame counter returned to 0 and auto-lock could kick in early"
+    ],
+    "verified": [
+     "Menu → weapon select screen → start at the chosen stage (loop 1, loop 2, chosen area, hidden stages, Cube / Boss Rush)",
+     "Results of the 3 power-up commands, a second use not working in NORMAL, repeated use in Boss Rush, starting from a hidden stage",
+     "Long press of START pauses (no power-ups given)",
+     "CUBE PATTERN: the same number gives the same sequence even with different input timing. 0 differs every time",
+     "RAM/ROM check at startup: all OK",
+     "Auto-lock after 300 seconds (18000 frames) idle",
+     "BACK TO DEMO / SHOT2 return to the demo and the credit remains"
+    ],
+    "known": [
+     "The power-up command \"adds what is missing\". If you have more Options or Barrier than the target, they are not reduced (speed is set back to level 2)",
+     "The cube appearance heights can be fixed, but their movement after appearing and the return fire may vary depending on slowdown",
+     "The underground respawn point on stage 10, separate checkpoints for the stage 10 bosses, and the edit screen extension are not implemented",
+     "The main ROM has almost no free space left, so future features will require cleanup"
+    ]
+   }
   },
   {
    "version": "0.1.0",
@@ -609,7 +1066,38 @@
     "9面のボスラッシュはキューブラッシュの終盤を含む",
     "メニュー背景は黒一色",
     "ポーズからGAME OVERを選ぶと『GAME OVER』表示なしでアトラクトへ戻る"
-   ]
+   ],
+   "en": {
+    "title": "First public release",
+    "changes": [
+     "Hidden menu (unlock with Up + A → release → Down + A, lock in reverse order, auto-lock after 60 seconds idle)",
+     "While unlocked, insert a credit → Up + START (default settings) / Down + START (previous settings) for the menu. Normal START works as in the original",
+     "Choice of stage, loop, area (respawn point), lives and Beginner",
+     "Equipment: types A–D / EDIT (choose missile, double and laser individually), plus speed, missile, shot, options and shield at start",
+     "10 shield colors (shared by the force field and the front shield)",
+     "Option Hunter: next type and time until it appears",
+     "Numeric rank display (ON/OFF)",
+     "MODE: Cube Rush (from the end of stage 9; restarts from the same point after dying)",
+     "MODE: Boss Rush (in order from just before the boss of the chosen stage; stage 4 is skipped; restarts just before the boss after dying; game over after one round)",
+     "MODE: start the Gradius / Salamander hidden stages on their own",
+     "START pauses during modded play (CONTINUE / GAME OVER)"
+    ],
+    "verified": [
+     "RAM/ROM check at startup: all OK",
+     "While locked, or START without the joystick, works as in the original (Technical / Beginner select → type select)",
+     "Unlock, lock, and 60-second auto-lock",
+     "Stage select in loop 1 (stage 5 etc.), choosing an area, loop 2 and later",
+     "Equipment, shield colors, Hunter appearance, rank display, pause",
+     "Boss Rush start positions on each stage (stages 1, 2, 3, 5–9), skipping stage 4, game over after one round",
+     "Cube Rush, Gradius stage, Salamander stage"
+    ],
+    "known": [
+     "The underground respawn point on stage 10 (before the lid at the fortress entrance) is not implemented",
+     "The stage 9 part of Boss Rush includes the end of the Cube Rush",
+     "The menu background is plain black",
+     "Choosing GAME OVER from the pause menu returns to the attract mode without showing \"GAME OVER\""
+    ]
+   }
   }
  ],
  "set": {

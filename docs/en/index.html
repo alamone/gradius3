@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Gradius III Mod ROM Patch</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--sub:#8b949e;--acc:#58a6ff;--ok:#3fb950;--ng:#f85149;--warn:#d29922}
+@media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--panel:#fff;--line:#d0d7de;--text:#1f2328;--sub:#59636e;--acc:#0969da;--ok:#1a7f37;--ng:#cf222e;--warn:#9a6700}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:17px;margin:32px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+.sub{color:var(--sub);font-size:13px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;margin:12px 0}
+#drop{border:2px dashed var(--line);border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;transition:.15s}
+#drop.on{border-color:var(--acc);background:color-mix(in srgb,var(--acc) 8%,transparent)}
+table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:5px 6px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}
+.ok{color:var(--ok)}.ng{color:var(--ng)}.warn{color:var(--warn)}
+button{font:inherit;padding:10px 18px;border-radius:8px;border:1px solid var(--acc);background:var(--acc);color:#fff;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
+select{max-width:100%;font:inherit;padding:6px;border-radius:6px;background:var(--panel);color:var(--text);border:1px solid var(--line)}
+ul{margin:6px 0;padding-left:22px}
+details{margin:8px 0}
+summary{cursor:pointer;font-weight:600}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--sub);margin-left:6px}
+code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:1px 5px;border-radius:4px}
+#log{font-size:13px;white-space:pre-wrap;color:var(--sub)}
+.bigl{display:block;padding:18px 20px;border-radius:12px;border:2px solid var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);color:var(--text);text-decoration:none;margin:14px 0}
+.bigl b{display:block;font-size:20px;color:var(--acc)}
+.bigl span{display:block;font-size:13px;color:var(--sub);margin-top:4px}
+.cg{display:grid;gap:8px;margin:8px 0 4px}
+.cg-row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.cg-ic{display:flex;gap:6px;align-items:center;min-width:160px}
+.cg-tx{flex:1;min-width:180px;font-size:14px}
+.cg-key{font-size:12px;color:var(--sub)}
+.lang{text-align:right;font-size:13px;margin-bottom:6px}.lang a{color:var(--acc)}
+.bigl:hover{background:color-mix(in srgb,var(--acc) 20%,transparent)}
+</style>
+</head>
+<body>
+<main>
+<div class="lang"><a href="../">日本語</a> ｜ <b>English</b></div>
+<h1>Gradius III Mod ROM Patch</h1>
+<div class="sub">A mod based on the genuine version 313 ROM (hidden menu, stage select, Boss Rush, Cube Rush and more). This page only distributes patches (differences). No ROM data is included.</div>
+
+
+<h2>Test Play Reports</h2>
+<a class="bigl" id="report" href="https://github.com/hknroms/gradius3/issues/new?template=testplay_en.yml" target="_blank" rel="noopener"><b>▶ Report a test play</b><span>Report bugs, findings and requests using a simple form. You can attach screenshots and videos (requires signing in with a GitHub account). Reports in English or Japanese are both welcome.</span></a>
+<div class="sub">Previous reports: <a href="https://github.com/hknroms/gradius3/issues" target="_blank" rel="noopener" style="color:var(--acc)">list of reports</a> (if the same issue is already there, please add to it). Reports are public.</div>
+
+<h2>Stereo Listening Comparison (prototype)</h2>
+<a class="bigl" href="stereo/sim.html"><b>▶ Compare the stereo mixes here</b><span>Switch between 10 patterns for all 35 tracks with a single button. You can also fine-tune each channel and record a rating for each track (headphones recommended)</span></a>
+
+<h2>Cube Rush Analysis</h2>
+<a class="bigl" href="cube/index.html"><b>▶ See the Cube Rush analysis here</b><span>How the heights are decided, the 2880 sequences (H / S / T), drift caused by slowdown (LAG), and the sticking check. Pick H, S and T to view the sequence of 99 cubes</span></a>
+
+<h2>How to Use (in game)</h2>
+<div class="panel">
+<h3 style="margin:0 0 6px;font-size:15px">Entering the hidden menu</h3>
+<ul>
+<li>Insert a credit, then press START while holding the joystick. Pressing START without the joystick starts the game exactly like the original.<div class="cg"><div class="cg-row"><div class="cg-ic"><svg width="42" height="34" viewBox="0 0 42 34" aria-label="Joystick up"><circle cx="15" cy="17" r="12" fill="none" stroke="var(--sub)" stroke-width="1.5"/><circle cx="15" cy="17" r="2" fill="var(--sub)"/><circle cx="15" cy="11" r="5.5" fill="var(--acc)"/><polygon points="30,19 40,19 35,10" fill="var(--acc)"/></svg><svg width="112" height="30" viewBox="0 0 112 30" aria-label="Buttons"><circle cx="14" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="14" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">S</text><circle cx="42" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="42" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">M</text><rect x="60" y="6" width="50" height="18" rx="9" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="85" y="19" font-size="10" text-anchor="middle" fill="#fff" font-weight="700">START</text></svg></div><div class="cg-tx"><b>Up + START</b>: menu with default settings</div></div><div class="cg-row"><div class="cg-ic"><svg width="42" height="34" viewBox="0 0 42 34" aria-label="Joystick down"><circle cx="15" cy="17" r="12" fill="none" stroke="var(--sub)" stroke-width="1.5"/><circle cx="15" cy="17" r="2" fill="var(--sub)"/><circle cx="15" cy="23" r="5.5" fill="var(--acc)"/><polygon points="30,15 40,15 35,24" fill="var(--acc)"/></svg><svg width="112" height="30" viewBox="0 0 112 30" aria-label="Buttons"><circle cx="14" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="14" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">S</text><circle cx="42" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="42" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">M</text><rect x="60" y="6" width="50" height="18" rx="9" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="85" y="19" font-size="10" text-anchor="middle" fill="#fff" font-weight="700">START</text></svg></div><div class="cg-tx"><b>Down + START</b>: menu with your previous settings</div></div></div></li>
+<li>The unlock / lock command (when not in a game: <b>Up + A → release both → Down + A → release both</b> unlocks; starting with Down and ending with Up locks; each step within 3 seconds; auto-locks after 300 seconds idle) is <b>currently suspended</b>. It is always unlocked, so you can enter the menu without the command.</li>
+</ul>
+<h3 style="margin:14px 0 6px;font-size:15px">Menu</h3>
+<ul>
+<li>Choose an item with Up/Down, change its value with Left/Right, and <b>press START to begin</b> (the menu does not return to the demo). After starting, you go to the type select (Beginner cannot be chosen) and the weapon select screens.</li>
+<li>Items: INVINCIBLE / MODE (NORMAL, CUBE RUSH, BOSS RUSH) / LOOP / stage and area table / CUBE HEIGHT, SHIFT, TYPE (the Cube Rush sequence) / SHD COLOR (shield color) / HUNTER NEXT (type of the first Option Hunter to appear) / SPEED (speed at start) / CAPSULE (power-up gauge position at start).</li>
+<li>Stage and area table: choose an area with Left/Right. Letters (A, B, …) are the starts of the original areas; <b>circled numbers</b> are added start points. On stages 1, 3, 6, 7 and 8, ❶ is just before the boss. On stage 5, ❶ is before the mid-boss and ❷ is before the boss. On stage 10, ❶ is where you head down after the boss rush, ❷ is entering the crab after the mid-boss, ❸ is before the final boss, and ❹ is the escape.</li>
+</ul>
+<h3 style="margin:14px 0 6px;font-size:15px">Power-up command during play (tap START)</h3>
+<ul>
+<li style="list-style:none;margin-left:-22px"><div class="cg"><div class="cg-row"><div class="cg-ic"><svg width="112" height="30" viewBox="0 0 112 30" aria-label="Buttons"><circle cx="14" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="14" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">S</text><circle cx="42" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="42" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">M</text><rect x="60" y="6" width="50" height="18" rx="9" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="85" y="19" font-size="10" text-anchor="middle" fill="#fff" font-weight="700">START</text></svg></div><div class="cg-tx">Speed ×2, Missile, <b>Laser</b>, 4 Options, Shield</div></div><div class="cg-row"><div class="cg-ic"><svg width="112" height="30" viewBox="0 0 112 30" aria-label="Buttons"><circle cx="14" cy="15" r="11" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="14" y="19.5" font-size="11" text-anchor="middle" fill="#fff" font-weight="700">S</text><circle cx="42" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="42" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">M</text><rect x="60" y="6" width="50" height="18" rx="9" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="85" y="19" font-size="10" text-anchor="middle" fill="#fff" font-weight="700">START</text></svg></div><div class="cg-tx"><b>Double</b> instead of Laser</div></div><div class="cg-row"><div class="cg-ic"><svg width="112" height="30" viewBox="0 0 112 30" aria-label="Buttons"><circle cx="14" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="14" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">S</text><circle cx="42" cy="15" r="11" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="42" y="19.5" font-size="11" text-anchor="middle" fill="#fff" font-weight="700">M</text><rect x="60" y="6" width="50" height="18" rx="9" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="85" y="19" font-size="10" text-anchor="middle" fill="#fff" font-weight="700">START</text></svg></div><div class="cg-tx">Full power-up with the <b>normal shot</b> (no Laser or Double)</div></div><div class="cg-row"><div class="cg-ic"><svg width="112" height="30" viewBox="0 0 112 30" aria-label="Buttons"><circle cx="14" cy="15" r="11" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="14" y="19.5" font-size="11" text-anchor="middle" fill="#fff" font-weight="700">S</text><circle cx="42" cy="15" r="11" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="42" y="19.5" font-size="11" text-anchor="middle" fill="#fff" font-weight="700">M</text><rect x="60" y="6" width="50" height="18" rx="9" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="85" y="19" font-size="10" text-anchor="middle" fill="#fff" font-weight="700">START</text></svg></div><div class="cg-tx">Speed ×2, Missile, <b>2 Options</b></div></div></div><div class="cg-key">S = Shot, M = Missile. Hold the highlighted buttons and tap START.</div></li>
+<li>After using the power-up command, the first Option Hunter does not appear (it does not count as having appeared either, so the next one is the type chosen in HUNTER NEXT).</li>
+<li>In NORMAL it can be used once per game; in Cube Rush, Boss Rush and while invincible it can be used any number of times. Power-ups are only added, so if you already have Laser or Double you do not go back to the normal shot.</li>
+</ul>
+<h3 style="margin:14px 0 6px;font-size:15px">Pause menu (hold START for about 1 second)</h3>
+<ul>
+<li style="list-style:none;margin-left:-22px"><div class="cg"><div class="cg-row"><div class="cg-ic"><svg width="112" height="38" viewBox="0 0 112 38" aria-label="Buttons"><circle cx="14" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="14" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">S</text><circle cx="42" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="42" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">M</text><rect x="60" y="6" width="50" height="18" rx="9" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="85" y="19" font-size="10" text-anchor="middle" fill="#fff" font-weight="700">START</text><text x="85" y="36" font-size="9" text-anchor="middle" fill="var(--acc)">~1 sec</text></svg></div><div class="cg-tx">Hold START for about 1 second to open the pause menu</div></div></div></li>
+<li>Choose with Up/Down, toggle ON/OFF items with Left/Right or Shot, and resume with START (or Shot). The game timer also stops while paused, so the cube sequence does not drift.</li>
+<li><b>CONTINUE</b> (resume) / <b>GAME OVER</b> (quit) / <b>INVINCIBLE</b> / <b>RANK DISP</b> (show the rank) / <b>POS DISP</b> (show the screen position X/Y below RANK; X:1CA0 means position 0x1ca000) / <b>CUBE INFO</b> (show the Cube Rush sequence and drift, in the high score and 2P areas) / <b>CUBE COLOR</b> (color incoming cubes by the position where they react) / <b>CUBE LINE V</b> (a vertical line in the same color at the position where each cube reacts; Left/Right cycles OFF, ROUGH = coarse dots, FINE = fine dots, EDGE = marks at the top and bottom edges only) / <b>CUBE LINE H</b> (horizontal lines for the 12 possible heights; OFF, ROUGH = coarse dots, LINE = faint line, EDGE = marks at the left and right edges only) / <b>CUBE HUNTER</b> (ON = only the first Option Hunter appears per Cube Rush run / OFF = none appear; starts OFF). CUBE INFO, CUBE COLOR, CUBE LINE V/H and CUBE HUNTER appear only in Cube Rush. RANK DISP, POS DISP, CUBE INFO, CUBE COLOR, CUBE LINE V/H and CUBE HUNTER return to OFF each time you start from the menu.</li>
+</ul>
+<h3 style="margin:14px 0 6px;font-size:15px">Cube Rush</h3>
+<ul>
+<li>Lives are the DIP switch setting + 4. Each cube that sticks gives 1000 points (this does not affect the high score, rankings or extra lives).</li>
+<li>The power-up gauge is fixed on SPEED UP (it stays on SPEED UP after use; up to speed 5).</li>
+<li>When the cube section ends and the screen has stopped for about 2 seconds, instead of going on to the stage 9 boss you lose one life (without the explosion) and restart from the beginning of the Cube Rush (lives are lost even while invincible). The game is over when you run out of lives.</li>
+</ul>
+<h3 style="margin:14px 0 6px;font-size:15px">Boss Rush</h3>
+<ul>
+<li>Starts just before a boss; after defeating it you go straight to just before the next stage's boss (stage 4 is skipped because it has no boss). The game ends after one full round.</li>
+</ul>
+</div>
+
+<h2>Latest Version</h2>
+<div id="latest" class="panel">Loading…</div>
+
+<h2>Build a zip for MAME</h2>
+<div class="panel">
+  <ol style="margin:0 0 10px;padding-left:20px">
+    <li>Drop all of your genuine ROMs here at once (a zip, a zip inside a zip, or loose files are all fine).<br>
+      You need: <b>the full gradius3 set for MAME (version R)</b> and <b>the two version 313 main ROMs</b> (<code>945_313.f15</code> / <code>945_312.e15</code>). Files are identified by their contents (CRC), not their names.</li>
+    <li>When everything is ready, press "Build zip" to download a zip you can put straight into MAME's roms folder.<br>You can choose the output set: <b>gradius3j</b> (on newer MAME such as 0.289 it runs as "Japan, version 3, newer" = version 313; recommended), <b>gradius3</b> (runs as "World, version R"), or gradius3j for older MAME ("Japan, program code S"). The modded ROMs inside are the same in every case; only the file names differ.</li>
+  </ol>
+  <div class="sub">ROMs are processed only inside your browser and are never sent anywhere. Keep a copy of your original gradius3.zip / gradius3j.zip somewhere else so it does not get overwritten. MAME will warn about a checksum mismatch, but the game runs.</div>
+  <p>Version: <select id="ver"></select>　Output set: <select id="setname"><option value="gradius3j">gradius3j (newer MAME such as 0.289: Japan, version 3 = version 313)</option><option value="gradius3">gradius3 (World, version R)</option><option value="gradius3j-old">gradius3j (older MAME: Japan, program code S)</option></select></p>
+  <div id="drop">Drop files here (or click to choose)<input id="file" type="file" multiple hidden></div>
+  <p class="sub" id="memo" style="margin:8px 0 0">Genuine ROMs you select are remembered in this browser (next time you can just press "Build zip" without choosing them again; they are never sent anywhere). <button id="forget" type="button" hidden style="background:transparent;color:var(--sub);border:1px solid var(--line);padding:2px 8px;font-size:12px;margin-top:4px">Forget saved ROMs</button></p>
+  <p><button id="build" disabled>Build zip</button></p>
+  <div id="log"></div>
+  <details id="needbox" style="margin-top:10px"><summary>List of required files</summary><table id="need" style="margin-top:8px"></table></details>
+  <div class="sub" style="margin-top:6px">On Android phones, if a zip with the same name already exists, the new one is saved as something like "gradius3j (1).zip" and MAME will not read it. Delete the old zip before building.</div>
+</div>
+
+<h2>Version History</h2>
+<div id="history"></div>
+
+<div class="sub" style="margin-top:24px">Gradius III is a copyrighted work of KONAMI. This page is an unofficial mod patch intended for personal use by people who own the genuine ROMs.</div>
+</main>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// ---- CRC32 ----
+const CT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
+function crc32(u8) { let c = 0xffffffff; for (let i = 0; i < u8.length; i++) c = CT[(c ^ u8[i]) & 0xff] ^ (c >>> 8); return ((c ^ 0xffffffff) >>> 0).toString(16).padStart(8, '0'); }
+// ---- ZIP（ブラウザ標準の DecompressionStream を使用。外部ライブラリ不要）----
+async function inflateRaw(u8) {
+  const ds = new DecompressionStream('deflate-raw');
+  const buf = await new Response(new Blob([u8]).stream().pipeThrough(ds)).arrayBuffer();
+  return new Uint8Array(buf);
+}
+async function unzip(u8) {
+  const dv = new DataView(u8.buffer, u8.byteOffset, u8.byteLength);
+  let e = u8.length - 22;
+  while (e >= 0 && dv.getUint32(e, true) !== 0x06054b50) e--;
+  if (e < 0) throw new Error('not a zip');
+  const cnt = dv.getUint16(e + 10, true); let p = dv.getUint32(e + 16, true); const out = [];
+  for (let i = 0; i < cnt; i++) {
+    if (dv.getUint32(p, true) !== 0x02014b50) break;
+    const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true);
+    const nlen = dv.getUint16(p + 28, true), xlen = dv.getUint16(p + 30, true), clen = dv.getUint16(p + 32, true);
+    const lho = dv.getUint32(p + 42, true);
+    const name = new TextDecoder().decode(u8.subarray(p + 46, p + 46 + nlen));
+    p += 46 + nlen + xlen + clen;
+    if (name.endsWith('/')) continue;
+    const lnl = dv.getUint16(lho + 26, true), lxl = dv.getUint16(lho + 28, true);
+    const raw = u8.subarray(lho + 30 + lnl + lxl, lho + 30 + lnl + lxl + csize);
+    if (method === 0) out.push([name, raw.slice()]);
+    else if (method === 8) out.push([name, await inflateRaw(raw)]);
+  }
+  return out;
+}
+function zipStore(files) {               // [[name, Uint8Array]] → 無圧縮zip
+  const enc = new TextEncoder(); const parts = [], cd = []; let off = 0;
+  for (const [name, data] of files) {
+    const n = enc.encode(name), c = parseInt(crc32(data), 16);
+    const h = new DataView(new ArrayBuffer(30));
+    h.setUint32(0, 0x04034b50, true); h.setUint16(4, 10, true); h.setUint16(10, 0, true);
+    h.setUint16(12, 0x2821, true);      // 2000-01-01
+    h.setUint32(14, c, true); h.setUint32(18, data.length, true); h.setUint32(22, data.length, true); h.setUint16(26, n.length, true);
+    parts.push(new Uint8Array(h.buffer), n, data);
+    const d = new DataView(new ArrayBuffer(46));
+    d.setUint32(0, 0x02014b50, true); d.setUint16(4, 20, true); d.setUint16(6, 10, true); d.setUint16(14, 0x2821, true);
+    d.setUint32(16, c, true); d.setUint32(20, data.length, true); d.setUint32(24, data.length, true); d.setUint16(28, n.length, true);
+    d.setUint32(42, off, true);
+    cd.push(new Uint8Array(d.buffer), n); off += 30 + n.length + data.length;
+  }
+  const cdsize = cd.reduce((a, b) => a + b.length, 0);
+  const e = new DataView(new ArrayBuffer(22));
+  e.setUint32(0, 0x06054b50, true); e.setUint16(8, files.length, true); e.setUint16(10, files.length, true);
+  e.setUint32(12, cdsize, true); e.setUint32(16, off, true);
+  return new Blob([...parts, ...cd, new Uint8Array(e.buffer)], { type: 'application/zip' });
+}
+// ---- BPS ----
+function bpsApply(src, p) {
+  if (String.fromCharCode(...p.slice(0, 4)) !== 'BPS1') throw new Error('not a BPS patch');
+  let pos = 4;
+  const rd = () => { let d = 0, s = 1; for (;;) { const x = p[pos++]; d += (x & 0x7f) * s; if (x & 0x80) return d; s *= 128; d += s; } };
+  const ss = rd(), ts = rd(), ms = rd(); pos += ms;
+  const u32 = o => (p[o] | p[o + 1] << 8 | p[o + 2] << 16 | p[o + 3] << 24) >>> 0;
+  const end = p.length - 12;
+  if (crc32(src) !== u32(end).toString(16).padStart(8, '0')) throw new Error('source ROM CRC does not match');
+  const out = new Uint8Array(ts); let o = 0, sr = 0, tr = 0;
+  while (pos < end) {
+    const d = rd(), cmd = d & 3, ln = Math.floor(d / 4) + 1;
+    if (cmd === 0) { out.set(src.subarray(o, o + ln), o); o += ln; }
+    else if (cmd === 1) { out.set(p.subarray(pos, pos + ln), o); pos += ln; o += ln; }
+    else { const v = rd(), off = (v & 1 ? -1 : 1) * Math.floor(v / 2);
+      if (cmd === 2) { sr += off; out.set(src.subarray(sr, sr + ln), o); sr += ln; o += ln; }
+      else { tr += off; for (let i = 0; i < ln; i++) out[o++] = out[tr++]; } }
+  }
+  if (crc32(out) !== u32(end + 4).toString(16).padStart(8, '0')) throw new Error('output CRC does not match');
+  return out;
+}
+// ---- 状態 ----
+let DATA = null; const have = new Map(); // crc -> Uint8Array
+function curVer() { return DATA.versions.find(v => v.patches && v.version === $('#ver').value) || DATA.versions[0]; }
+function needList() {
+  const v = curVer(); const L = [];
+  for (const f of DATA.set.files) if (!v.patches[f.name]) L.push({ label: f.name, crc: f.crc });   // パッチで作るファイルは除く
+  for (const [name, p] of Object.entries(v.patches)) L.push({ label: name + ' (patch source)', crc: p.source_crc });
+  return L;
+}
+function refresh() {
+  const L = needList(); let ok = 0;
+  $('#need').innerHTML = '<tr><th>Required file</th><th>CRC</th><th>Status</th></tr>' + L.map(x => {
+    const h = have.has(x.crc); if (h) ok++;
+    return `<tr><td>${esc(x.label)}</td><td><code>${x.crc}</code></td><td class="${h ? 'ok' : 'ng'}">${h ? 'OK' : 'missing'}</td></tr>`;
+  }).join('');
+  $('#build').disabled = ok !== L.length;
+  $('#needbox').open = ok !== L.length;
+  $('#log').textContent = ok === L.length ? 'All files are ready.' : `${ok} / ${L.length} files ready.`;
+}
+// ---- 純正ROMをこのブラウザに覚える（IndexedDB。使えないときは何もしない） ----
+const DBN = 'g3rom', ST = 'files';
+function idb() { return new Promise((ok, ng) => { try { const r = indexedDB.open(DBN, 1); r.onupgradeneeded = () => r.result.createObjectStore(ST); r.onsuccess = () => ok(r.result); r.onerror = () => ng(r.error); } catch (e) { ng(e); } }); }
+async function idbAll() { try { const db = await idb(); return await new Promise((ok, ng) => { const out = []; const c = db.transaction(ST).objectStore(ST).openCursor(); c.onsuccess = () => { const k = c.result; if (k) { out.push([k.key, new Uint8Array(k.value)]); k.continue(); } else ok(out); }; c.onerror = () => ng(c.error); }); } catch (e) { return []; } }
+async function idbPut(crc, u8) { try { const db = await idb(); await new Promise((ok, ng) => { const t = db.transaction(ST, 'readwrite'); t.objectStore(ST).put(u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.length), crc); t.oncomplete = ok; t.onerror = () => ng(t.error); }); } catch (e) {} }
+async function idbClear() { try { const db = await idb(); await new Promise((ok, ng) => { const t = db.transaction(ST, 'readwrite'); t.objectStore(ST).clear(); t.oncomplete = ok; t.onerror = () => ng(t.error); }); } catch (e) {} }
+let saved = 0;
+function wanted() {     // 覚えるのは、どれかの版で使うファイルだけ
+  const s = new Set();
+  if (!DATA) return null;
+  for (const f of DATA.set.files) s.add(f.crc);
+  for (const v of DATA.versions) for (const p of Object.values(v.patches || {})) s.add(p.source_crc);
+  return s;
+}
+function memoUi() { $('#forget').hidden = saved === 0; if (saved) $('#forget').textContent = `Forget saved ROMs (${saved})`; }
+async function addBytes(name, u8) {
+  if (u8.length > 4 && u8[0] === 0x50 && u8[1] === 0x4b) {          // zip（入れ子も展開）
+    try { for (const [n, b] of await unzip(u8)) await addBytes(n, b);
+      return; } catch (e) { /* zipでなければ通常ファイル扱い */ }
+  }
+  if (u8.length <= 0x100000) {
+    const c = crc32(u8), w = wanted();
+    if (!have.has(c) && (!w || w.has(c))) { have.set(c, u8); await idbPut(c, u8); saved++; }
+    else if (!have.has(c)) have.set(c, u8);
+  }
+}
+async function addFiles(files) {
+  $('#log').textContent = 'Loading…';
+  for (const f of files) await addBytes(f.name, new Uint8Array(await f.arrayBuffer()));
+  memoUi(); refresh();
+}
+async function build() {
+  const v = curVer(); const files = [];
+  try {
+    for (const f of DATA.set.files) if (!v.patches[f.name]) files.push([f.name, have.get(f.crc)]);
+    for (const [name, p] of Object.entries(v.patches)) {
+      const patch = new Uint8Array(await (await fetch('../' + p.file)).arrayBuffer());
+      const out = bpsApply(have.get(p.source_crc), patch);
+      if (crc32(out) !== p.target_crc) throw new Error('CRC of ' + name + ' does not match');
+      files.push([name, out]);
+    }
+    const sel = $('#setname').value, sn = sel.replace('-old', '');
+    // セットごとに違うのはメインROMとサウンドROMのファイル名だけ（サウンドの中身は同じ）
+    //  新しいMAME(0.289 など)の gradius3j = 313版(945_313/945_312)、古いMAMEの gradius3j = S版(945_s13/945_s12)
+    const RENAME = {
+      'gradius3j': { '945_r13.f15': '945_313.f15', '945_r12.e15': '945_312.e15', '945_r05.d9': '945_m05.d9' },
+      'gradius3j-old': { '945_r13.f15': '945_s13.f15', '945_r12.e15': '945_s12.e15', '945_r05.d9': '945_m05.d9' },
+    }[sel] || {};
+    for (const f of files) if (RENAME[f[0]]) f[0] = RENAME[f[0]];
+    files.sort((a, b) => a[0] < b[0] ? -1 : 1);
+    const blob = zipStore(files);
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = sn + '.zip'; a.click();
+    $('#log').textContent = `Built ${sn}.zip for v${v.version}. Put it in MAME's roms folder and start ${sn}.`;
+  } catch (e) { $('#log').innerHTML = '<span class="ng">Error: ' + esc(e.message) + '</span>'; }
+}
+function verHtml(v0, open) {
+  const v = Object.assign({}, v0, v0.en || {});   // English text when available
+  const li = a => a && a.length ? '<ul>' + a.map(x => '<li>' + esc(x) + '</li>').join('') + '</ul>' : '';
+  return `<details ${open ? 'open' : ''}><summary>v${esc(v.version)} <span class="tag">${esc(v.build ? v.build : v.date)}</span> ${esc(v.title || '')}${v.patches ? '' : ' <span class="tag">patch no longer available</span>'}</summary>
+    ${v.changes && v.changes.length ? '<div><b>Changes</b>' + li(v.changes) + '</div>' : ''}
+    ${v.verified && v.verified.length ? '<div><b>Verified</b>' + li(v.verified) + '</div>' : ''}
+    ${v.known && v.known.length ? '<div><b>Known issues / notes</b>' + li(v.known) + '</div>' : ''}</details>`;
+}
+(async () => {
+  try { DATA = await (await fetch('../versions.json', { cache: 'no-store' })).json(); }
+  catch (e) { $('#latest').textContent = 'Could not load version information.'; return; }
+  const L = DATA.versions[0];
+  $('#latest').innerHTML = verHtml(L, true);
+  $('#report').href += '&version=v' + encodeURIComponent(L.version);   // 報告ページの「版」を入力済みに
+  $('#history').innerHTML = DATA.versions.map((v, i) => `<div class="panel">${verHtml(v, i === 0)}</div>`).join('');
+  $('#ver').innerHTML = DATA.versions.filter(v => v.patches).map(v => `<option value="${esc(v.version)}">v${esc(v.version)} (${esc(v.build ? 'build ' + v.build : v.date)})</option>`).join('');
+  $('#ver').onchange = refresh;
+  for (const [c, u8] of await idbAll()) { have.set(c, u8); saved++; }   // 前に覚えた純正ROM
+  memoUi(); refresh();
+  if (saved) $('#log').textContent += ' (using the genuine ROMs saved in this browser)';
+})();
+const drop = $('#drop');
+drop.onclick = () => $('#file').click();
+$('#file').onchange = e => addFiles(e.target.files);
+drop.ondragover = e => { e.preventDefault(); drop.classList.add('on'); };
+drop.ondragleave = () => drop.classList.remove('on');
+drop.ondrop = e => { e.preventDefault(); drop.classList.remove('on'); addFiles(e.dataTransfer.files); };
+$('#build').onclick = build;
+$('#forget').onclick = async () => { await idbClear(); have.clear(); saved = 0; memoUi(); refresh(); $('#log').textContent = 'Saved ROMs have been forgotten.'; };
+
+</script>
+</body>
+</html>

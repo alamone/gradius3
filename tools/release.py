@@ -1,6 +1,7 @@
 """リリース作成: 改造ROMと純正ROMから差分パッチ(BPS)を作り、docs/versions.json に版を追加する。
 usage: python3 tools/release.py <版> <改造ROMフォルダ(945_313.f15 等4本)> <純正313メインのフォルダ> <MAME用 gradius3.zip(R版)> <notes.json>
 notes.json: {"title": "...", "changes": [...], "verified": [...], "known": [...]}
+            英語ページ用に "en": {"title": "...", "changes": [...], "verified": [...], "known": [...]} も入れる（docs/en/ が表示に使う）
 ※ リポジトリには純正ROMの中身は一切入らない（パッチは改造部分の差分のみ）。
 """
 import sys, os, json, zipfile, zlib, datetime
@@ -40,6 +41,7 @@ data = json.load(open(vj)) if os.path.exists(vj) else {'versions': []}
 data['set'] = {'name': 'gradius3', 'files': [{'name': n, 'crc': crc(b), 'size': len(b)} for n, b in sorted(setfiles.items()) if n not in plan or n == SND]}
 data['required'] = {'313main': {'945_313.f15': crc(g313['f15']), '945_312.e15': crc(g313['e15'])}}
 n = json.load(open(notes))
+if 'en' not in n: print('注意: notes.json に en（英語の説明）がありません。英語ページでは日本語のまま表示されます')
 # ビルド日時: 改造メインROMの起動画面の文字列（BUILD 年 月 日 時:分:秒）から読む
 mm = bytes(x for p in zip(mod['945_313.f15'], mod['945_312.e15']) for x in p)
 k = mm.find(b'BUILD@')

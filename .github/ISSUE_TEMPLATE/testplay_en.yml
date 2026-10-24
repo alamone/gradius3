@@ -1,0 +1,81 @@
+name: Test play report (English)
+description: Report a bug, a finding or a request
+title: "[Test] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for test playing! Fill in what you can (you do not have to fill in everything).
+        - **Title**: after "[Test] ", describe the issue in a few words (e.g. Boss music does not play at stage 5 mid-boss)
+        - Fill in the fields below, then press the green button at the bottom (**Create** or **Submit new issue**)
+  - type: dropdown
+    id: kind
+    attributes:
+      label: Type of report
+      options:
+        - Bug
+        - Finding / impression
+        - Request
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Filled in automatically when opened from the button on the patch page
+      placeholder: v0.4.16
+    validations:
+      required: true
+  - type: dropdown
+    id: env
+    attributes:
+      label: Where you played
+      options:
+        - MAME (PC)
+        - MAME4droid (Android)
+        - Other emulator
+        - Real hardware (PCB)
+    validations:
+      required: true
+  - type: input
+    id: envdetail
+    attributes:
+      label: Environment details (if known)
+      placeholder: e.g. MAME 0.289 / Windows 11 / PS5 controller
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      options:
+        - NORMAL (started from the menu)
+        - CUBE RUSH
+        - BOSS RUSH
+        - Original start (without the menu)
+        - The menu or pause screen itself
+        - Other / not sure
+  - type: input
+    id: stage
+    attributes:
+      label: Stage / area
+      placeholder: e.g. Stage 5 ❷ / Stage 9 in the middle of the cubes
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What happened, and what you expected instead
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: How to reproduce
+      description: What makes it happen. Does it happen every time or only sometimes?
+      placeholder: |
+        1. Set MODE to CUBE RUSH in the menu and start
+        2. In the pause menu, set CUBE LINE H to LINE
+        3. …
+  - type: textarea
+    id: media
+    attributes:
+      label: Screenshots / videos
+      description: Drag image or video files here (on phones, choose them with "Paste, drop, or click to add files" below). Videos up to 10MB; for larger ones, please use a link such as YouTube
