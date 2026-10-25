@@ -1,0 +1,59 @@
+name: 検証タスク（分担用）
+description: 協力者に分担して確かめてもらう項目を立てる（主に管理者用）
+title: "[検証] "
+labels: ["検証", "未着手"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        協力者（とその Claude）がこの Issue を見て検証します。手順は [VERIFY.md](https://github.com/hknroms/gradius3/blob/main/VERIFY.md)、進み具合は [進捗ページ](https://hknroms.github.io/gradius3/status.html) で見られます。
+        「確認項目」は1行に1つ、`- [ ] ` で始めて書いてください。協力者は `/check 番号 ok` のように結果を付けます。
+  - type: input
+    id: version
+    attributes:
+      label: 対象の版
+      placeholder: v0.4.16
+    validations:
+      required: true
+  - type: dropdown
+    id: mode
+    attributes:
+      label: モード
+      options:
+        - NORMAL（メニューから開始）
+        - CUBE RUSH（キューブラッシュ）
+        - BOSS RUSH（ボスラッシュ）
+        - 純正どおりの開始（メニューを使わない）
+        - メニュー・ポーズ画面そのもの
+        - いろいろ・その他
+  - type: input
+    id: stage
+    attributes:
+      label: 面・エリア
+      placeholder: 例）4面 ❶ ／ 全面
+  - type: textarea
+    id: background
+    attributes:
+      label: 何を確かめたいか（背景）
+      description: 変更点や報告された不具合など。関連する Issue があれば #1 のように番号を書く
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 手順のヒント
+      description: どう操作すると確かめられるか（わかれば）
+      placeholder: |
+        1. メニューで STAGE 4 を選んで開始
+        2. …
+  - type: textarea
+    id: checklist
+    attributes:
+      label: 確認項目
+      description: 1行に1つ。見た目・音など人の目が要るものは末尾に（目視）と書く
+      value: |
+        - [ ]
+        - [ ]
+        - [ ]
+    validations:
+      required: true

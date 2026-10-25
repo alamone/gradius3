@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>検証の進み具合 — グラディウスIII 改造ROM</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--sub:#8b949e;--acc:#58a6ff;--ok:#3fb950;--ng:#f85149;--warn:#d29922;--todo:#6e7681}
+@media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--panel:#fff;--line:#d0d7de;--text:#1f2328;--sub:#59636e;--acc:#0969da;--ok:#1a7f37;--ng:#cf222e;--warn:#9a6700;--todo:#8c959f}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.6 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:860px;margin:0 auto;padding:24px 16px 64px}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:16px;margin:28px 0 10px;display:flex;align-items:center;gap:8px}
+h2 .n{font-size:13px;color:var(--sub);font-weight:400}
+.sub{color:var(--sub);font-size:13px}
+a{color:var(--acc)}
+.top{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+button{font:inherit;font-size:13px;padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:18px 0 6px}
+.tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+.tile b{display:block;font-size:24px;line-height:1.2}
+.tile span{font-size:12px;color:var(--sub)}
+.tile.todo b{color:var(--todo)}.tile.doing b{color:var(--warn)}.tile.human b{color:var(--ng)}.tile.done b{color:var(--ok)}
+@media (max-width:480px){.tiles{grid-template-columns:repeat(2,1fr)}}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none}
+.dot.todo{background:var(--todo)}.dot.doing{background:var(--warn)}.dot.human{background:var(--ng)}.dot.done{background:var(--ok)}
+.card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0;color:inherit;text-decoration:none}
+.card:hover{border-color:var(--acc)}
+.card .t{font-weight:600;overflow-wrap:anywhere}
+.card .t .num{color:var(--sub);font-weight:400;margin-right:6px}
+.meta{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--sub);margin-top:4px}
+.meta .who{color:var(--text)}
+.bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:color-mix(in srgb,var(--sub) 22%,transparent);margin-top:10px}
+.bar i{display:block;height:100%}
+.bar .ok{background:var(--ok)}.bar .ng{background:var(--ng)}.bar .hold{background:var(--warn)}
+.cnt{font-size:12.5px;margin-top:4px;color:var(--sub)}
+.cnt .ok{color:var(--ok)}.cnt .ng{color:var(--ng)}.cnt .hold{color:var(--warn)}
+.note{font-size:13px;margin-top:6px;padding-left:10px;border-left:2px solid var(--line);overflow-wrap:anywhere}
+.empty{color:var(--sub);font-size:13px;padding:6px 2px}
+.err{background:color-mix(in srgb,var(--ng) 12%,transparent);border:1px solid var(--ng);border-radius:10px;padding:12px 14px;font-size:14px}
+details{margin-top:28px;font-size:13.5px}
+summary{cursor:pointer;font-weight:600}
+code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:1px 5px;border-radius:4px}
+.closed{opacity:.75}
+</style>
+</head>
+<body>
+<main>
+  <div class="top">
+    <div>
+      <h1>検証の進み具合</h1>
+      <div class="sub">グラディウスIII 改造ROM（非公式）／ <a href="./">配布ページ</a> ／ <a href="https://github.com/hknroms/gradius3/blob/main/VERIFY.md">協力のしかた</a></div>
+    </div>
+    <button id="reload" type="button">更新</button>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+  <div class="sub" id="stamp">読み込み中…</div>
+  <div id="out"></div>
+
+  <details>
+    <summary>このページの見方</summary>
+    <ul>
+      <li>GitHub の Issue のうち、ラベル「検証」が付いたものを一覧にしています。開くたびに最新を読み込みます。</li>
+      <li>担当・進み具合は、協力者（の Claude）が Issue にコメントするコマンド（<code>/claim</code> <code>/check</code> <code>/done</code> など）で自動的に変わります。</li>
+      <li>バーの色: <span style="color:var(--ok)">緑＝OK</span>／<span style="color:var(--ng)">赤＝おかしい</span>／<span style="color:var(--warn)">黄＝人の目で確認が必要</span>／灰＝まだ</li>
+      <li>3日間報告がない担当は、自動で「未着手」に戻ります。</li>
+    </ul>
+  </details>
+</main>
+
+<script>
+const REPO = 'hknroms/gradius3';
+const S = [
+  { key: 'doing', label: '担当中' },
+  { key: 'human', label: '要人間確認' },
+  { key: 'todo',  label: '未着手' },
+  { key: 'done',  label: '検証済み' },
+];
+const ITEM = /^\s*- \[( |x|X)\] (.*)$/;
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function getState(body) {
+  const m = (body || '').match(/<!-- verify-state (\{[^]*?\}) -->/);
+  if (!m) return {};
+  try { return JSON.parse(m[1]); } catch { return {}; }
+}
+function section(body, name) {
+  const m = (body || '').match(new RegExp('^### ' + name + '\\s*\\n+([^]*?)(?=\\n### |\\n<!--|$)', 'm'));
+  const v = m ? m[1].trim() : '';
+  return v === '_No response_' ? '' : v;
+}
+function count(body) {
+  const c = { total: 0, ok: 0, ng: 0, hold: 0 };
+  for (const line of (body || '').split('\n')) {
+    const m = line.match(ITEM); if (!m) continue;
+    c.total++;
+    if (m[2].startsWith('✅')) c.ok++;
+    else if (m[2].startsWith('❌')) c.ng++;
+    else if (m[2].startsWith('⚠️')) c.hold++;
+    else if (m[1] !== ' ') c.ok++;
+  }
+  return c;
+}
+function statusOf(is) {
+  const names = is.labels.map(l => typeof l === 'string' ? l : l.name);
+  if (names.includes('検証済み')) return 'done';
+  if (names.includes('要人間確認')) return 'human';
+  if (names.includes('担当中')) return 'doing';
+  return 'todo';
+}
+function ago(iso) {
+  if (!iso) return '';
+  const s = (Date.now() - Date.parse(iso)) / 1000;
+  if (s < 3600) return Math.max(1, Math.round(s / 60)) + '分前';
+  if (s < 86400) return Math.round(s / 3600) + '時間前';
+  return Math.round(s / 86400) + '日前';
+}
+
+function card(is) {
+  const st = getState(is.body);
+  const c = count(is.body);
+  const ver = section(is.body, '対象の版');
+  const stage = section(is.body, '面・エリア');
+  const k = statusOf(is);
+  const pct = n => c.total ? (n / c.total * 100) + '%' : '0';
+  const meta = [];
+  if (ver) meta.push(esc(ver));
+  if (stage) meta.push(esc(stage));
+  if (k === 'doing' && st.claimer) meta.push(`<span class="who">@${esc(st.claimer)}</span> が ${ago(st.claimed_at)}から担当`);
+  else if ((k === 'done' || k === 'human') && st.done_by) meta.push(`<span class="who">@${esc(st.done_by)}</span> が ${ago(st.done_at)}に報告`);
+  meta.push('更新 ' + ago(st.updated_at || is.updated_at));
+  const left = c.total - c.ok - c.ng - c.hold;
+  const cnt = c.total
+    ? `<div class="bar"><i class="ok" style="width:${pct(c.ok)}"></i><i class="ng" style="width:${pct(c.ng)}"></i><i class="hold" style="width:${pct(c.hold)}"></i></div>
+       <div class="cnt">${c.ok + c.ng + c.hold}/${c.total} 項目　<span class="ok">✅${c.ok}</span>　<span class="ng">❌${c.ng}</span>　<span class="hold">⚠️${c.hold}</span>${left ? `　残り${left}` : ''}</div>`
+    : '<div class="cnt">確認項目がまだありません</div>';
+  const note = st.note ? `<div class="note">${esc(st.note)}</div>` : '';
+  const href = st.last_comment && /^https:\/\/github\.com\//.test(st.last_comment) ? st.last_comment : is.html_url;
+  return `<a class="card${is.state === 'closed' ? ' closed' : ''}" href="${esc(href)}">
+    <div class="t"><span class="num">#${is.number}</span>${esc(is.title.replace(/^\[(検証|テスト)\]\s*/, ''))}</div>
+    <div class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>${cnt}${note}</a>`;
+}
+
+function render(list) {
+  const by = { todo: [], doing: [], human: [], done: [] };
+  for (const is of list) by[statusOf(is)].push(is);
+  document.getElementById('tiles').innerHTML = S.map(s =>
+    `<div class="tile ${s.key}"><b>${by[s.key].length}</b><span>${s.label}</span></div>`).join('');
+  document.getElementById('out').innerHTML = S.map(s => {
+    const items = by[s.key].sort((a, b) => a.number - b.number);
+    if (s.key === 'done') items.sort((a, b) => Date.parse(b.updated_at) - Date.parse(a.updated_at));
+    return `<h2><span class="dot ${s.key}"></span>${s.label}<span class="n">${items.length}件</span></h2>` +
+      (items.length ? items.map(card).join('') : '<div class="empty">ありません</div>');
+  }).join('');
+}
+
+const DEMO = () => {
+  const h = n => new Date(Date.now() - n * 3600e3).toISOString();
+  const mk = (number, title, labels, body, st) => ({ number, title, labels, state: 'open', updated_at: h(1),
+    html_url: 'https://github.com/' + REPO + '/issues/' + number,
+    body: body + '\n\n<!-- verify-state ' + JSON.stringify(st) + ' -->' });
+  return [
+    mk(1, '[テスト] 地形の表示がおかしい、所々で消失している', ['検証','担当中'], '### 対象の版\n\nv0.4.16\n\n### 面・エリア\n\n4面\n\n### 確認項目\n- [x] ✅ 4面開始時に地形が出る\n- [x] ❌ 死んで再開後も消えない\n- [ ] スクロール後半でも欠けない', { claimer: 'tanaka', claimed_at: h(5), updated_at: h(1) }),
+    mk(3, '[テスト] フル装備ボタンの挙動', ['検証','要人間確認'], '### 対象の版\n\nv0.4.16\n\n### 確認項目\n- [x] ✅ ボタンで全装備になる\n- [ ] ⚠️ 効果音が鳴る（目視）', { done_by: 'suzuki', done_at: h(20), note: '1件ok・音は人の確認が必要' }),
+    mk(5, '[テスト] スタートメニューのスピード指定とフル装備ボタンの挙動', ['検証','未着手'], '### 対象の版\n\nv0.4.16\n\n### 確認項目\n- [ ] スピード指定が反映される\n- [ ] フル装備後もスピード値が保たれる', {}),
+    mk(2, '[テスト] キューブラッシュモードの地形', ['検証','検証済み'], '### 対象の版\n\nv0.4.15\n\n### 確認項目\n- [x] ✅ 地形が出る\n- [x] ✅ キューブが地形に重ならない', { done_by: 'tanaka', done_at: h(50), note: '全項目ok' }),
+  ];
+};
+
+async function load() {
+  const out = document.getElementById('out');
+  const stamp = document.getElementById('stamp');
+  stamp.textContent = '読み込み中…';
+  if (new URLSearchParams(location.search).has('demo')) {
+    render(DEMO()); stamp.textContent = 'デモ表示（実際のデータではありません）'; return;
+  }
+  try {
+    const all = [];
+    for (let page = 1; page <= 5; page++) {
+      const r = await fetch(`https://api.github.com/repos/${REPO}/issues?labels=${encodeURIComponent('検証')}&state=all&per_page=100&page=${page}`,
+        { headers: { Accept: 'application/vnd.github+json' } });
+      if (r.status === 403 || r.status === 429) throw new Error('GitHub の読み込み回数の上限（1時間に60回）に達しました。しばらくしてから「更新」を押してください。');
+      if (!r.ok) throw new Error('GitHub から読み込めませんでした（' + r.status + '）。');
+      const list = await r.json();
+      all.push(...list.filter(i => !i.pull_request));
+      if (list.length < 100) break;
+    }
+    render(all);
+    stamp.textContent = new Date().toLocaleString('ja-JP', { dateStyle: 'short', timeStyle: 'short' }) + ' 時点';
+  } catch (e) {
+    out.innerHTML = `<div class="err">${esc(e.message)}</div>`;
+    stamp.textContent = '';
+  }
+}
+document.getElementById('reload').addEventListener('click', load);
+load();
+</script>
+</body>
+</html>
