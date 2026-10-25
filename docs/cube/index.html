@@ -1,10 +1,10 @@
 <!doctype html>
-<html lang="en">
+<html lang="ja">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex, nofollow, noarchive">
-<title>Cube Rush Analysis</title>
+<title>キューブラッシュ解析</title>
 <style>
 :root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--sub:#8b949e;--acc:#58a6ff;--ok:#3fb950;--ng:#f85149;--warn:#d29922;--cube:#79c0ff}
 @media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--panel:#fff;--line:#d0d7de;--text:#1f2328;--sub:#59636e;--acc:#0969da;--ok:#1a7f37;--ng:#cf222e;--warn:#9a6700;--cube:#0969da}}
@@ -50,116 +50,116 @@ button{font:inherit;padding:6px 14px;border-radius:8px;border:1px solid var(--ac
 </head>
 <body>
 <section id="auth-gate" class="panel" aria-live="polite">
-  <h1>Gradius III ROM Patch</h1>
-  <p id="auth-status">Checking sign-in status…</p>
-  <button id="google-login" type="button" hidden>Sign in with Google / Apply</button>
-  <button id="auth-logout" type="button" hidden>Sign out</button>
+  <h1>グラディウスIII 改造ROM パッチ</h1>
+  <p id="auth-status">ログイン状態を確認しています…</p>
+  <button id="google-login" type="button" hidden>Googleでログイン・利用申請</button>
+  <button id="auth-logout" type="button" hidden>ログアウト</button>
 </section>
-<div id="member-bar"><span id="member-name"></span><button id="member-logout" type="button">Sign out</button></div>
+<div id="member-bar"><span id="member-name"></span><button id="member-logout" type="button">ログアウト</button></div>
 <main id="site-content">
 <main>
-<div class="back"><a href="../index.html">← Back to the patch page</a><span><a href="../../cube/index.html">日本語</a> ｜ <b>English</b></span></div>
-<h1>Cube Rush Analysis</h1>
-<div class="sub">Results of investigating how the cube heights are decided in the stage 9 Cube Rush of Gradius III (arcade, version 313), based on the program and its behavior on hardware-equivalent emulation (MAME). The mod ROM's CUBE HEIGHT / SHIFT / TYPE and CUBE INFO are built on these results.</div>
+<div class="back"><a href="../index.html">← パッチのページへ戻る</a><span><b>日本語</b> ｜ <a href="../en/cube/index.html">English</a></span></div>
+<h1>キューブラッシュ解析</h1>
+<div class="sub">グラディウスIII（アーケード 313版）9面のキューブラッシュで、キューブの高さがどう決まるかをプログラムと実機相当（MAME）の動きから調べた結果です。改造ROMの CUBE HEIGHT / SHIFT / TYPE と CUBE INFO はこの結果をもとに作っています。</div>
 
 <div class="grid3" style="margin-top:16px">
-  <div class="stat"><div class="big num">99</div><div class="sub">cubes in one rush</div></div>
-  <div class="stat"><div class="big num">16</div><div class="sub">height numbers (12 actual heights)</div></div>
-  <div class="stat"><div class="big num">4208</div><div class="sub">frames from the 1st to the 99th cube (about 70 s)</div></div>
-  <div class="stat"><div class="big num">2880</div><div class="sub">possible sequences (16 × 4 × 45)</div></div>
+  <div class="stat"><div class="big num">99</div><div class="sub">1回のラッシュのキューブの数</div></div>
+  <div class="stat"><div class="big num">16</div><div class="sub">高さの番号（実際の高さは12種類）</div></div>
+  <div class="stat"><div class="big num">4208</div><div class="sub">1個目から99個目までのフレーム数（約70秒）</div></div>
+  <div class="stat"><div class="big num">2880</div><div class="sub">並び方の種類（16×4×45）</div></div>
 </div>
 
-<h2>How the Height Is Decided</h2>
-<p>At the moment a cube appears, the game looks at a <b>timer that increases by 1 on every screen refresh</b> (16 bits) and decides the height from its value.</p>
+<h2>高さの決まり方</h2>
+<p>キューブが出る瞬間に、ゲームは<b>画面の書き換えごとに1ずつ増えるタイマー</b>（16ビット）を見て、その値から高さを決めています。</p>
 <ul>
-  <li>Height number = bits 3–6 (counting from the bottom) of (low 8 bits of the timer xor high 8 bits). That gives 16 values, 0–15.</li>
-  <li>The height for each number comes from a table, and four pairs near the middle (5 and 6, 7 and 8, 9 and 10, 11 and 12) share the same height, so there are 12 actual heights.</li>
-  <li>Everything other than the height is decided after the cube appears: the direction it flies in depends on the ship's position at that time, and the speed depends on the rank.</li>
+  <li>高さの番号 ＝（タイマーの下位8ビット xor 上位8ビット）の下から3〜6ビット目。0〜15 の16通りです。</li>
+  <li>番号ごとの高さは表で決まっていて、真ん中あたりの4組（5と6、7と8、9と10、11と12）は同じ高さです。そのため実際の高さは12種類です。</li>
+  <li>高さ以外は、出たあとに決まります。飛んでくる方向はそのときの自機の位置、速さはランクで決まります。</li>
 </ul>
 <div class="panel">
 <div style="overflow-x:auto"><table class="num">
-<tr><th>Number (H)</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td></tr>
-<tr><th>Position from the top of the screen (dots)</th><td>208</td><td>192</td><td>176</td><td>160</td><td>144</td><td>144</td><td>128</td><td>128</td><td>112</td><td>112</td><td>96</td><td>96</td><td>80</td><td>64</td><td>48</td><td>32</td></tr>
+<tr><th>番号（H）</th><td>1</td><td>2</td><td>3</td><td>4</td><td>5</td><td>6</td><td>7</td><td>8</td><td>9</td><td>10</td><td>11</td><td>12</td><td>13</td><td>14</td><td>15</td><td>16</td></tr>
+<tr><th>画面の上からの位置（ドット）</th><td>208</td><td>192</td><td>176</td><td>160</td><td>144</td><td>144</td><td>128</td><td>128</td><td>112</td><td>112</td><td>96</td><td>96</td><td>80</td><td>64</td><td>48</td><td>32</td></tr>
 </table></div>
-<div class="sub" style="margin-top:6px">H is counted 1–16 to match the mod ROM's display (1 is the lowest, 16 the highest).</div>
+<div class="sub" style="margin-top:6px">H は改造ROMの表示に合わせて 1〜16 で数えています（1 が一番下、16 が一番上）。</div>
 </div>
 
-<h2>Appearance Timing</h2>
+<h2>出るタイミング</h2>
 <ul>
-  <li>The timing of the 2nd cube onward is fixed as a number of frames after the 1st, and is the same every time.</li>
-  <li>Every interval is a multiple of 16 frames (16–80 frames). The 99th cube appears 4208 frames after the 1st.</li>
-  <li>These intervals are counted in frames where the game logic advanced, while the timer increases on every screen refresh (this leads to the "drift" described below).</li>
+  <li>2個目以降が出るタイミングは、1個目からのフレーム数で決まっていて毎回同じです。</li>
+  <li>間隔はすべて16フレームの倍数です（16〜80フレーム）。99個目は1個目の4208フレーム後に出ます。</li>
+  <li>この間隔はゲームの処理が進んだフレームで数えます。タイマーのほうは画面の書き換えごとに増えます（下の「ずれ」の話につながります）。</li>
 </ul>
 
-<h2>How the Sequence Is Decided</h2>
-<p>Because the intervals are fixed, <b>the timer value at the moment the 1st cube appears alone decides the heights of all 99 cubes</b> (when there is no slowdown).</p>
+<h2>並びが決まる仕組み</h2>
+<p>出る間隔が固定なので、<b>1個目が出た瞬間のタイマーの値だけで99個すべての高さが決まります</b>（処理落ちがない場合）。</p>
 <ul>
-  <li>The timer has 65536 possible values, but the lowest 2 bits are not used in the height calculation, so there are 2880 actually different sequences.</li>
-  <li>The mod ROM identifies these 2880 sequences with the following three values.
+  <li>タイマーの値は65536通りありますが、高さの計算に下2ビットは使われないので、実際に違う並びになるのは 2880 通りです。</li>
+  <li>この 2880 通りを、改造ROMでは次の3つで呼び分けています。
     <ul>
-      <li><b>H (1–16)</b>: the height number of the 1st cube.</li>
-      <li><b>S (A–D)</b>: bits 3–4 (from the bottom) of the timer at the moment of the 1st cube. Since the intervals are multiples of 16, these 2 bits are the same for all 99 cubes. They decide how neighboring height numbers swap.</li>
-      <li><b>T (01–45)</b>: the remaining difference within the same H and S. There are 45, numbered in increasing order of the timer value.</li>
+      <li><b>H（1〜16）</b>：1個目の高さの番号。</li>
+      <li><b>S（A〜D）</b>：1個目の瞬間のタイマーの下から3〜4ビット目。間隔が16の倍数なので、99個すべてでこの2ビットは変わりません。隣り合う高さの番号の入れ替わり方が決まります。</li>
+      <li><b>T（01〜45）</b>：同じ H・S の中の残りの違い。45通りあり、タイマーの値が小さい順に番号を付けています。</li>
     </ul></li>
-  <li>Even counting height numbers that share a height as one, all 2880 sequences are different.</li>
-  <li>We chose H5, S B, T12 in MAME, recorded a full run, and confirmed that all 99 heights match the calculation. The sequence is the same even if you wait a different time in the menu.</li>
+  <li>同じ高さの番号を1つにまとめて数えても 2880 通りはすべて違う並びです。</li>
+  <li>MAME で H5・S B・T12 を選んで通しで記録し、99個すべての高さが計算どおりになることを確かめています。メニューで待つ時間を変えても同じ並びになります。</li>
 </ul>
 
-<h2>Drift Caused by Slowdown (LAG)</h2>
+<h2>処理落ちによるずれ（LAG）</h2>
 <ul>
-  <li>The timer still increases on slowdown frames, but the appearance interval does not advance. So for every frame of slowdown, the timer gets one ahead of the calculation.</li>
-  <li>The drift never goes back; it keeps accumulating for the rest of that rush, with no upper limit.</li>
-  <li>Since the lowest 2 bits are not used in the height calculation, depending on those bits at the moment of the 1st cube, a drift of 1–3 frames may not change the sequence. With 4 or more frames of drift, the heights from that point on are almost completely different.</li>
-  <li>The mod ROM's CUBE INFO shows "LAG:12+0005" (number of the first cube whose sequence changed + total frames of drift) only when the sequence has actually changed.</li>
-  <li>In a test running all 99 cubes while invincible with a large pile of stuck cubes, there were 0 frames of slowdown. How much drift occurs while firing continuously with Options and Laser has not been measured yet.</li>
+  <li>処理落ちしたフレームでもタイマーは増えますが、出る間隔のほうは進みません。そのため処理落ちが1フレームあるごとに、タイマーが計算より1つ先に進みます。</li>
+  <li>ずれは戻らず、そのラッシュの間ずっと足されていきます。上限はありません。</li>
+  <li>高さの計算に下2ビットは使われないので、1個目の瞬間の下2ビット次第で、1〜3フレームのずれなら並びが変わらないことがあります。4フレーム以上ずれると、そこから先の高さはほぼ別物になります。</li>
+  <li>改造ROMの CUBE INFO では、並びが実際に変わったときだけ「LAG:12+0005」（最初に並びが変わったキューブの番号＋ずれの累計フレーム数）を出します。</li>
+  <li>無敵でキューブを大量に積もらせたまま99個通した試験では、処理落ちは0フレームでした。オプションやレーザーで撃ち続けたときにどこまでずれるかは、まだ測っていません。</li>
 </ul>
 
-<h2>Sticking Check</h2>
+<h2>くっつく判定</h2>
 <ul>
-  <li>A cube "sticks" and becomes part of the background when it hits a wall or another cube, or reaches the left edge or the top/bottom edges of the screen. This check is done by the sub CPU.</li>
-  <li>Cubes that leave the screen do not stick. In testing, 97 of 99 cubes stuck.</li>
-  <li>In the mod ROM's Cube Rush, each cube that sticks gives 1000 points. This does not affect the high score, rankings or extra lives.</li>
+  <li>キューブが壁やほかのキューブに当たったとき、画面の左端・上下の端に来たときに「くっついた」ことになり、背景の一部に変わります。この判定はサブCPU側で行われています。</li>
+  <li>画面の外へ抜けたキューブはくっつきません。試験では99個中97個がくっつきました。</li>
+  <li>改造ROMのキューブラッシュでは、1個くっつくたびに 1000点が入ります。ハイスコア・ランキング・残機の増加には影響しません。</li>
 </ul>
 
-<h2>Where Cubes React (decided by the cube number)</h2>
-<p>A cube appears at the right edge (around x=350), drifts straight left for a fixed time (2 dots per frame), and the moment that time ends it <b>aims once at the ship's position at that moment</b> and flies straight at it. It does not re-aim.</p>
+<h2>どこで反応するか（キューブの番号で決まる）</h2>
+<p>キューブは右端（x=350あたり）に出て、決まった時間だけ左へまっすぐ流れ（1フレーム2ドット）、その時間が終わった瞬間に<b>そのときの自機の位置へ向きを1回だけ決めて</b>まっすぐ飛んできます。追いかけ直しはしません。</p>
 <ul>
-  <li>The wait time comes from a 16-entry table indexed by the cube number divided by 2. Cubes move the same way in pairs, and the pattern repeats every 32 cubes (only the 1st cube is on its own). It is unrelated to the height sequence (H, S, T).</li>
-  <li>The reacting position is "350 − (wait time × 2)" dots. Cubes with a wait time of 176 frames or more reach the left edge before reacting and simply stick there (they do not react).</li>
-  <li>The flying speed depends on the rank (ranks 0–5: 4 dots per frame; then 0.5 dots faster for every 2 ranks; 6.5 dots at ranks 14–15, and 7 dots at 16 and above).</li>
-  <li>Whether a cube "reacts in front" or "comes from behind" depends on the ship's position. The table below assumes the ship stays at its initial position (x=111).</li>
+  <li>待ち時間は「何個目か」を2で割った値で16通りの表から決まります。2個ずつ同じ動きになり、32個で一周します（1個目だけは単独）。高さの並び（H・S・T）とは関係ありません。</li>
+  <li>反応する位置は「350 −（待ち時間×2）」ドット。待ち時間が176フレーム以上のキューブは、反応する前に左端に着いてそのままくっつきます（反応しない）。</li>
+  <li>飛んでくる速さはランクで決まります（ランク0〜5は1フレーム4ドット、以後2ずつ上がるごとに0.5ドット速くなり、14〜15で6.5ドット、16以上は7ドット）。</li>
+  <li>「手前で反応する／後ろから来る」は自機の位置しだいです。下の表は自機が初期位置（x=111）のままの場合です。</li>
 </ul>
 <div class="panel"><div style="overflow-x:auto"><table class="num">
-<tr><th>Cube number (repeats every 32)</th><th>Wait time (frames)</th><th>Reacting position</th><th>With the ship at its initial position</th></tr>
-<tr><td>30, 31</td><td>16</td><td>x=318</td><td>in front (near the right edge)</td></tr><tr><td>4, 5</td><td>32</td><td>x=286</td><td>in front</td></tr><tr><td>16, 17</td><td>48</td><td>x=254</td><td>in front</td></tr><tr><td>1, 32</td><td>64</td><td>x=222</td><td>in front</td></tr><tr><td>28, 29</td><td>64</td><td>x=222</td><td>in front</td></tr><tr><td>8, 9</td><td>80</td><td>x=190</td><td>in front</td></tr><tr><td>20, 21</td><td>80</td><td>x=190</td><td>in front</td></tr><tr><td>22, 23</td><td>96</td><td>x=158</td><td>in front</td></tr><tr><td>14, 15</td><td>112</td><td>x=126</td><td>just in front of the ship</td></tr><tr><td>18, 19</td><td>128</td><td>x=94</td><td><b>from behind the ship</b></td></tr><tr><td>24, 25</td><td>144</td><td>x=62</td><td><b>from behind the ship</b></td></tr><tr><td>12, 13</td><td>160</td><td>x=30</td><td><b>from behind the ship</b></td></tr><tr><td>2, 3</td><td>176</td><td>—</td><td><b>does not react</b> (sticks at the left edge)</td></tr><tr><td>26, 27</td><td>192</td><td>—</td><td><b>does not react</b> (sticks at the left edge)</td></tr><tr><td>10, 11</td><td>208</td><td>—</td><td><b>does not react</b> (sticks at the left edge)</td></tr><tr><td>6, 7</td><td>224</td><td>—</td><td><b>does not react</b> (sticks at the left edge)</td></tr>
+<tr><th>何個目（32個で一周）</th><th>待ち時間（フレーム）</th><th>反応する位置</th><th>自機が初期位置のとき</th></tr>
+<tr><td>30・31</td><td>16</td><td>x=318</td><td>手前（右端すぐ）</td></tr><tr><td>4・5</td><td>32</td><td>x=286</td><td>手前</td></tr><tr><td>16・17</td><td>48</td><td>x=254</td><td>手前</td></tr><tr><td>1・32</td><td>64</td><td>x=222</td><td>手前</td></tr><tr><td>28・29</td><td>64</td><td>x=222</td><td>手前</td></tr><tr><td>8・9</td><td>80</td><td>x=190</td><td>手前</td></tr><tr><td>20・21</td><td>80</td><td>x=190</td><td>手前</td></tr><tr><td>22・23</td><td>96</td><td>x=158</td><td>手前</td></tr><tr><td>14・15</td><td>112</td><td>x=126</td><td>自機のすぐ前</td></tr><tr><td>18・19</td><td>128</td><td>x=94</td><td><b>自機の後ろから</b></td></tr><tr><td>24・25</td><td>144</td><td>x=62</td><td><b>自機の後ろから</b></td></tr><tr><td>12・13</td><td>160</td><td>x=30</td><td><b>自機の後ろから</b></td></tr><tr><td>2・3</td><td>176</td><td>—</td><td><b>反応しない</b>（左端でくっつく）</td></tr><tr><td>26・27</td><td>192</td><td>—</td><td><b>反応しない</b>（左端でくっつく）</td></tr><tr><td>10・11</td><td>208</td><td>—</td><td><b>反応しない</b>（左端でくっつく）</td></tr><tr><td>6・7</td><td>224</td><td>—</td><td><b>反応しない</b>（左端でくっつく）</td></tr>
 </table></div>
-<div class="sub" style="margin-top:6px">From the 34th cube on, the same order repeats (e.g. the 34th and 35th are the same as the 2nd and 3rd). Of the 32, 8 do not react and 6 come from behind the ship. We recorded the reaction moment and position of all 99 cubes in MAME and confirmed they match this table.</div></div>
+<div class="sub" style="margin-top:6px">34個目以降も同じ順でくり返します（例：34・35個目＝2・3個目と同じ）。32個のうち、反応しないのは8個、自機の後ろから来るのは6個です。MAME で99個すべての反応の瞬間と位置を記録し、この表どおりであることを確かめています。</div></div>
 
-<h2>Simulator</h2>
+<h2>シミュレーター</h2>
 <div class="panel">
-  <div class="sub">Set the ship position and rank, and watch how the 99 cubes drift and where they react. During playback you can move the ship with the <b>keyboard arrow keys</b>, a <b>gamepad D-pad (or stick)</b>, or by <b>dragging on the pad below the chart (or on the chart itself)</b> (the ship moves by the amount you drag, so your finger does not cover it). As in the game, cubes head for the ship's position at the moment they react. While stopped, click (tap) on the chart to move the ship there. Sticking to other cubes or terrain is omitted (cubes stick at the left and top/bottom edges, and those leaving to the right disappear).</div>
+  <div class="sub">自機の位置とランクを決めて、99個のキューブがどう流れてどこで反応するかを動かして見られます。再生中は<b>キーボードの矢印キー</b>、<b>ゲームパッドの十字キー（スティック）</b>、または<b>図の下のパッド（または図の中）をなぞる</b>と自機を動かせます（なぞった分だけ自機が動くので、自機を指で隠さずに操作できます）（キューブはゲームと同じく、反応した瞬間の自機の位置へ向かいます）。止めているときは図の中をクリック（タップ）すると自機がそこへ移ります。キューブ同士・地形にくっつく動きは省いています（画面の左・上下の端でくっつき、右へ抜けたものは消えます）。</div>
   <div class="ctl" style="margin-top:10px">
     <label>H <select id="sh"></select></label>
     <label>S <select id="ss"><option value="0">A</option><option value="1">B</option><option value="2">C</option><option value="3">D</option></select></label>
     <label>T <select id="st"></select></label>
-    <label>Rank <select id="rk"></select></label>
+    <label>ランク <select id="rk"></select></label>
   </div>
   <div class="ctl" style="margin-top:8px">
-    <label>Ship x <input id="px" type="number" min="8" max="340" value="111" style="width:4.5em"></label>
+    <label>自機 x <input id="px" type="number" min="8" max="340" value="111" style="width:4.5em"></label>
     <label>y <input id="py" type="number" min="24" max="224" value="128" style="width:4.5em"></label>
-    <label>Ship speed <select id="ss2"></select></label>
-    <button id="play" type="button">▶ Play</button>
-    <button id="reset" type="button">Restart</button>
-    <label>Playback speed <select id="spd"><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select></label>
+    <label>自機のスピード <select id="ss2"></select></label>
+    <button id="play" type="button">▶ 再生</button>
+    <button id="reset" type="button">最初から</button>
+    <label>再生の速さ <select id="spd"><option value="1" selected>×1</option><option value="2">×2</option><option value="4">×4</option></select></label>
   </div>
-  <input id="tm" type="range" min="0" max="4600" value="0" style="width:100%;margin-top:10px" aria-label="Time">
+  <input id="tm" type="range" min="0" max="4600" value="0" style="width:100%;margin-top:10px" aria-label="時間">
   <div class="sub num" id="tlab"></div>
   <div class="chart"><canvas id="cv" tabindex="0" width="704" height="480" style="touch-action:none;width:100%;max-width:704px;display:block;margin:0 auto;cursor:crosshair"></canvas></div>
-  <div id="pad" style="touch-action:none;user-select:none;-webkit-user-select:none;margin-top:8px;height:240px;border:1px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:13px;text-align:center;padding:0 12px">Touch pad: during playback, drag here to move the ship by the amount you drag (dragging on the chart works the same way)</div>
-  <div class="key"><span style="color:#5aaee8">■ the 2 rightmost (318, 286)</span><span style="color:#1e8cff">■ 254</span><span style="color:#00b8d4">■ 222</span><span style="color:#00c080">■ 190</span><span style="color:#2ecc40">■ x=158</span><span style="color:#9be22d">■ x=126</span><span style="color:#d4b000">■ x=94</span><span style="color:#ff8a00">■ x=62</span><span style="color:#ff1a1a">■ x=30</span><span style="color:var(--sub)">■ does not react</span><span>× where it reacted / vertical lines are the 10 reacting positions</span></div>
+  <div id="pad" style="touch-action:none;user-select:none;-webkit-user-select:none;margin-top:8px;height:240px;border:1px dashed var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;color:var(--sub);font-size:13px;text-align:center;padding:0 12px">タッチ操作用のパッド：再生中にここをなぞると、なぞった分だけ自機が動きます（図の中をなぞっても同じ）</div>
+  <div class="key"><span style="color:#5aaee8">■ 右寄りの2か所（318・286）</span><span style="color:#1e8cff">■ 254</span><span style="color:#00b8d4">■ 222</span><span style="color:#00c080">■ 190</span><span style="color:#2ecc40">■ x=158</span><span style="color:#9be22d">■ x=126</span><span style="color:#d4b000">■ x=94</span><span style="color:#ff8a00">■ x=62</span><span style="color:#ff1a1a">■ x=30</span><span style="color:var(--sub)">■ 反応しない</span><span>× 反応した位置／縦線は反応する10か所</span></div>
 </div>
 
-<h2>View a Sequence</h2>
+<h2>並びを見る</h2>
 <div class="panel">
   <div class="ctl">
     <label>H <select id="h"></select></label>
@@ -167,16 +167,16 @@ button{font:inherit;padding:6px 14px;border-radius:8px;border:1px solid var(--ac
     <label>T <select id="t"></select></label>
   </div>
   <div class="ctl" style="margin-top:10px">
-    <label>Try a drift: from cube <input id="lk" type="number" min="1" max="99" value="12" style="width:4.5em"></label>
-    <label>+<input id="lf" type="number" min="0" max="999" value="0" style="width:4.5em"> frames</label>
+    <label>ずれを試す：<input id="lk" type="number" min="1" max="99" value="12" style="width:4.5em"> 個目から</label>
+    <label>＋<input id="lf" type="number" min="0" max="999" value="0" style="width:4.5em"> フレーム</label>
   </div>
-  <div class="chart"><svg id="svg" role="img" aria-label="Height sequence of the 99 cubes"></svg></div>
-  <div class="key"><span>Horizontal: time from the 1st cube (frames)</span><span>Vertical: height (top = top of the screen)</span><span style="color:var(--ng)">Red: cubes whose height changed due to drift</span></div>
+  <div class="chart"><svg id="svg" role="img" aria-label="99個のキューブの高さの並び"></svg></div>
+  <div class="key"><span>横：1個目からの時間（フレーム）</span><span>縦：高さ（上が画面の上）</span><span style="color:var(--ng)">赤：ずれで高さが変わったキューブ</span></div>
   <div class="seq num" id="seq"></div>
   <div class="sub" id="info" style="margin-top:6px"></div>
 </div>
 
-<div class="sub" style="margin-top:28px">The height table and timings are values derived from the genuine ROM's program and recordings in MAME. No ROM data itself is included.</div>
+<div class="sub" style="margin-top:28px">高さの表とタイミングは、純正ROMのプログラムと MAME での記録から求めた数値です。ROMのデータそのものは載せていません。</div>
 </main>
 <script>
 const C0=[0,128,192,256,320,384,448,512,576,640,704,768,832,960,4112,4176,4240,4304,4368,4432,4496,4560,4624,4688,4752,4816,4880,4944,5008,8288,8416,8480,8544,8672,8736,8864,8992,9184,12464,12528,12592,12720,12848,12976,13296,1028,1156,1220,1284,1348,1412,1476,1540,1604,1668,1732,1796,1860,1988,5140,5204,5268,5332,5396,5460,5524,5588,5652,5716,5780,5844,5908,5972,6036,9316,9444,9508,9572,9700,9764,9892,10020,10212,13492,13556,13620,13748,13876,14004,14324,2056,2184,2248,2312,2376,2440,2504,2568,2632,2696,2760,2824,2888,3016,6168,6232,6296,6360,6424,6488,6552,6616,6680,6744,6808,6872,6936,7000,7064,10344,10472,10536,10600,10728,10792,10920,11048,11240,14520,14584,14648,14776,14904,15032,15352,3084,3212,3276,3340,3404,3468,3532,3596,3660,3724,3788,3852,3916,4044,7196,7260,7324,7388,7452,7516,7580,7644,7708,7772,7836,7900,7964,8028,8092,11372,11500,11564,11628,11756,11820,11948,12076,12268,15548,15612,15676,15804,15932,16060,16380,1024,1152,1216,1280,1344,1408,1472,1536,1600,1664,1728,1792,1856,1984,5136,5200,5264,5328,5392,5456,5520,5584,5648,5712,5776,5840,5904,5968,6032,9312,9440,9504,9568,9696,9760,9888,10016,10208,13488,13552,13616,13744,13872,14000,14320,4,132,196,260,324,388,452,516,580,644,708,772,836,964,4116,4180,4244,4308,4372,4436,4500,4564,4628,4692,4756,4820,4884,4948,5012,8292,8420,8484,8548,8676,8740,8868,8996,9188,12468,12532,12596,12724,12852,12980,13300,3080,3208,3272,3336,3400,3464,3528,3592,3656,3720,3784,3848,3912,4040,7192,7256,7320,7384,7448,7512,7576,7640,7704,7768,7832,7896,7960,8024,8088,11368,11496,11560,11624,11752,11816,11944,12072,12264,15544,15608,15672,15800,15928,16056,16376,2060,2188,2252,2316,2380,2444,2508,2572,2636,2700,2764,2828,2892,3020,6172,6236,6300,6364,6428,6492,6556,6620,6684,6748,6812,6876,6940,7004,7068,10348,10476,10540,10604,10732,10796,10924,11052,11244,14524,14588,14652,14780,14908,15036,15356,2048,2176,2240,2304,2368,2432,2496,2560,2624,2688,2752,2816,2880,3008,6160,6224,6288,6352,6416,6480,6544,6608,6672,6736,6800,6864,6928,6992,7056,10336,10464,10528,10592,10720,10784,10912,11040,11232,14512,14576,14640,14768,14896,15024,15344,3076,3204,3268,3332,3396,3460,3524,3588,3652,3716,3780,3844,3908,4036,7188,7252,7316,7380,7444,7508,7572,7636,7700,7764,7828,7892,7956,8020,8084,11364,11492,11556,11620,11748,11812,11940,12068,12260,15540,15604,15668,15796,15924,16052,16372,8,136,200,264,328,392,456,520,584,648,712,776,840,968,4120,4184,4248,4312,4376,4440,4504,4568,4632,4696,4760,4824,4888,4952,5016,8296,8424,8488,8552,8680,8744,8872,9000,9192,12472,12536,12600,12728,12856,12984,13304,1036,1164,1228,1292,1356,1420,1484,1548,1612,1676,1740,1804,1868,1996,5148,5212,5276,5340,5404,5468,5532,5596,5660,5724,5788,5852,5916,5980,6044,9324,9452,9516,9580,9708,9772,9900,10028,10220,13500,13564,13628,13756,13884,14012,14332,3072,3200,3264,3328,3392,3456,3520,3584,3648,3712,3776,3840,3904,4032,7184,7248,7312,7376,7440,7504,7568,7632,7696,7760,7824,7888,7952,8016,8080,11360,11488,11552,11616,11744,11808,11936,12064,12256,15536,15600,15664,15792,15920,16048,16368,2052,2180,2244,2308,2372,2436,2500,2564,2628,2692,2756,2820,2884,3012,6164,6228,6292,6356,6420,6484,6548,6612,6676,6740,6804,6868,6932,6996,7060,10340,10468,10532,10596,10724,10788,10916,11044,11236,14516,14580,14644,14772,14900,15028,15348,1032,1160,1224,1288,1352,1416,1480,1544,1608,1672,1736,1800,1864,1992,5144,5208,5272,5336,5400,5464,5528,5592,5656,5720,5784,5848,5912,5976,6040,9320,9448,9512,9576,9704,9768,9896,10024,10216,13496,13560,13624,13752,13880,14008,14328,12,140,204,268,332,396,460,524,588,652,716,780,844,972,4124,4188,4252,4316,4380,4444,4508,4572,4636,4700,4764,4828,4892,4956,5020,8300,8428,8492,8556,8684,8748,8876,9004,9196,12476,12540,12604,12732,12860,12988,13308,16,80,144,208,272,336,400,464,528,592,656,720,784,848,912,4096,4224,4288,4352,4416,4480,4544,4608,4672,4736,4800,4864,4928,5056,8368,8432,8496,8624,8752,8880,9200,12384,12512,12576,12640,12768,12832,12960,13088,13280,1044,1108,1172,1236,1300,1364,1428,1492,1556,1620,1684,1748,1812,1876,1940,5124,5252,5316,5380,5444,5508,5572,5636,5700,5764,5828,5892,5956,6084,9396,9460,9524,9652,9780,9908,10228,13412,13540,13604,13668,13796,13860,13988,14116,14308,2072,2136,2200,2264,2328,2392,2456,2520,2584,2648,2712,2776,2840,2904,2968,6152,6280,6344,6408,6472,6536,6600,6664,6728,6792,6856,6920,6984,7112,10424,10488,10552,10680,10808,10936,11256,14440,14568,14632,14696,14824,14888,15016,15144,15336,3100,3164,3228,3292,3356,3420,3484,3548,3612,3676,3740,3804,3868,3932,3996,7180,7308,7372,7436,7500,7564,7628,7692,7756,7820,7884,7948,8012,8140,11452,11516,11580,11708,11836,11964,12284,15468,15596,15660,15724,15852,15916,16044,16172,16364,1040,1104,1168,1232,1296,1360,1424,1488,1552,1616,1680,1744,1808,1872,1936,5120,5248,5312,5376,5440,5504,5568,5632,5696,5760,5824,5888,5952,6080,9392,9456,9520,9648,9776,9904,10224,13408,13536,13600,13664,13792,13856,13984,14112,14304,20,84,148,212,276,340,404,468,532,596,660,724,788,852,916,4100,4228,4292,4356,4420,4484,4548,4612,4676,4740,4804,4868,4932,5060,8372,8436,8500,8628,8756,8884,9204,12388,12516,12580,12644,12772,12836,12964,13092,13284,3096,3160,3224,3288,3352,3416,3480,3544,3608,3672,3736,3800,3864,3928,3992,7176,7304,7368,7432,7496,7560,7624,7688,7752,7816,7880,7944,8008,8136,11448,11512,11576,11704,11832,11960,12280,15464,15592,15656,15720,15848,15912,16040,16168,16360,2076,2140,2204,2268,2332,2396,2460,2524,2588,2652,2716,2780,2844,2908,2972,6156,6284,6348,6412,6476,6540,6604,6668,6732,6796,6860,6924,6988,7116,10428,10492,10556,10684,10812,10940,11260,14444,14572,14636,14700,14828,14892,15020,15148,15340,2064,2128,2192,2256,2320,2384,2448,2512,2576,2640,2704,2768,2832,2896,2960,6144,6272,6336,6400,6464,6528,6592,6656,6720,6784,6848,6912,6976,7104,10416,10480,10544,10672,10800,10928,11248,14432,14560,14624,14688,14816,14880,15008,15136,15328,3092,3156,3220,3284,3348,3412,3476,3540,3604,3668,3732,3796,3860,3924,3988,7172,7300,7364,7428,7492,7556,7620,7684,7748,7812,7876,7940,8004,8132,11444,11508,11572,11700,11828,11956,12276,15460,15588,15652,15716,15844,15908,16036,16164,16356,24,88,152,216,280,344,408,472,536,600,664,728,792,856,920,4104,4232,4296,4360,4424,4488,4552,4616,4680,4744,4808,4872,4936,5064,8376,8440,8504,8632,8760,8888,9208,12392,12520,12584,12648,12776,12840,12968,13096,13288,1052,1116,1180,1244,1308,1372,1436,1500,1564,1628,1692,1756,1820,1884,1948,5132,5260,5324,5388,5452,5516,5580,5644,5708,5772,5836,5900,5964,6092,9404,9468,9532,9660,9788,9916,10236,13420,13548,13612,13676,13804,13868,13996,14124,14316,3088,3152,3216,3280,3344,3408,3472,3536,3600,3664,3728,3792,3856,3920,3984,7168,7296,7360,7424,7488,7552,7616,7680,7744,7808,7872,7936,8000,8128,11440,11504,11568,11696,11824,11952,12272,15456,15584,15648,15712,15840,15904,16032,16160,16352,2068,2132,2196,2260,2324,2388,2452,2516,2580,2644,2708,2772,2836,2900,2964,6148,6276,6340,6404,6468,6532,6596,6660,6724,6788,6852,6916,6980,7108,10420,10484,10548,10676,10804,10932,11252,14436,14564,14628,14692,14820,14884,15012,15140,15332,1048,1112,1176,1240,1304,1368,1432,1496,1560,1624,1688,1752,1816,1880,1944,5128,5256,5320,5384,5448,5512,5576,5640,5704,5768,5832,5896,5960,6088,9400,9464,9528,9656,9784,9912,10232,13416,13544,13608,13672,13800,13864,13992,14120,14312,28,92,156,220,284,348,412,476,540,604,668,732,796,860,924,4108,4236,4300,4364,4428,4492,4556,4620,4684,4748,4812,4876,4940,5068,8380,8444,8508,8636,8764,8892,9212,12396,12524,12588,12652,12780,12844,12972,13100,13292,32,96,160,224,288,352,416,480,544,608,672,736,800,864,928,992,4144,4208,4272,4336,4400,4464,4528,4592,4656,4720,4784,4848,4912,4976,5040,5104,8384,8448,8512,8640,8704,8832,8896,12432,12496,12560,12688,12752,12944,1060,1124,1188,1252,1316,1380,1444,1508,1572,1636,1700,1764,1828,1892,1956,2020,5172,5236,5300,5364,5428,5492,5556,5620,5684,5748,5812,5876,5940,6004,6068,6132,9412,9476,9540,9668,9732,9860,9924,13460,13524,13588,13716,13780,13972,2088,2152,2216,2280,2344,2408,2472,2536,2600,2664,2728,2792,2856,2920,2984,3048,6200,6264,6328,6392,6456,6520,6584,6648,6712,6776,6840,6904,6968,7032,7096,7160,10440,10504,10568,10696,10760,10888,10952,14488,14552,14616,14744,14808,15000,3116,3180,3244,3308,3372,3436,3500,3564,3628,3692,3756,3820,3884,3948,4012,4076,7228,7292,7356,7420,7484,7548,7612,7676,7740,7804,7868,7932,7996,8060,8124,8188,11468,11532,11596,11724,11788,11916,11980,15516,15580,15644,15772,15836,16028,1056,1120,1184,1248,1312,1376,1440,1504,1568,1632,1696,1760,1824,1888,1952,2016,5168,5232,5296,5360,5424,5488,5552,5616,5680,5744,5808,5872,5936,6000,6064,6128,9408,9472,9536,9664,9728,9856,9920,13456,13520,13584,13712,13776,13968,36,100,164,228,292,356,420,484,548,612,676,740,804,868,932,996,4148,4212,4276,4340,4404,4468,4532,4596,4660,4724,4788,4852,4916,4980,5044,5108,8388,8452,8516,8644,8708,8836,8900,12436,12500,12564,12692,12756,12948,3112,3176,3240,3304,3368,3432,3496,3560,3624,3688,3752,3816,3880,3944,4008,4072,7224,7288,7352,7416,7480,7544,7608,7672,7736,7800,7864,7928,7992,8056,8120,8184,11464,11528,11592,11720,11784,11912,11976,15512,15576,15640,15768,15832,16024,2092,2156,2220,2284,2348,2412,2476,2540,2604,2668,2732,2796,2860,2924,2988,3052,6204,6268,6332,6396,6460,6524,6588,6652,6716,6780,6844,6908,6972,7036,7100,7164,10444,10508,10572,10700,10764,10892,10956,14492,14556,14620,14748,14812,15004,2080,2144,2208,2272,2336,2400,2464,2528,2592,2656,2720,2784,2848,2912,2976,3040,6192,6256,6320,6384,6448,6512,6576,6640,6704,6768,6832,6896,6960,7024,7088,7152,10432,10496,10560,10688,10752,10880,10944,14480,14544,14608,14736,14800,14992,3108,3172,3236,3300,3364,3428,3492,3556,3620,3684,3748,3812,3876,3940,4004,4068,7220,7284,7348,7412,7476,7540,7604,7668,7732,7796,7860,7924,7988,8052,8116,8180,11460,11524,11588,11716,11780,11908,11972,15508,15572,15636,15764,15828,16020,40,104,168,232,296,360,424,488,552,616,680,744,808,872,936,1000,4152,4216,4280,4344,4408,4472,4536,4600,4664,4728,4792,4856,4920,4984,5048,5112,8392,8456,8520,8648,8712,8840,8904,12440,12504,12568,12696,12760,12952,1068,1132,1196,1260,1324,1388,1452,1516,1580,1644,1708,1772,1836,1900,1964,2028,5180,5244,5308,5372,5436,5500,5564,5628,5692,5756,5820,5884,5948,6012,6076,6140,9420,9484,9548,9676,9740,9868,9932,13468,13532,13596,13724,13788,13980,3104,3168,3232,3296,3360,3424,3488,3552,3616,3680,3744,3808,3872,3936,4000,4064,7216,7280,7344,7408,7472,7536,7600,7664,7728,7792,7856,7920,7984,8048,8112,8176,11456,11520,11584,11712,11776,11904,11968,15504,15568,15632,15760,15824,16016,2084,2148,2212,2276,2340,2404,2468,2532,2596,2660,2724,2788,2852,2916,2980,3044,6196,6260,6324,6388,6452,6516,6580,6644,6708,6772,6836,6900,6964,7028,7092,7156,10436,10500,10564,10692,10756,10884,10948,14484,14548,14612,14740,14804,14996,1064,1128,1192,1256,1320,1384,1448,1512,1576,1640,1704,1768,1832,1896,1960,2024,5176,5240,5304,5368,5432,5496,5560,5624,5688,5752,5816,5880,5944,6008,6072,6136,9416,9480,9544,9672,9736,9864,9928,13464,13528,13592,13720,13784,13976,44,108,172,236,300,364,428,492,556,620,684,748,812,876,940,1004,4156,4220,4284,4348,4412,4476,4540,4604,4668,4732,4796,4860,4924,4988,5052,5116,8396,8460,8524,8652,8716,8844,8908,12444,12508,12572,12700,12764,12956,48,112,176,240,304,368,432,496,560,624,688,752,816,880,944,1008,4128,4192,4256,4320,4384,4448,4512,4576,4640,4704,4768,4832,4896,4960,5024,5088,8336,8400,8464,8592,8656,8848,12480,12544,12608,12736,12800,12928,12992,1076,1140,1204,1268,1332,1396,1460,1524,1588,1652,1716,1780,1844,1908,1972,2036,5156,5220,5284,5348,5412,5476,5540,5604,5668,5732,5796,5860,5924,5988,6052,6116,9364,9428,9492,9620,9684,9876,13508,13572,13636,13764,13828,13956,14020,2104,2168,2232,2296,2360,2424,2488,2552,2616,2680,2744,2808,2872,2936,3000,3064,6184,6248,6312,6376,6440,6504,6568,6632,6696,6760,6824,6888,6952,7016,7080,7144,10392,10456,10520,10648,10712,10904,14536,14600,14664,14792,14856,14984,15048,3132,3196,3260,3324,3388,3452,3516,3580,3644,3708,3772,3836,3900,3964,4028,4092,7212,7276,7340,7404,7468,7532,7596,7660,7724,7788,7852,7916,7980,8044,8108,8172,11420,11484,11548,11676,11740,11932,15564,15628,15692,15820,15884,16012,16076,1072,1136,1200,1264,1328,1392,1456,1520,1584,1648,1712,1776,1840,1904,1968,2032,5152,5216,5280,5344,5408,5472,5536,5600,5664,5728,5792,5856,5920,5984,6048,6112,9360,9424,9488,9616,9680,9872,13504,13568,13632,13760,13824,13952,14016,52,116,180,244,308,372,436,500,564,628,692,756,820,884,948,1012,4132,4196,4260,4324,4388,4452,4516,4580,4644,4708,4772,4836,4900,4964,5028,5092,8340,8404,8468,8596,8660,8852,12484,12548,12612,12740,12804,12932,12996,3128,3192,3256,3320,3384,3448,3512,3576,3640,3704,3768,3832,3896,3960,4024,4088,7208,7272,7336,7400,7464,7528,7592,7656,7720,7784,7848,7912,7976,8040,8104,8168,11416,11480,11544,11672,11736,11928,15560,15624,15688,15816,15880,16008,16072,2108,2172,2236,2300,2364,2428,2492,2556,2620,2684,2748,2812,2876,2940,3004,3068,6188,6252,6316,6380,6444,6508,6572,6636,6700,6764,6828,6892,6956,7020,7084,7148,10396,10460,10524,10652,10716,10908,14540,14604,14668,14796,14860,14988,15052,2096,2160,2224,2288,2352,2416,2480,2544,2608,2672,2736,2800,2864,2928,2992,3056,6176,6240,6304,6368,6432,6496,6560,6624,6688,6752,6816,6880,6944,7008,7072,7136,10384,10448,10512,10640,10704,10896,14528,14592,14656,14784,14848,14976,15040,3124,3188,3252,3316,3380,3444,3508,3572,3636,3700,3764,3828,3892,3956,4020,4084,7204,7268,7332,7396,7460,7524,7588,7652,7716,7780,7844,7908,7972,8036,8100,8164,11412,11476,11540,11668,11732,11924,15556,15620,15684,15812,15876,16004,16068,56,120,184,248,312,376,440,504,568,632,696,760,824,888,952,1016,4136,4200,4264,4328,4392,4456,4520,4584,4648,4712,4776,4840,4904,4968,5032,5096,8344,8408,8472,8600,8664,8856,12488,12552,12616,12744,12808,12936,13000,1084,1148,1212,1276,1340,1404,1468,1532,1596,1660,1724,1788,1852,1916,1980,2044,5164,5228,5292,5356,5420,5484,5548,5612,5676,5740,5804,5868,5932,5996,6060,6124,9372,9436,9500,9628,9692,9884,13516,13580,13644,13772,13836,13964,14028,3120,3184,3248,3312,3376,3440,3504,3568,3632,3696,3760,3824,3888,3952,4016,4080,7200,7264,7328,7392,7456,7520,7584,7648,7712,7776,7840,7904,7968,8032,8096,8160,11408,11472,11536,11664,11728,11920,15552,15616,15680,15808,15872,16000,16064,2100,2164,2228,2292,2356,2420,2484,2548,2612,2676,2740,2804,2868,2932,2996,3060,6180,6244,6308,6372,6436,6500,6564,6628,6692,6756,6820,6884,6948,7012,7076,7140,10388,10452,10516,10644,10708,10900,14532,14596,14660,14788,14852,14980,15044,1080,1144,1208,1272,1336,1400,1464,1528,1592,1656,1720,1784,1848,1912,1976,2040,5160,5224,5288,5352,5416,5480,5544,5608,5672,5736,5800,5864,5928,5992,6056,6120,9368,9432,9496,9624,9688,9880,13512,13576,13640,13768,13832,13960,14024,60,124,188,252,316,380,444,508,572,636,700,764,828,892,956,1020,4140,4204,4268,4332,4396,4460,4524,4588,4652,4716,4780,4844,4908,4972,5036,5100,8348,8412,8476,8604,8668,8860,12492,12556,12620,12748,12812,12940,13004];
@@ -202,11 +202,11 @@ function draw(){
   for(let f=0;f<=4200;f+=600)g+=`<text x="${x(f)}" y="${Hh-6}" font-size="10" fill="${sub}" text-anchor="middle">${f}</text>`;
   D.forEach((d,i)=>{const sl=lag[i],ch=sl!==base[i];
     if(ch)g+=`<rect x="${x(d)-3}" y="${y(HY[base[i]])-3}" width="6" height="6" fill="none" stroke="${sub}" stroke-dasharray="2 2"/>`;
-    g+=`<rect x="${x(d)-3.5}" y="${y(HY[sl])-3.5}" width="7" height="7" rx="1.5" fill="${ch?ng:cube}"><title>cube ${i+1} H${sl+1} (${HY[sl]})</title></rect>`});
+    g+=`<rect x="${x(d)-3.5}" y="${y(HY[sl])-3.5}" width="7" height="7" rx="1.5" fill="${ch?ng:cube}"><title>${i+1}個目 H${sl+1}（${HY[sl]}）</title></rect>`});
   g+='</svg>';$('svg').outerHTML=g.replace('<svg ','<svg id="svg" ');
-  $('seq').innerHTML=lag.map((sl,i)=>`<span class="${sl!==base[i]?'chg':''}" title="cube ${i+1}">${sl+1}</span>`).join('');
+  $('seq').innerHTML=lag.map((sl,i)=>`<span class="${sl!==base[i]?'chg':''}" title="${i+1}個目">${sl+1}</span>`).join('');
   const n=lag.filter((sl,i)=>sl!==base[i]).length;
-  $('info').textContent=`Timer at the moment of the 1st cube: ${c0} (any value 0–3 in the lowest 2 bits gives the same sequence)`+(lf?`　A drift of +${lf} frames from cube ${lk} changes the height of ${n} cubes`:'');
+  $('info').textContent=`1個目の瞬間のタイマー：${c0}（下2ビットは0〜3のどれでも同じ並び）`+(lf?`　${lk}個目から +${lf} フレームずれると、${n}個の高さが変わります`:'');
 }
 ['h','s','t','lk','lf'].forEach(id=>$(id).addEventListener('input',draw));
 draw();
@@ -218,7 +218,7 @@ const ICE='#9fd4ff';                                  // 元の色（氷の色�
 const CAT_COL=['#1e8cff','#00c8e6','#00d98c','#2ecc40','#9be22d','#ffd400','#ff8a00','#ff1a1a'];
 for(let i=1;i<=16;i++)$('sh').add(new Option(String(i),i-1));
 for(let i=1;i<=45;i++)$('st').add(new Option(String(i).padStart(2,'0'),i-1));
-for(let i=0;i<=16;i++)$('rk').add(new Option(i<16?String(i):'16+',i));
+for(let i=0;i<=16;i++)$('rk').add(new Option(i<16?String(i):'16以上',i));
 for(let i=0;i<=5;i++)$('ss2').add(new Option(String(i),i));
 $('sh').value=4;$('ss').value=1;$('st').value=11;$('rk').value=10;$('ss2').value=2;
 const TMAX=4600;
@@ -261,7 +261,7 @@ function render(){
   }
   cx.fillStyle=hit?'#ff1a1a':col('--text');cx.beginPath();cx.moveTo((sp.x+10)*sx,sp.y*sy);cx.lineTo((sp.x-8)*sx,(sp.y-5)*sy);cx.lineTo((sp.x-8)*sx,(sp.y+5)*sy);cx.closePath();cx.fill();
   $('tm').value=t;
-  $('tlab').textContent=`${t} frames from the 1st cube (about ${(t/60).toFixed(1)} s)　cubes out: ${D.filter(d=>d<=t).length}　ship x=${Math.round(sp.x)} y=${Math.round(sp.y)}${hit?'　HIT!':''}`;
+  $('tlab').textContent=`1個目から ${t} フレーム（約${(t/60).toFixed(1)}秒）　出たキューブ ${D.filter(d=>d<=t).length}個　自機 x=${Math.round(sp.x)} y=${Math.round(sp.y)}${hit?'　当たり！':''}`;
 }
 function shipSpeed(){return 1+0.75*(+$('ss2').value)}
 function inputDir(){
@@ -277,7 +277,7 @@ function resetPath(){path=[{x:+$('px').value,y:+$('py').value}];tNow=0}
 function step(){
   if(!playing)return;
   for(let i=0;i<+$('spd').value;i++){
-    if(tNow>=TMAX){playing=false;$('play').textContent='▶ Play';break}
+    if(tNow>=TMAX){playing=false;$('play').textContent='▶ 再生';break}
     const p=path[tNow],[dx,dy]=inputDir(),s=shipSpeed();
     path.length=tNow+1;
     path.push({x:Math.max(8,Math.min(344,p.x+dx*s)),y:Math.max(24,Math.min(224,p.y+dy*s))});
@@ -298,9 +298,9 @@ for(const el of [cv,$('pad')]){
 }
 cv.addEventListener('click',e=>{if(playing)return;const r=cv.getBoundingClientRect();const x=Math.round((e.clientX-r.left)/r.width*352),y=Math.round((e.clientY-r.top)/r.height*240);
   $('px').value=x;$('py').value=y;path.length=tNow+1;path[tNow]={x,y};render()});
-$('play').addEventListener('click',()=>{playing=!playing;$('play').textContent=playing?'❚❚ Pause':'▶ Play';
+$('play').addEventListener('click',()=>{playing=!playing;$('play').textContent=playing?'❚❚ 止める':'▶ 再生';
   if(playing){if(tNow>=TMAX)resetPath();requestAnimationFrame(step)}});
-$('reset').addEventListener('click',()=>{playing=false;$('play').textContent='▶ Play';resetPath();render()});
+$('reset').addEventListener('click',()=>{playing=false;$('play').textContent='▶ 再生';resetPath();render()});
 window.addEventListener('keydown',e=>{if(e.key.startsWith('Arrow')&&playing){keys[e.key]=true;e.preventDefault()}});
 window.addEventListener('keyup',e=>{if(e.key.startsWith('Arrow'))keys[e.key]=false});
 window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change',()=>{render();draw()});
@@ -346,25 +346,25 @@ function showSite(user) {
   gate.style.display = 'none';
   site.style.display = 'block';
   memberBar.style.display = 'block';
-  memberName.textContent = (user.displayName || user.email || 'Member') + '';
+  memberName.textContent = (user.displayName || user.email || '利用者') + ' さん';
 }
 loginButton.addEventListener('click', async () => {
   loginButton.disabled = true;
   try { await signInWithPopup(auth, provider); }
-  catch (e) { showGate('Google sign-in failed. Check pop-up permissions and Firebase authorized domains.\n' + e.code, true); }
+  catch (e) { showGate('Googleログインに失敗しました。ブラウザのポップアップ設定とFirebaseの承認済みドメインを確認してください。\n' + e.code, true); }
   finally { loginButton.disabled = false; }
 });
 async function logout() {
   try { await signOut(auth); }
-  catch (e) { showGate('Sign-out failed: ' + e.code, false, true); }
+  catch (e) { showGate('ログアウトに失敗しました: ' + e.code, false, true); }
 }
 logoutButton.addEventListener('click', logout);
 document.getElementById('member-logout').addEventListener('click', logout);
 onAuthStateChanged(auth, async (user) => {
   const sequence = ++authSequence;
   if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-  if (!user) { showGate('Google sign-in and administrator approval are required. Your first sign-in submits an application.', true); return; }
-  showGate('Checking approval status…', false, true);
+  if (!user) { showGate('利用にはGoogleアカウントでのログインと管理者の承認が必要です。初回ログインで利用申請されます。', true); return; }
+  showGate('承認状態を確認しています…', false, true);
   const userRef = doc(db, 'users', user.uid);
   try {
     const snap = await getDoc(userRef);
@@ -383,11 +383,11 @@ onAuthStateChanged(auth, async (user) => {
       if (sequence !== authSequence) return;
       const state = current.data()?.status;
       if (state === 'approved') showSite(user);
-      else if (state === 'rejected') showGate('Your request has not been approved. Please contact the administrator.', false, true);
-      else showGate('Application received.\nWaiting for administrator approval.', false, true);
-    }, (error) => showGate('Unable to check approval status. Check Firestore rules.\n' + error.code, false, true));
+      else if (state === 'rejected') showGate('申請は承認されていません。管理者にお問い合わせください。', false, true);
+      else showGate('利用申請を受け付けました。\n現在、管理者の承認待ちです。承認されるとこの画面から利用できます。', false, true);
+    }, (error) => showGate('承認状態を取得できませんでした。Firestoreのルールを確認してください。\n' + error.code, false, true));
   } catch (e) {
-    if (sequence === authSequence) showGate('Unable to submit application. Check Firestore rules.\n' + e.code, false, true);
+    if (sequence === authSequence) showGate('利用申請を登録できませんでした。Firestoreのルールを確認してください。\n' + e.code, false, true);
   }
 });
 </script>
