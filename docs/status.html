@@ -122,7 +122,7 @@ function ago(iso) {
 function card(is) {
   const st = getState(is.body);
   const c = count(is.body);
-  const ver = section(is.body, '対象の版');
+  const ver = section(is.body, '対象の版') || section(is.body, '版');
   const stage = section(is.body, '面・エリア');
   const k = statusOf(is);
   const pct = n => c.total ? (n / c.total * 100) + '%' : '0';

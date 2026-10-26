@@ -8,7 +8,7 @@
 ## 協力してくれる人へ（人間向け・3行）
 
 1. Claude に **GitHub を連携**しておく（claude.ai の設定 → コネクタ）。連携しなくても、Claude が書いた報告文を貼るだけで参加できます。
-2. 配布ページ（https://hknroms.github.io/gradius3/ ）で作った **`gradius3.zip` を Claude の会話に添付**する（ROMはご自身のものを使ってください。ここでは配布していません）。
+2. 配布ページ（https://hknroms.github.io/gradius3/ ）で作った **`gradius3.zip`（改造版）を Claude の会話に添付**する。Claude に頼まれたら、改造前の**純正の `gradius3.zip`** も名前を変えて（例 `gradius3_orig.zip`）添付する（比べるのに使います）。ROMはご自身のものを使ってください。ここでは配布していません。
 3. Claude に次の一文を送る：
    > hknroms/gradius3 の VERIFY.md に従って、未着手の検証を1件やって
 
@@ -62,6 +62,7 @@ make SUBTARGET=g3 SOURCES=src/mame/konami/gradius3.cpp \
 - SDL2 が無くてビルドできない場合は、SDL2 を GitHub（libsdl-org/SDL の release-2 系）からソースでビルドして `/opt/sdl` に入れ、`PKG_CONFIG_PATH=/opt/sdl/lib/pkgconfig` を付けて再ビルドする（`src/lua/run.sh` は `/opt/sdl/lib` を参照する）。
 - それ以外のエラーはメッセージに従って直す。時間がかかるのは初回だけ（数十分）。同じ会話の中なら次からは再利用できる。
 - ROM: 添付の `gradius3.zip` を作業用の空フォルダ（例 `roms/`）にコピーするだけでよい（MAME は zip のまま読む）。
+- 確認項目に「純正」と比べるものがある場合は、改造前の純正 `gradius3.zip` も添付してもらい、別の空フォルダ（例 `roms_orig/gradius3.zip`）に置いて同じ手順で動かす。純正は面選択メニューが無いので、目的の場面までは入力列（`SEQ`）や `POKE` で進める。
 
 ### 4. 検証する
 
