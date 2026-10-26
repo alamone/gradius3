@@ -18,6 +18,7 @@
 | 調べること・直すこと・頼むこと（1件ずつ） | GitHub の Issue（まとめページに出る） |
 | リリースの説明文 | docs/dev/notes/<版>.json |
 | 調査用スクリプト | src/lua/research/ |
+| **どのタイトルにも通じるノウハウ** | **hknroms/arcade-mod-kit の docs/knowhow/**（ここではなく、ひな形の方に書き足す） |
 
 - 会話を始めたら、この CLAUDE.md の次に **docs/dev/STATUS.md を読む**。
 - 作業の節目（何かが分かった・決まった・終わった）ごとに STATUS.md・TECH.md を更新して push する。会話が途中で止まっても続きが分かるように、まとめて最後に書くのではなく、その都度書く。
