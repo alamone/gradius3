@@ -63,6 +63,6 @@
 
 - 配布ページを Google ログインの内側に置いた（ユーザーが設定。Firebase Authentication、プロジェクト `gradius3-login-41798`、Spark プラン）。
 - 申請: ログインした人が Firestore の `users/{uid}` に `status: "pending"` で自分の申請を作る。**承認は管理者が Firebase の管理画面で `status` を `approved` に変える**。ルールは `docs/dev/firebase/firestore.rules`。
-- 通知・承認・管理画面: Google Apps Script（`tools/notify-gas/`）。新しい申請は管理者にメール（承認・却下のリンク付き）、自動承認の一覧にある Google アカウントは即承認、承認したら本人にメール。管理画面（Apps Script のウェブアプリ、管理者だけが開ける）で一覧・Twitter・コメント・承認・却下。Twitter とコメントは Firestore の `admin_notes/{uid}`（本人には見えない）。管理画面の URL は docs/collaborators.json の admin_url に入れるとまとめページにリンクが出る。設定手順は同フォルダの README.md。2026-10-26 にウェブアプリをデプロイ済み（admin_url に登録。写真から読み取った URL なので開けなければ直す）。
+- 通知・承認・管理画面: Google Apps Script（`tools/notify-gas/`）。新しい申請は管理者にメール（承認・却下のリンク付き）、自動承認の一覧にある Google アカウントは即承認、承認したら本人にメール。管理画面（Apps Script のウェブアプリ、管理者だけが開ける）で一覧・Twitter・コメント・承認・却下。Twitter とコメントは Firestore の `admin_notes/{uid}`（本人には見えない）。管理画面の URL は docs/collaborators.json の admin_url に入れるとまとめページにリンクが出る。設定手順は同フォルダの README.md。2026-10-26 に設定済み（ルール更新・マニフェスト・setup・ウェブアプリ。管理画面のエラーなし。URL は admin_url）。
 - これは「入口の扉」で、パッチなどのファイル自体は URL を知っていれば見られる（GitHub Pages の仕組み上）。ユーザーは了解済み。
 - Claude はログインの内側のページを開けない（手順書・Issue はリポジトリから読むので作業には影響しない）。
