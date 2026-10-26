@@ -42,6 +42,8 @@ document.documentElement.classList.add('gate-locked');
 const gate = document.createElement('div'); gate.id = 'gate';
 const mount = () => document.body ? document.body.prepend(gate) : document.addEventListener('DOMContentLoaded', () => document.body.prepend(gate));
 mount();
+const EN = (document.documentElement.lang || '').startsWith('en');
+const t = (ja, en) => EN ? en : ja;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const show = html => { gate.innerHTML = '<div class="box">' + html + '</div>'; gate.style.display = 'flex'; document.documentElement.classList.add('gate-locked'); };
 const title = document.title.replace(/\s*—.*$/, '');
@@ -51,7 +53,7 @@ function open(user) {
   document.documentElement.classList.remove('gate-locked');
   if (!document.getElementById('gatebar')) {
     const bar = document.createElement('div'); bar.id = 'gatebar';
-    bar.innerHTML = esc(user.email) + '<button type="button">ログアウト</button>';
+    bar.innerHTML = esc(user.email) + '<button type="button">' + t('ログアウト', 'Sign out') + '</button>';
     bar.querySelector('button').onclick = () => signOut(auth);
     document.body.prepend(bar);
   }
@@ -63,20 +65,20 @@ async function login() {
   try { await signInWithPopup(auth, p); }
   catch (e) {
     if (['auth/popup-blocked', 'auth/operation-not-supported-in-this-environment', 'auth/popup-closed-by-user'].includes(e.code)) await signInWithRedirect(auth, p);
-    else show(`<h2>ログインできませんでした</h2><p class="sub">${esc(e.code || e.message)}</p><button type="button" id="g_retry">もう一度</button>`), gate.querySelector('#g_retry').onclick = login;
+    else show(`<h2>${t('ログインできませんでした', 'Could not sign in')}</h2><p class="sub">${esc(e.code || e.message)}</p><button type="button" id="g_retry">${t('もう一度', 'Try again')}</button>`), gate.querySelector('#g_retry').onclick = login;
   }
 }
 
 function askLogin() {
-  show(`<h2>${esc(title)}</h2><p>このページは、許可された人だけが見られます。Google アカウントでログインしてください。</p>
-    <button type="button" id="g_login">Google でログイン</button>
-    ${MODE === 'admin' ? '<p class="sub">管理者だけが見られるページです。</p>' : '<p class="sub">初めての人は、ログインしたあと申請すると、管理者が確認して許可します（許可されるとメールが届きます）。</p>'}`);
+  show(`<h2>${esc(title)}</h2><p>${t('このページは、許可された人だけが見られます。Google アカウントでログインしてください。', 'Only approved people can view this page. Please sign in with your Google account.')}</p>
+    <button type="button" id="g_login">${t('Google でログイン', 'Sign in with Google')}</button>
+    ${MODE === 'admin' ? '<p class="sub">' + t('管理者だけが見られるページです。', 'This page is for administrators only.') + '</p>' : '<p class="sub">' + t('初めての人は、ログインしたあと申請すると、管理者が確認して許可します（許可されるとメールが届きます）。', 'If this is your first time, sign in and send a request. An administrator will review it (you will get an email when approved).') + '</p>'}`);
   gate.querySelector('#g_login').onclick = login;
 }
 
 async function checkAdmin(user) {
-  show('<p class="sub">確認中…</p>');
-  const out = '<button type="button" class="sub2" id="g_out">ログアウト</button>';
+  show('<p class="sub">' + t('確認中…', 'Checking…') + '</p>');
+  const out = '<button type="button" class="sub2" id="g_out">' + t('ログアウト', 'Sign out') + '</button>';
   try {
     const a = await getDoc(doc(db, 'admins', String(user.email || '').toLowerCase()));
     if (a.exists()) return open(user);
@@ -89,28 +91,28 @@ async function checkAdmin(user) {
 
 async function check(user) {
   if (MODE === 'admin') return checkAdmin(user);
-  show('<p class="sub">確認中…</p>');
+  show('<p class="sub">' + t('確認中…', 'Checking…') + '</p>');
   let snap;
   try { snap = await getDoc(doc(db, 'users', user.uid)); }
-  catch (e) { show(`<h2>確認できませんでした</h2><p class="sub">${esc(e.code || e.message)}</p><button type="button" class="sub2" id="g_out">ログアウト</button>`); gate.querySelector('#g_out').onclick = () => signOut(auth); return; }
+  catch (e) { show(`<h2>${t('確認できませんでした', 'Could not check your status')}</h2><p class="sub">${esc(e.code || e.message)}</p><button type="button" class="sub2" id="g_out">${t('ログアウト', 'Sign out')}</button>`); gate.querySelector('#g_out').onclick = () => signOut(auth); return; }
   const st = snap.exists() ? snap.data().status : null;
   if (st === 'approved') return open(user);
-  const out = '<button type="button" class="sub2" id="g_out">ログアウト</button>';
+  const out = '<button type="button" class="sub2" id="g_out">' + t('ログアウト', 'Sign out') + '</button>';
   if (st === 'pending') {
-    show(`<h2>承認待ちです</h2><p>${esc(user.email)} で申請を受け付けています。管理者が確認して許可すると、メールでお知らせします。</p>${out}`);
+    show(`<h2>${t('承認待ちです', 'Waiting for approval')}</h2><p>${t(esc(user.email) + ' で申請を受け付けています。管理者が確認して許可すると、メールでお知らせします。', 'Your request from ' + esc(user.email) + ' has been received. You will get an email when an administrator approves it.')}</p>${out}`);
   } else if (st) {
-    show(`<h2>このページは見られません</h2><p>${esc(user.email)} の申請は許可されていません。</p>${out}`);
+    show(`<h2>${t('このページは見られません', 'You cannot view this page')}</h2><p>${t(esc(user.email) + ' の申請は許可されていません。', 'The request from ' + esc(user.email) + ' was not approved.')}</p>${out}`);
   } else {
-    show(`<h2>利用の申請</h2><p>${esc(user.email)} でログインしています。名前（呼び名）を入れて申請してください。</p>
-      <input id="g_name" maxlength="200" placeholder="名前・ハンドル名" value="${esc(user.displayName || '')}">
-      <button type="button" id="g_apply">申請する</button> ${out}`);
+    show(`<h2>${t('利用の申請', 'Request access')}</h2><p>${t(esc(user.email) + ' でログインしています。名前（呼び名）を入れて申請してください。', 'Signed in as ' + esc(user.email) + '. Enter your name (or nickname) and send a request.')}</p>
+      <input id="g_name" maxlength="200" placeholder="${t('名前・ハンドル名', 'Name or nickname')}" value="${esc(user.displayName || '')}">
+      <button type="button" id="g_apply">${t('申請する', 'Send request')}</button> ${out}`);
     gate.querySelector('#g_apply').onclick = async () => {
       const name = gate.querySelector('#g_name').value.trim();
       if (!name) return;
       try {
         await setDoc(doc(db, 'users', user.uid), { uid: user.uid, name, email: user.email, status: 'pending', createdAt: serverTimestamp() });
         check(user);
-      } catch (e) { show(`<h2>申請できませんでした</h2><p class="sub">${esc(e.code || e.message)}</p>${out}`); gate.querySelector('#g_out').onclick = () => signOut(auth); }
+      } catch (e) { show(`<h2>${t('申請できませんでした', 'Could not send the request')}</h2><p class="sub">${esc(e.code || e.message)}</p>${out}`); gate.querySelector('#g_out').onclick = () => signOut(auth); }
     };
   }
   const o = gate.querySelector('#g_out'); if (o) o.onclick = () => signOut(auth);

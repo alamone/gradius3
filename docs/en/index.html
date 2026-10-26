@@ -66,8 +66,7 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 
 
 <h2>Test Play Reports</h2>
-<a class="bigl" id="report" href="https://github.com/hknroms/gradius3/issues/new?template=testplay_en.yml" target="_blank" rel="noopener"><b>▶ Report a test play</b><span>Report bugs, findings and requests using a simple form. You can attach screenshots and videos (requires signing in with a GitHub account). Reports in English or Japanese are both welcome.</span></a>
-<div class="sub">Previous reports: <a href="https://github.com/hknroms/gradius3/issues" target="_blank" rel="noopener" style="color:var(--acc)">list of reports</a> (if the same issue is already there, please add to it). Reports are public.</div>
+<a class="bigl" id="report" href="testplay.html"><b>▶ Report a test play</b><span>How to send a report (GitHub or Google Form), recommended way to test, setting up MAME, fixes to check, and previous reports with their status</span></a>
 
 <h2>Stereo Listening Comparison (prototype)</h2>
 <a class="bigl" href="stereo/sim.html"><b>▶ Compare the stereo mixes here</b><span>Switch between 10 patterns for all 35 tracks with a single button. You can also fine-tune each channel and record a rating for each track (headphones recommended)</span></a>
@@ -75,8 +74,8 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 <h2>Cube Rush Analysis</h2>
 <a class="bigl" href="cube/index.html"><b>▶ See the Cube Rush analysis here</b><span>How the heights are decided, the 2880 sequences (H / S / T), drift caused by slowdown (LAG), and the sticking check. Pick H, S and T to view the sequence of 99 cubes</span></a>
 
-<h2>How to Use (in game)</h2>
-<div class="panel">
+<details class="panel" id="usage"><summary style="font-size:16px">▶ How to use (in game): menu, equipment commands, pause menu, Cube Rush, Boss Rush</summary>
+<div style="margin-top:8px">
 <h3 style="margin:0 0 6px;font-size:15px">Entering the hidden menu</h3>
 <ul>
 <li>Insert a credit, then press START while holding the joystick. Pressing START without the joystick starts the game exactly like the original.<div class="cg"><div class="cg-row"><div class="cg-ic"><svg width="42" height="34" viewBox="0 0 42 34" aria-label="Joystick up"><circle cx="15" cy="17" r="12" fill="none" stroke="var(--sub)" stroke-width="1.5"/><circle cx="15" cy="17" r="2" fill="var(--sub)"/><circle cx="15" cy="11" r="5.5" fill="var(--acc)"/><polygon points="30,19 40,19 35,10" fill="var(--acc)"/></svg><svg width="112" height="30" viewBox="0 0 112 30" aria-label="Buttons"><circle cx="14" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="14" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">S</text><circle cx="42" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="42" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">M</text><rect x="60" y="6" width="50" height="18" rx="9" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="85" y="19" font-size="10" text-anchor="middle" fill="#fff" font-weight="700">START</text></svg></div><div class="cg-tx"><b>Up + START</b>: menu with default settings</div></div><div class="cg-row"><div class="cg-ic"><svg width="42" height="34" viewBox="0 0 42 34" aria-label="Joystick down"><circle cx="15" cy="17" r="12" fill="none" stroke="var(--sub)" stroke-width="1.5"/><circle cx="15" cy="17" r="2" fill="var(--sub)"/><circle cx="15" cy="23" r="5.5" fill="var(--acc)"/><polygon points="30,15 40,15 35,24" fill="var(--acc)"/></svg><svg width="112" height="30" viewBox="0 0 112 30" aria-label="Buttons"><circle cx="14" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="14" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">S</text><circle cx="42" cy="15" r="11" fill="none" stroke="var(--sub)" stroke-width="1.5"/><text x="42" y="19.5" font-size="11" text-anchor="middle" fill="var(--sub)" font-weight="700">M</text><rect x="60" y="6" width="50" height="18" rx="9" fill="var(--acc)" stroke="var(--acc)" stroke-width="1.5"/><text x="85" y="19" font-size="10" text-anchor="middle" fill="#fff" font-weight="700">START</text></svg></div><div class="cg-tx"><b>Down + START</b>: menu with your previous settings</div></div></div></li>
@@ -111,6 +110,7 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 <li>Starts just before a boss; after defeating it you go straight to just before the next stage's boss (stage 4 is skipped because it has no boss). The game ends after one full round.</li>
 </ul>
 </div>
+</details>
 
 <h2>Latest Version</h2>
 <div id="latest" class="panel">Loading…</div>
@@ -300,7 +300,7 @@ function verHtml(v0, open) {
   catch (e) { $('#latest').textContent = 'Could not load version information.'; return; }
   const L = DATA.versions[0];
   $('#latest').innerHTML = verHtml(L, true);
-  $('#report').href += '&version=v' + encodeURIComponent(L.version);   // 報告ページの「版」を入力済みに
+  // (version is filled in on testplay.html)   // 報告ページの「版」を入力済みに
   $('#history').innerHTML = DATA.versions.map((v, i) => `<div class="panel">${verHtml(v, i === 0)}</div>`).join('');
   $('#ver').innerHTML = DATA.versions.filter(v => v.patches).map(v => `<option value="${esc(v.version)}">v${esc(v.version)} (${esc(v.build ? 'build ' + v.build : v.date)})</option>`).join('');
   $('#ver').onchange = refresh;

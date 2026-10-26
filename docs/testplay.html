@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>テストプレイの報告 — グラディウスIII 改造ROM</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--sub:#8b949e;--acc:#58a6ff;--ok:#3fb950;--ng:#f85149;--warn:#d29922}
+@media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--panel:#fff;--line:#d0d7de;--text:#1f2328;--sub:#59636e;--acc:#0969da;--ok:#1a7f37;--ng:#cf222e;--warn:#9a6700}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 64px}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:17px;margin:28px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:15px;margin:14px 0 4px}
+a{color:var(--acc)}
+.sub{color:var(--sub);font-size:13px}
+.lang{text-align:right;font-size:13px;margin-bottom:6px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+.hello{font-size:15.5px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
+@media (max-width:560px){.btns{grid-template-columns:1fr}}
+.bigl{display:block;padding:16px 18px;border-radius:12px;border:2px solid var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);color:var(--text);text-decoration:none}
+.bigl b{display:block;font-size:17px;color:var(--acc)}
+.bigl span{display:block;font-size:12.5px;color:var(--sub);margin-top:4px}
+.bigl.g{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent)}.bigl.g b{color:var(--ok)}
+.bigl.off{opacity:.55;pointer-events:none}
+details.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0}
+details.box>summary{cursor:pointer;font-weight:600;font-size:15px}
+details.box[open]>summary{margin-bottom:6px}
+ol,ul{margin:6px 0;padding-left:22px}
+li{margin:4px 0}
+.note{font-size:13px;color:var(--sub);border-left:3px solid var(--line);padding-left:10px;margin:8px 0}
+.warnbox{font-size:13.5px;border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent);border-radius:8px;padding:8px 12px;margin:8px 0}
+code,kbd{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:1px 5px;border-radius:4px}
+kbd{border:1px solid var(--line)}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--sub);margin-left:6px;font-weight:400}
+.rep{display:flex;gap:8px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.rep:last-child{border-bottom:none}
+.rep .t{flex:1;min-width:0;overflow-wrap:anywhere}
+.rep .t a{color:var(--text);text-decoration:none}
+.rep .k{font-size:11.5px;color:var(--sub);border:1px solid var(--line);border-radius:99px;padding:0 7px;white-space:nowrap}
+.rep .s{font-size:12.5px;white-space:nowrap;font-weight:600}
+.rs-new{color:var(--sub)}.rs-wip{color:var(--warn)}.rs-fix{color:var(--ok)}.rs-done{color:var(--ok)}.rs-no{color:var(--sub)}
+#recheck{display:none}
+#recheck .rc{padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+#recheck .rc:last-child{border-bottom:none}
+#recheck .rc .t a{color:var(--text);text-decoration:none}
+#recheck .rc .v{font-size:12px;color:var(--ok);font-weight:600;margin-left:6px}
+#recheck .rc .b{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+#recheck .rc .b a{font-size:12.5px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);text-decoration:none;color:var(--text)}
+#recheck .rc .b a.ok{border-color:var(--ok);color:var(--ok)}
+#recheck .rc .b a.ng{border-color:var(--warn);color:var(--warn)}
+.mic{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:22px;padding:6px 8px 6px 14px;max-width:340px;margin:8px 0;background:var(--bg)}
+.mic .ph{flex:1;color:var(--sub);font-size:13px}
+.mic .ic{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+.mic .ic.on{outline:2px solid var(--ok);outline-offset:2px}
+.mic .lbl{font-size:11px;text-align:center;line-height:1.2}
+</style>
+<script type="module" src="auth-gate.js"></script>
+</head>
+<body>
+<main>
+<div class="lang"><b>日本語</b> ｜ <a href="en/testplay.html">English</a></div>
+<div class="sub"><a href="./">← 配布ページへ戻る</a></div>
+<h1>テストプレイの報告</h1>
+
+<div class="panel hello">
+  テストプレイにご協力いただき、ありがとうございます。<br>
+  気づいたことは、どんな小さなことでも改善の役に立ちます。わかる範囲で、気軽に送ってください。
+  <div class="btns">
+    <a class="bigl" id="gh" href="https://github.com/hknroms/gradius3/issues/new?template=testplay.yml" target="_blank" rel="noopener"><b>▶ GitHub のアカウントをお持ちの方はこちら</b><span>項目に沿って書けます。写真や動画も付けられ、報告の状況がこのページに出ます（報告は公開されます）。</span></a>
+    <a class="bigl g" id="gform" href="#" target="_blank" rel="noopener"><b>▶ お持ちでない方はこちら</b><span>Google フォームで送れます（GitHub のアカウントは要りません）。</span></a>
+  </div>
+  <div class="sub">GitHub のアカウントを作るときは、下の「GitHub のアカウントを作る」を見てください。</div>
+</div>
+
+<div id="recheck" class="panel"><b>確かめてほしいこと</b> <span class="tag" id="rc-count"></span>
+  <div class="sub" style="margin:4px 0 4px">新しい版で直したものです。遊んで確かめたら、ボタンから報告してください（版と元の報告は入力済みになります）。GitHub のアカウントがない方は、上の Google フォームに「どの報告を確かめたか」と結果を書いて送ってください。</div>
+  <div id="rc-list"></div>
+</div>
+
+<details class="box" id="howto">
+  <summary>▶ テストプレイのおすすめのやり方</summary>
+  <ol>
+    <li><b>気づいたことは、その場でメモする。</b>スマホの音声入力を使うと、遊びながら話すだけで記録できて便利です（下の「音声入力のおすすめ」）。</li>
+    <li><b>まず無敵で遊んでみる。</b>メニューで INVINCIBLE を ON にすると、最後まで通して見られます。おかしいと思った所は、その場でメモします。</li>
+    <li><b>画面を撮りたいときは、ポーズをかけて写真を撮る。</b>START を約1秒押し続けるとポーズメニューになります。メモには「写真を撮った」と書いておくと、あとでどの写真がどの話か分かります。</li>
+    <li><b>遊び終わったら、メモをそのまま報告に貼り付けて、撮った写真を添付する。</b>文章を整えなくても大丈夫です。</li>
+    <li><b>問題がなかった区間も、書いてもらえると参考になります。</b>（例：「5面は最後まで問題なし」）</li>
+    <li><b>実機か MAME か</b>（MAME なら版も）を書いてください。報告のフォームに選ぶ欄があります。</li>
+  </ol>
+  <h3>メモに残してほしいこと</h3>
+  <ul>
+    <li>今何面か、どのあたりか</li>
+    <li>どう始めたか（メニューで選んだ面・エリア、モード）</li>
+    <li>やった操作（無敵にした、ポーズメニューで何を ON にした、など）</li>
+    <li><b>位置の数字</b>：ポーズメニューで POS DISP を ON にすると、画面の右上（RANK の下）に <code>X:1CA0 Y:0000</code> のように出ます。X の値と、Y が 0 でなければ Y の値も書いてください。同じ場面をすぐ再現できます。</li>
+    <li>何が起きたか、本当はどうなってほしいか</li>
+  </ul>
+  <h3>音声入力のおすすめ</h3>
+  <p style="margin:4px 0">ChatGPT や Claude のアプリの、<b>文字を打つ欄にあるマイクのボタン</b>がおすすめです。話した内容を、ある程度直して文字にしてくれます。</p>
+  <div class="mic" aria-hidden="true"><span class="ph">メッセージを入力</span>
+    <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+    <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="2"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></span>
+  </div>
+  <ul class="sub" style="margin-top:0">
+    <li>緑の丸のマイクのボタン（音声入力）を使います。押して話し、終わったらもう一度押すと文字になります。</li>
+    <li>その横の波の形のボタンは「会話モード」（声でやり取りする）なので、ここでは使いません。</li>
+    <li>ボタンの形や場所は、アプリの版によって少し違います。</li>
+    <li>スマホのキーボードのマイクでも入力できますが、日本語では正確さが落ちることがあります。</li>
+  </ul>
+</details>
+
+<details class="box" id="github">
+  <summary>▶ GitHub のアカウントを作る</summary>
+  <p style="margin:4px 0">GitHub の画面は英語です。下に、押すボタンの英語の表示と、日本語の意味を書いています。表示は時期によって少し変わることがあるので、別の表示も書いておきます。</p>
+  <div class="warnbox">Chrome の<b>自動翻訳は切っておく</b>のがおすすめです（アドレス欄の右の翻訳のマーク →「英語」）。翻訳がかかると、ボタンの文字がこの説明と変わったり、押しても反応が遅く見えたりします。</div>
+  <ol>
+    <li><a href="https://github.com/signup" target="_blank" rel="noopener">github.com/signup</a> を開く。<br><span class="sub">github.com のトップページからなら、右上の「<b>Sign up</b>」（登録）を押す。</span></li>
+    <li><b>Email</b>（メールアドレス）を入れる。<br><span class="sub">確認の数字がこのアドレスに届きます。</span></li>
+    <li><b>Password</b>（パスワード）を入れる。<br><span class="sub">15文字以上、または8文字以上で数字と英小文字を両方含むもの。</span></li>
+    <li><b>Username</b>（ユーザー名）を入れる。<br><span class="sub">英数字とハイフン（-）だけ。報告するとこの名前が公開されます。本名でなくて大丈夫です。使えない名前だと赤い字で出るので、変えてください。</span></li>
+    <li><b>Your Country/Region</b>（国）が「Japan」になっているか見る。</li>
+    <li><b>Email preferences</b>（お知らせのメールを受け取るか）のチェックは、外したままで大丈夫です。</li>
+    <li>緑の「<b>Create account</b>」（アカウントを作る）を押す。<br><span class="sub">ボタンが「Continue」（続ける）になっていて、1項目ずつ進む画面のこともあります。その場合は、上の 2〜6 を1つ入れるごとに「Continue」を押します。</span></li>
+    <li><b>パズル</b>（「Verify」／「Visual puzzle」）が出たら、指示どおりに答える。<br><span class="sub">ロボットでないことの確認です。何問か続くことがあります。</span></li>
+    <li>メールに届く「<b>Your GitHub launch code</b>」の8桁（または6桁）の数字を、画面の「<b>Enter code</b>」の欄に入れる。<br><span class="sub">届かないときは迷惑メールのフォルダを見るか、「<b>Resend the code</b>」（もう一度送る）を押す。</span></li>
+    <li>「<b>Sign in</b>」（ログイン）の画面になったら、作ったユーザー名（またはメールアドレス）とパスワードでログインする。</li>
+    <li>アンケート（「<b>How many team members…</b>」「<b>What specific features…</b>」など）や、有料プラン（「<b>Choose your plan</b>」「Free」「Pro」など）の画面が出たら、いちばん下の「<b>Skip personalization</b>」（飛ばす）か「<b>Continue for free</b>」（無料で続ける）を押す。<br><span class="sub">お金はかかりません。無料のままで報告できます。</span></li>
+    <li>これで完了です。このページに戻って「GitHub のアカウントをお持ちの方はこちら」を押してください。</li>
+  </ol>
+  <p class="sub">報告のフォームのボタンも英語です。いちばん上の「<b>Add a title</b>」（題名）に一言で内容を書き、下の欄を埋めて、いちばん下の緑の「<b>Create</b>」（または「Submit new issue」）を押すと送れます。写真は「<b>Paste, drop, or click to add files</b>」の所にドラッグするか、押して選びます。</p>
+</details>
+
+<details class="box" id="mame">
+  <summary>▶ MAME の準備</summary>
+  <h3>おすすめの MAME</h3>
+  <ul>
+    <li><b>最新の MAMEUI（Windows）</b>：動作を確認できています。これをおすすめします。</li>
+  </ul>
+  <p class="sub" style="margin:2px 0 8px">確認した範囲で動かなかったもの：Windows の最新の本家 MAME ／ スマホの MAME4droid（ふつうのやり方では起動しない）</p>
+  <h3>ROM（zip）の作り方と置き方</h3>
+  <ol>
+    <li>配布ページの「MAME用 zip を作る」で zip を作る（出力するセットは、おすすめの <code>gradius3j</code> のまま）。</li>
+    <li>zip は解凍せず、<b>ダウンロードしたフォルダー</b>に置いたままにする。</li>
+    <li>MAMEUI で、そのフォルダーを ROM を探す場所に足す（ROM のフォルダーに移すより、このほうが新しい版に入れ替えやすいです）。<br><span class="sub">メニューの「Options」→「Directories」（ディレクトリ）→ 上の欄で「ROMs」を選ぶ →「Insert」（追加）でダウンロードのフォルダーを選ぶ →「OK」。</span></li>
+    <li>一覧を読み直す（<kbd>F5</kbd>）と、Gradius III（Japan, version 3）が出ます。ダブルクリックで起動。</li>
+  </ol>
+  <div class="warnbox"><b>新しい版の zip を作ったら、前の zip に上書きしてください。</b>同じ名前のファイルがあると「gradius3j (1).zip」のような名前で保存され、MAME はそれを読みません（前の版のまま動きます）。前の zip を消してから作るか、名前を <code>gradius3j.zip</code> に直してください。</div>
+  <h3>起動したら</h3>
+  <ul>
+    <li>「チェックサムが正しくない」のような警告が出ますが、改造した ROM なので正常です。何かキーを押すと始まります。</li>
+    <li>電源を入れた直後の「RAM ROM CHECK」の下に、版と作った日時の数字が出ます（例：<code>0 4 17  26 10 26 10:12</code>）。報告のときに書いてもらえると、どの版か確実に分かります。</li>
+    <li>クレジットを入れる：<kbd>5</kbd>　1P のスタート：<kbd>1</kbd>（はじめの設定）</li>
+  </ul>
+  <h3>ボタンの割り当て</h3>
+  <ul>
+    <li>ゲーム中に <kbd>Tab</kbd> → 「Input (this Machine)」（この機械の入力）→ 変えたい項目を選んで Enter → 使いたいボタンを押す。</li>
+    <li>PS5 などのコントローラーが反応しないときは、「Input (this Machine)」で割り当て直すか、DS4Windows や Steam の入力の機能を使うと動くことがあります。</li>
+  </ul>
+  <h3>「ROM が見つからない」と出たとき</h3>
+  <ul>
+    <li>zip の名前が <code>gradius3j.zip</code> になっているか（「(1)」などが付いていないか）。</li>
+    <li>その zip のあるフォルダーが、上の「Directories」の ROMs に入っているか。</li>
+    <li>MAMEUI で選んだのが「Gradius III (Japan, version 3)」か。別のセット（gradius3）で作った場合は「World, version R」を選びます。</li>
+  </ul>
+</details>
+
+<details class="box" id="reports">
+  <summary>▶ これまでの報告と、いまの状況 <span class="tag" id="rep-count"></span></summary>
+  <div id="rep-list" class="sub">読み込み中…</div>
+  <div class="sub" style="margin-top:6px"><a href="https://github.com/hknroms/gradius3/issues" target="_blank" rel="noopener">GitHub ですべての報告を見る</a>（同じ内容がすでにあれば、その報告に書き足してください）</div>
+</details>
+
+<div class="sub" style="margin-top:24px">Gradius III は KONAMI の著作物です。本ページは非公式の改造パッチの協力者向けのページです。</div>
+</main>
+
+<script>
+// Google フォームの URL（日本語と英語の両方で書かれた1つのフォーム）。空のあいだはボタンを「準備中」にする
+const FORM_URL = '';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+(function () {
+  const g = $('#gform');
+  if (/^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/)/.test(FORM_URL)) g.href = FORM_URL;
+  else { g.classList.add('off'); g.querySelector('span').textContent = '準備中です。しばらくお待ちください。'; }
+})();
+(async function reports() {
+  const box = $('#rep-list');
+  let latest = '';
+  try { const v = await (await fetch('versions.json', { cache: 'no-store' })).json(); latest = 'v' + v.versions[0].version; } catch {}
+  if (latest) $('#gh').href += '&version=' + encodeURIComponent(latest);   // 報告フォームの「版」を入力済みに
+  try {
+    const r = await fetch('https://api.github.com/repos/hknroms/gradius3/issues?state=all&per_page=100', { headers: { Accept: 'application/vnd.github+json' } });
+    if (!r.ok) throw new Error(r.status);
+    const all = (await r.json()).filter(i => !i.pull_request);
+    const labels = i => i.labels.map(l => typeof l === 'string' ? l : l.name);
+    const isReport = i => /^\[テスト\]/.test(i.title) || labels(i).includes('要望');
+    const sec = (b, n) => { const m = (b || '').match(new RegExp('^### ' + n + '\\s*\\n+([^]*?)(?=\\n### |\\n<!--|$)', 'm')); const v = m ? m[1].trim() : ''; return v === '_No response_' ? '' : v; };
+    const state = i => { const m = (i.body || '').match(/<!-- (?:verify|task)-state (\{[^]*?\}) -->/); try { return m ? JSON.parse(m[1]) : {}; } catch { return {}; } };
+    const status = i => {
+      const st = state(i), L = labels(i);
+      if (st.fixed_in) return ['fix', st.fixed_in + ' で直しました' + ((st.confirmed || []).length ? '（確認済み）' : '')];
+      if (st.wontfix || i.state_reason === 'not_planned' || L.includes('wontfix')) return ['no', '見送り'];
+      if (i.state === 'closed') return ['done', '対応しました'];
+      if (L.some(x => ['担当中', '確認待ち', '要人間確認', '完了'].includes(x))) return ['wip', '調べています'];
+      return ['new', '受け付けました'];
+    };
+    const kind = i => labels(i).includes('要望') && !/^\[テスト\]/.test(i.title) ? '要望' : (sec(i.body, '報告の種類') || '報告').replace('気づいたこと・感想', '気づいたこと');
+    const strip = t => t.replace(/^\[(テスト|要望|作業)\]\s*/, '');
+    const list = all.filter(isReport).sort((a, b) => b.number - a.number);
+    $('#rep-count').textContent = list.length ? list.length + '件' : '';
+    const row = i => { const [c, t] = status(i); return '<div class="rep"><span class="k">' + esc(kind(i)) + '</span><span class="t"><a href="' + esc(i.html_url) + '" target="_blank" rel="noopener">' + esc(strip(i.title)) + '</a></span><span class="s rs-' + c + '">' + esc(t) + '</span></div>'; };
+    const N = 10;
+    if (!list.length) box.textContent = 'まだありません';
+    else {
+      box.innerHTML = list.slice(0, N).map(row).join('') + (list.length > N ? '<div class="rep"><a href="#" id="rep-more">ほか ' + (list.length - N) + ' 件を表示</a></div>' : '');
+      const more = $('#rep-more'); if (more) more.onclick = e => { e.preventDefault(); box.innerHTML = list.map(row).join(''); };
+      box.classList.remove('sub');
+    }
+    // 確かめてほしいこと: 直した（/fixed）けれど、まだ「直っていた」の確認がないもの
+    const todo = all.filter(i => { const st = state(i); return st.fixed_in && !(st.confirmed || []).length; }).sort((a, b) => b.number - a.number);
+    if (todo.length) {
+      const form = (i, res) => 'https://github.com/hknroms/gradius3/issues/new?' + [['template', 'testplay.yml'], ['title', '[確認] #' + i.number + ' ' + strip(i.title)],
+        ['kind', '直ったかの確認'], ['version', latest || state(i).fixed_in], ['origin', '#' + i.number], ['recheck', res]].map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+      $('#rc-list').innerHTML = todo.map(i => '<div class="rc"><span class="t"><a href="' + esc(i.html_url) + '" target="_blank" rel="noopener">' + esc(strip(i.title)) + '</a></span><span class="v">' + esc(state(i).fixed_in) + ' で直しました</span>' +
+        '<div class="b"><a class="ok" href="' + esc(form(i, '直っていた')) + '" target="_blank" rel="noopener">✅ 直っていた</a><a class="ng" href="' + esc(form(i, 'まだおかしい')) + '" target="_blank" rel="noopener">⚠️ まだおかしい</a></div></div>').join('');
+      $('#rc-count').textContent = todo.length + '件';
+      $('#recheck').style.display = 'block';
+    }
+  } catch (e) { box.textContent = '読み込めませんでした（' + e.message + '）。下のリンクから見られます。'; }
+})();
+// 開いた見出しを URL の #howto などで直接開けるように
+const h = location.hash.slice(1); if (h) { const d = document.getElementById(h); if (d && d.tagName === 'DETAILS') d.open = true; }
+</script>
+</body>
+</html>

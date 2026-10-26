@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow, noarchive">
+<title>Test Play Reports — Gradius III Mod ROM</title>
+<style>
+:root{--bg:#0d1117;--panel:#161b22;--line:#30363d;--text:#e6edf3;--sub:#8b949e;--acc:#58a6ff;--ok:#3fb950;--ng:#f85149;--warn:#d29922}
+@media (prefers-color-scheme: light){:root{--bg:#f6f8fa;--panel:#fff;--line:#d0d7de;--text:#1f2328;--sub:#59636e;--acc:#0969da;--ok:#1a7f37;--ng:#cf222e;--warn:#9a6700}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.7 system-ui,-apple-system,"Hiragino Sans","Noto Sans JP",sans-serif}
+main{max-width:860px;margin:0 auto;padding:20px 16px 64px}
+h1{font-size:22px;margin:0 0 4px}
+h2{font-size:17px;margin:28px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line)}
+h3{font-size:15px;margin:14px 0 4px}
+a{color:var(--acc)}
+.sub{color:var(--sub);font-size:13px}
+.lang{text-align:right;font-size:13px;margin-bottom:6px}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px 16px;margin:12px 0}
+.hello{font-size:15.5px}
+.btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0 4px}
+@media (max-width:560px){.btns{grid-template-columns:1fr}}
+.bigl{display:block;padding:16px 18px;border-radius:12px;border:2px solid var(--acc);background:color-mix(in srgb,var(--acc) 12%,transparent);color:var(--text);text-decoration:none}
+.bigl b{display:block;font-size:17px;color:var(--acc)}
+.bigl span{display:block;font-size:12.5px;color:var(--sub);margin-top:4px}
+.bigl.g{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 10%,transparent)}.bigl.g b{color:var(--ok)}
+.bigl.off{opacity:.55;pointer-events:none}
+details.box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 16px;margin:10px 0}
+details.box>summary{cursor:pointer;font-weight:600;font-size:15px}
+details.box[open]>summary{margin-bottom:6px}
+ol,ul{margin:6px 0;padding-left:22px}
+li{margin:4px 0}
+.note{font-size:13px;color:var(--sub);border-left:3px solid var(--line);padding-left:10px;margin:8px 0}
+.warnbox{font-size:13.5px;border:1px solid var(--warn);background:color-mix(in srgb,var(--warn) 10%,transparent);border-radius:8px;padding:8px 12px;margin:8px 0}
+code,kbd{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:1px 5px;border-radius:4px}
+kbd{border:1px solid var(--line)}
+.tag{display:inline-block;font-size:12px;padding:1px 8px;border-radius:99px;border:1px solid var(--line);color:var(--sub);margin-left:6px;font-weight:400}
+.rep{display:flex;gap:8px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.rep:last-child{border-bottom:none}
+.rep .t{flex:1;min-width:0;overflow-wrap:anywhere}
+.rep .t a{color:var(--text);text-decoration:none}
+.rep .k{font-size:11.5px;color:var(--sub);border:1px solid var(--line);border-radius:99px;padding:0 7px;white-space:nowrap}
+.rep .s{font-size:12.5px;white-space:nowrap;font-weight:600}
+.rs-new{color:var(--sub)}.rs-wip{color:var(--warn)}.rs-fix{color:var(--ok)}.rs-done{color:var(--ok)}.rs-no{color:var(--sub)}
+#recheck{display:none}
+#recheck .rc{padding:9px 0;border-bottom:1px solid var(--line);font-size:14px}
+#recheck .rc:last-child{border-bottom:none}
+#recheck .rc .t a{color:var(--text);text-decoration:none}
+#recheck .rc .v{font-size:12px;color:var(--ok);font-weight:600;margin-left:6px}
+#recheck .rc .b{display:flex;gap:6px;margin-top:6px;flex-wrap:wrap}
+#recheck .rc .b a{font-size:12.5px;padding:4px 12px;border-radius:8px;border:1px solid var(--line);text-decoration:none;color:var(--text)}
+#recheck .rc .b a.ok{border-color:var(--ok);color:var(--ok)}
+#recheck .rc .b a.ng{border-color:var(--warn);color:var(--warn)}
+.mic{display:flex;align-items:center;gap:8px;border:1px solid var(--line);border-radius:22px;padding:6px 8px 6px 14px;max-width:340px;margin:8px 0;background:var(--bg)}
+.mic .ph{flex:1;color:var(--sub);font-size:13px}
+.mic .ic{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
+.mic .ic.on{outline:2px solid var(--ok);outline-offset:2px}
+.mic .lbl{font-size:11px;text-align:center;line-height:1.2}
+</style>
+<script type="module" src="../auth-gate.js"></script>
+</head>
+<body>
+<main>
+<div class="lang"><a href="../testplay.html">日本語</a> ｜ <b>English</b></div>
+<div class="sub"><a href="./">← Back to the patch page</a></div>
+<h1>Test Play Reports</h1>
+
+<div class="panel hello">
+  Thank you for helping with test play!<br>
+  Anything you notice, however small, helps us improve. Please send whatever you can, in English or Japanese.
+  <div class="btns">
+    <a class="bigl" id="gh" href="https://github.com/hknroms/gradius3/issues/new?template=testplay_en.yml" target="_blank" rel="noopener"><b>▶ If you have a GitHub account</b><span>Fill in a simple form. You can attach screenshots and videos, and the status of your report appears on this page (reports are public).</span></a>
+    <a class="bigl g" id="gform" href="#" target="_blank" rel="noopener"><b>▶ If you don't</b><span>Send it with a Google Form (no GitHub account needed).</span></a>
+  </div>
+  <div class="sub">To create a GitHub account, see "Creating a GitHub account" below.</div>
+</div>
+
+<div id="recheck" class="panel"><b>Please check these fixes</b> <span class="tag" id="rc-count"></span>
+  <div class="sub" style="margin:4px 0 4px">These were fixed in a new version. After playing, report with a button (the version and the original report are filled in). Without a GitHub account, use the Google Form above and write which report you checked and the result.</div>
+  <div id="rc-list"></div>
+</div>
+
+<details class="box" id="howto">
+  <summary>▶ Recommended way to test</summary>
+  <ol>
+    <li><b>Take notes as you play.</b> Voice input on your phone is handy: just talk while you play (see "Voice input" below).</li>
+    <li><b>Try it with invincibility first.</b> Turn INVINCIBLE on in the menu so you can see everything to the end. Note anything that looks wrong right away.</li>
+    <li><b>To take a picture, pause first.</b> Hold START for about 1 second for the pause menu. Write "took a photo" in your notes so we know which photo goes with which note.</li>
+    <li><b>When you finish, paste your notes into the report as they are and attach the photos.</b> No need to tidy up the text.</li>
+    <li><b>Sections with no problems are useful too</b> (e.g. "Stage 5 was fine to the end").</li>
+    <li><b>Tell us whether you played on real hardware or MAME</b> (and the MAME version). The form has a field for this.</li>
+  </ol>
+  <h3>What to note</h3>
+  <ul>
+    <li>Which stage and where</li>
+    <li>How you started (stage and area chosen in the menu, mode)</li>
+    <li>What you did (turned on invincibility, what you turned on in the pause menu, etc.)</li>
+    <li><b>The position</b>: turn POS DISP on in the pause menu and the position appears at the top right (under RANK) like <code>X:1CA0 Y:0000</code>. Write the X value, and the Y value too if it is not 0. This lets us reproduce the scene quickly.</li>
+    <li>What happened, and what should have happened</li>
+  </ul>
+  <h3>Voice input</h3>
+  <p style="margin:4px 0">We recommend the <b>microphone button in the text box</b> of the ChatGPT or Claude app. It turns what you say into text and cleans it up a little.</p>
+  <div class="mic" aria-hidden="true"><span class="ph">Message</span>
+    <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ok)" stroke-width="2"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></span>
+    <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--sub)" stroke-width="2"><path d="M4 10v4M8 7v10M12 4v16M16 7v10M20 10v4"/></svg></span>
+  </div>
+  <ul class="sub" style="margin-top:0">
+    <li>Use the microphone button (circled in green). Tap it, talk, and tap it again to get the text.</li>
+    <li>The wave-shaped button next to it is "voice mode" (a spoken conversation). Don't use that one here.</li>
+    <li>The button's shape and position vary a little between app versions.</li>
+  </ul>
+</details>
+
+<details class="box" id="github">
+  <summary>▶ Creating a GitHub account</summary>
+  <ol>
+    <li>Open <a href="https://github.com/signup" target="_blank" rel="noopener">github.com/signup</a> (or press "<b>Sign up</b>" at the top right of github.com).</li>
+    <li>Enter your <b>Email</b>, <b>Password</b> (15+ characters, or 8+ with a number and a lowercase letter) and <b>Username</b> (letters, numbers and hyphens; it is shown publicly on your reports, so it need not be your real name). Check <b>Your Country/Region</b>. You can leave <b>Email preferences</b> unchecked.</li>
+    <li>Press the green "<b>Create account</b>". (Some versions ask one item at a time with a "<b>Continue</b>" button.)</li>
+    <li>Solve the <b>puzzle</b> ("Verify") if one appears.</li>
+    <li>Enter the code from the email "<b>Your GitHub launch code</b>" in "<b>Enter code</b>". If it does not arrive, check your spam folder or press "<b>Resend the code</b>".</li>
+    <li>Sign in. If a survey or plan selection appears, press "<b>Skip personalization</b>" or "<b>Continue for free</b>". It is free.</li>
+    <li>Come back here and press "If you have a GitHub account".</li>
+  </ol>
+  <p class="sub">On the report form, type a short summary in "<b>Add a title</b>", fill in the fields, and press the green "<b>Create</b>" (or "Submit new issue"). Drag photos onto "<b>Paste, drop, or click to add files</b>" or click it to choose them. If your browser auto-translates the page, button labels may differ from this guide.</p>
+</details>
+
+<details class="box" id="mame">
+  <summary>▶ Setting up MAME</summary>
+  <h3>Recommended MAME</h3>
+  <ul><li><b>The latest MAMEUI (Windows)</b>: confirmed to work. We recommend this.</li></ul>
+  <p class="sub" style="margin:2px 0 8px">Did not work in our tests: the latest official MAME for Windows / MAME4droid on phones (does not start the usual way)</p>
+  <h3>Making and placing the ROM zip</h3>
+  <ol>
+    <li>Make the zip with "Make a zip for MAME" on the patch page (keep the recommended set, <code>gradius3j</code>).</li>
+    <li>Do not unzip it. Leave it in your <b>downloads folder</b>.</li>
+    <li>In MAMEUI, add that folder to the ROM search paths (easier to replace with new versions than moving the zip): "Options" → "Directories" → choose "ROMs" at the top → "Insert" → pick the downloads folder → "OK".</li>
+    <li>Refresh the list (<kbd>F5</kbd>). Gradius III (Japan, version 3) appears. Double-click to start.</li>
+  </ol>
+  <div class="warnbox"><b>When you make a zip for a new version, overwrite the old one.</b> If a file with the same name exists, it is saved as "gradius3j (1).zip" and MAME ignores it (you keep playing the old version). Delete the old zip first, or rename the new one to <code>gradius3j.zip</code>.</div>
+  <h3>After starting</h3>
+  <ul>
+    <li>MAME warns about incorrect checksums. This is normal for a modified ROM; press any key to continue.</li>
+    <li>Right after power-on, the version and build time appear under "RAM ROM CHECK" (e.g. <code>0 4 17  26 10 26 10:12</code>). Including it in reports tells us exactly which version you used.</li>
+    <li>Insert a coin: <kbd>5</kbd> / 1P start: <kbd>1</kbd> (default keys)</li>
+  </ul>
+  <h3>Button mapping</h3>
+  <ul>
+    <li>During the game press <kbd>Tab</kbd> → "Input (this Machine)" → select an item, press Enter, then press the button you want.</li>
+    <li>If a controller such as a PS5 pad doesn't respond, remap it there, or try DS4Windows or Steam Input.</li>
+  </ul>
+  <h3>If MAME says the ROM is missing</h3>
+  <ul>
+    <li>Is the zip named exactly <code>gradius3j.zip</code> (no "(1)")?</li>
+    <li>Is its folder listed under ROMs in "Directories"?</li>
+    <li>Did you pick "Gradius III (Japan, version 3)"? If you made the gradius3 set instead, pick "World, version R".</li>
+  </ul>
+</details>
+
+<details class="box" id="reports">
+  <summary>▶ Previous reports and their status <span class="tag" id="rep-count"></span></summary>
+  <div id="rep-list" class="sub">Loading…</div>
+  <div class="sub" style="margin-top:6px"><a href="https://github.com/hknroms/gradius3/issues" target="_blank" rel="noopener">See all reports on GitHub</a> (if the same issue is already there, please add to it). Most reports are written in Japanese.</div>
+</details>
+
+<div class="sub" style="margin-top:24px">Gradius III is a work of KONAMI. This is an unofficial page for helpers of the mod patch.</div>
+</main>
+
+<script>
+// Google Form URL (one form in both Japanese and English). Same as ../testplay.html
+const FORM_URL = '';
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+(function () {
+  const g = $('#gform');
+  if (/^https:\/\/(docs\.google\.com\/forms\/|forms\.gle\/)/.test(FORM_URL)) g.href = FORM_URL;
+  else { g.classList.add('off'); g.querySelector('span').textContent = 'Coming soon.'; }
+})();
+(async function reports() {
+  const box = $('#rep-list');
+  let latest = '';
+  try { const v = await (await fetch('../versions.json', { cache: 'no-store' })).json(); latest = 'v' + v.versions[0].version; } catch {}
+  if (latest) $('#gh').href += '&version=' + encodeURIComponent(latest);   // 報告フォームの「版」を入力済みに
+  try {
+    const r = await fetch('https://api.github.com/repos/hknroms/gradius3/issues?state=all&per_page=100', { headers: { Accept: 'application/vnd.github+json' } });
+    if (!r.ok) throw new Error(r.status);
+    const all = (await r.json()).filter(i => !i.pull_request);
+    const labels = i => i.labels.map(l => typeof l === 'string' ? l : l.name);
+    const isReport = i => /^\[テスト\]/.test(i.title) || labels(i).includes('要望');
+    const sec = (b, n) => { const m = (b || '').match(new RegExp('^### ' + n + '\\s*\\n+([^]*?)(?=\\n### |\\n<!--|$)', 'm')); const v = m ? m[1].trim() : ''; return v === '_No response_' ? '' : v; };
+    const state = i => { const m = (i.body || '').match(/<!-- (?:verify|task)-state (\{[^]*?\}) -->/); try { return m ? JSON.parse(m[1]) : {}; } catch { return {}; } };
+    const status = i => {
+      const st = state(i), L = labels(i);
+      if (st.fixed_in) return ['fix', st.fixed_in + ' fixed' + ((st.confirmed || []).length ? ' (confirmed)' : '')];
+      if (st.wontfix || i.state_reason === 'not_planned' || L.includes('wontfix')) return ['no', 'Not planned'];
+      if (i.state === 'closed') return ['done', 'Done'];
+      if (L.some(x => ['担当中', '確認待ち', '要人間確認', '完了'].includes(x))) return ['wip', 'Investigating'];
+      return ['new', 'Received'];
+    };
+    const kind = i => labels(i).includes('要望') && !/^\[テスト\]/.test(i.title) ? 'Request' : ({ '不具合': 'Bug', '要望': 'Request', '気づいたこと・感想': 'Finding', '直ったかの確認': 'Re-check', 'Bug': 'Bug', 'Request': 'Request', 'Finding / impression': 'Finding' }[sec(i.body, '報告の種類') || sec(i.body, 'Type of report')] || 'Report');
+    const strip = t => t.replace(/^\[(テスト|要望|作業)\]\s*/, '');
+    const list = all.filter(isReport).sort((a, b) => b.number - a.number);
+    $('#rep-count').textContent = list.length ? list.length + '' : '';
+    const row = i => { const [c, t] = status(i); return '<div class="rep"><span class="k">' + esc(kind(i)) + '</span><span class="t"><a href="' + esc(i.html_url) + '" target="_blank" rel="noopener">' + esc(strip(i.title)) + '</a></span><span class="s rs-' + c + '">' + esc(t) + '</span></div>'; };
+    const N = 10;
+    if (!list.length) box.textContent = 'None yet';
+    else {
+      box.innerHTML = list.slice(0, N).map(row).join('') + (list.length > N ? '<div class="rep"><a href="#" id="rep-more">Show ' + (list.length - N) + ' more</a></div>' : '');
+      const more = $('#rep-more'); if (more) more.onclick = e => { e.preventDefault(); box.innerHTML = list.map(row).join(''); };
+      box.classList.remove('sub');
+    }
+    // 確かめてほしいこと: 直した（/fixed）けれど、まだ「直っていた」の確認がないもの
+    const todo = all.filter(i => { const st = state(i); return st.fixed_in && !(st.confirmed || []).length; }).sort((a, b) => b.number - a.number);
+    if (todo.length) {
+      const form = (i, res) => 'https://github.com/hknroms/gradius3/issues/new?' + [['template', 'testplay_en.yml'], ['title', '[Check] #' + i.number + ' ' + strip(i.title)],
+        ['kind', 'Re-check of a fix'], ['version', latest || state(i).fixed_in], ['origin', '#' + i.number], ['recheck', res]].map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+      $('#rc-list').innerHTML = todo.map(i => '<div class="rc"><span class="t"><a href="' + esc(i.html_url) + '" target="_blank" rel="noopener">' + esc(strip(i.title)) + '</a></span><span class="v">' + esc(state(i).fixed_in) + ' fixed</span>' +
+        '<div class="b"><a class="ok" href="' + esc(form(i, 'fixed')) + '" target="_blank" rel="noopener">✅ Fixed</a><a class="ng" href="' + esc(form(i, 'still broken')) + '" target="_blank" rel="noopener">⚠️ Still broken</a></div></div>').join('');
+      $('#rc-count').textContent = todo.length + '';
+      $('#recheck').style.display = 'block';
+    }
+  } catch (e) { box.textContent = 'Could not load (' + e.message + '). See the link below.'; }
+})();
+// 開いた見出しを URL の #howto などで直接開けるように
+const h = location.hash.slice(1); if (h) { const d = document.getElementById(h); if (d && d.tagName === 'DETAILS') d.open = true; }
+</script>
+</body>
+</html>
