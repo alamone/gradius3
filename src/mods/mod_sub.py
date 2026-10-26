@@ -371,7 +371,7 @@ def apply(rom):
     bb = mod_main.boss_area_blob(); assert len(bb) == len(ab)
     dl['BOSSBLOB'] = DATA_BASE + len(data); data += bb
     import mod_edit
-    main = open(os.path.join(os.path.dirname(__file__), '..', 'work', 'main313.bin'), 'rb').read()
+    import mod_main; main = mod_main._main313()
     cells = open(os.path.join(os.path.dirname(__file__), 'edit_cells.bin'), 'rb').read()
     if len(data) & 1: data += b'\0'
     eb, el = mod_edit.sub_blob(DATA_BASE + len(data), cells[:6], cells[8:], cells[6:8], mod_edit.tables(main, False), mod_edit.tables(main, True))

@@ -537,6 +537,12 @@ at_r:   rts
 """
 
 import os
+def _main313():
+    """純正313メイン（偶数 945_313.f15・奇数 945_312.e15 を交互に並べた1本）。G3BASE/work/main313.bin があればそれを使う"""
+    import g3build
+    p = os.path.join(g3build.BASE, 'work', 'main313.bin')
+    if os.path.exists(p): return open(p, 'rb').read()
+    return bytes(g3build.il(open(g3build.F15, 'rb').read(), open(g3build.E15, 'rb').read()))
 CUBEX = int(os.environ.get('CUBEX', '54000'), 16); CUBEY = int(os.environ.get('CUBEY', '0'), 16)
 # 10面(マップ13)の独自エリア表。
 # ボスラッシュの各ボス = 敵出現表(0x252d4)のボス出現イベントの約0xc4手前。ボス1 = 0x11c00、
@@ -569,7 +575,7 @@ def stage_areas(st):
     """面 st(0..8) のエリア表 [(x, y), ...]。本来の復活地点に「ボスの手前」などを足したもの（x の順）
     1・6・7・8面 = ❶ボスの手前 / 3面 = ❶ビッグコアMkIIIの手前(MK3) / 5面 = ❶中ボスの手前・❷ボスの手前 / 9面 = 独自"""
     import struct
-    d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    d = _main313()
     L = lambda a: struct.unpack('>I', d[a:a+4])[0]
     smap = d[0x69ce:0x69de]
     if st == 8: return list(ST9)
@@ -596,7 +602,7 @@ def stage_areas(st):
 
 def boss_progress():
     import struct
-    d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    d = _main313()
     L = lambda a: struct.unpack('>I', d[a:a+4])[0]
     smap = d[0x69ce:0x69de]; bt = []
     for st in range(16):
@@ -616,7 +622,7 @@ def progress_tables():
     """(PROGTBL: 行1..13 x エリア1..10 の開始進行度, 面idx0..15 のボス接近進行度) をメインROMから算出
     行11/12(隠し面)は未使用、行13 = 10面ボスラッシュ"""
     import struct
-    d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    d = _main313()
     L = lambda a: struct.unpack('>I', d[a:a+4])[0]
     smap = d[0x69ce:0x69de]
     def areas(m):
@@ -659,7 +665,7 @@ def area_table_blob(st, base=0x103f40):
     """面 st(0..9) をプレイ中に共有RAM base に置く独自エリア表（ポインタ16個 + その面の表 128バイト）。
     サブが今の面に合わせて毎フレーム書き直す（表は今の面の分だけ置けばよい）"""
     import struct
-    d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    d = _main313()
     L = lambda a: struct.unpack('>I', d[a:a+4])[0]
     smap = d[0x69ce:0x69de]
     ptr = [L(0x54fe + 4*m) for m in range(16)]
@@ -679,7 +685,7 @@ def boss_area_blob(base=0x103f40):
     """ボスラッシュ用エリア表: 各面(4面・10面を除く)の表を「ボス接近位置-BRDELTA」の1件だけにする。
     死んだときも必ずボス直前から再開する。"""
     import struct
-    d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    d = _main313()
     L = lambda a: struct.unpack('>I', d[a:a+4])[0]
     smap = d[0x69ce:0x69de]
     pt, bt = progress_tables()
@@ -857,7 +863,7 @@ def apply(rom):
     rom.put('main', 0xd8f6, b2, 'stubsB')
     rom.put('main', 0x154aa, bytes.fromhex('4eb9') + lab2['EvPtr'].to_bytes(4, 'big'), 'evptr', expect=bytes.fromhex('23ce00042e00'))
     import struct
-    d313 = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    d313 = _main313()
     gw = []
     for i in range(16):                                   # ビギナーの枠の色(0x328c0)を灰色・やや暗く
         v = struct.unpack('>H', d313[0x328c0 + 2*i:0x328c2 + 2*i])[0]
@@ -891,7 +897,7 @@ def apply(rom):
     rom.put('main', 0x26238, bytes.fromhex('4eb9') + lab['CubeSeed'].to_bytes(4, 'big'), 'cubeseed', expect=bytes.fromhex('1a3900040032'))
     rom.put('main', 0x1e44, lab['StateTbl'].to_bytes(4, 'big'), 'state-table-ptr', expect=bytes.fromhex('00001e58'))
     import mod_edit
-    mod_edit.apply_main(rom, open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read())
+    mod_edit.apply_main(rom, _main313())
     print('edit L/R stub bytes', mod_edit.apply_lr(rom))
     # 無敵（改造プレイのみ・メニューの INVINCIBLE）: 自機が死亡に入る2か所の直前で、無敵なら当たりを消して通常の続きへ
     rom.put('main', 0x7bc4, bytes.fromhex('4eb9') + li['DieA'].to_bytes(4, 'big') + bytes.fromhex('4e71'), 'inv-a', expect=bytes.fromhex('13fc0001000400a2'))
@@ -915,7 +921,7 @@ def apply(rom):
 def brskip_blob():
     """ボスラッシュ用: 面(0〜9)ごとに [最後のボスの停止位置, 面の終わりの位置]（画面の位置 = 表の位置 − 0x14000）。10面は 0（飛ばさない）"""
     import struct
-    d = open('/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad/work/main313.bin', 'rb').read()
+    d = _main313()
     L = lambda a: struct.unpack('>I', d[a:a+4])[0]
     smap = d[0x69ce:0x69de]; out = b''
     for st in range(10):

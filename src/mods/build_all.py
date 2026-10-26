@@ -1,6 +1,9 @@
-import sys
-B='/tmp/claude-0/-home-claude/57f28419-36f2-5d63-9dbe-6a3976a5a75b/scratchpad'
-sys.path[:0]=[B+'/tools',B+'/mods']
+# usage: VERSION=0.4.17 [G3BASE=<ROMの置き場>] python3 src/mods/build_all.py <出力フォルダ>
+#   G3BASE の中に rom/genuine/313_main/945_313.f15・945_312.e15, rw/945_m09.r17・945_m08.n17,
+#   rom/gradius3_313_for_MAME.zip を置く（src/tools/g3build.py の先頭を参照）
+import sys, os
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path[:0] = [os.path.join(os.path.dirname(HERE), 'tools'), HERE]
 import g3build, mod_main, mod_sub, mod_boot, mod_sound, os
 out=sys.argv[1]
 r=g3build.Rom()
