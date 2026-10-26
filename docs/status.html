@@ -63,6 +63,12 @@ td.z{color:var(--sub)}
 .howto li{margin:3px 0}
 .say{position:relative;margin:8px 0 2px;padding:10px 12px;padding-right:64px;border-radius:8px;background:color-mix(in srgb,var(--acc) 10%,transparent);border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap}
 .say button{position:absolute;top:6px;right:6px;font-size:12px;padding:4px 10px}
+.form{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px;margin-top:16px;display:grid;gap:10px}
+.form label{font-size:13px;color:var(--sub);display:grid;gap:4px}
+.form input,.form select,.form textarea{font:inherit;font-size:15px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);width:100%}
+.form textarea{min-height:160px;resize:vertical}
+.form .go{background:var(--acc);border-color:var(--acc);color:#fff;font-size:15px;padding:10px}
+.form .hint{font-size:12.5px;color:var(--sub)}
 .startlink{display:inline-block;margin-top:8px;font-size:13.5px}
 .feed{list-style:none;padding:0;margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px}
 .feed li{padding:8px 12px;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;gap:10px;align-items:baseline}
@@ -194,9 +200,9 @@ function card(t, showType) {
     `<a href="${esc(s.url)}" target="_blank" rel="noopener">${esc(s.note || s.url.replace('https://github.com/', ''))}</a>（@${esc(s.by)}・${ago(s.at)}）`).join('　')}</div>` : '';
   const note = st.note ? `<div class="note">${esc(st.note)}</div>` : '';
   const href = safeUrl(st.last_comment) || t.html_url;
-  const typeChip = showType && t.type ? `<span class="chip">${esc(t.type)}</span>` : '';
+  const typeChip = (labelsOf(t).includes('要望') ? '<span class="chip">要望</span>' : '') + (showType && t.type ? `<span class="chip">${esc(t.type)}</span>` : '');
   return `<div class="card${t.state === 'closed' ? ' closed' : ''}">
-    <div class="t">${typeChip}<a href="${esc(href)}" target="_blank" rel="noopener"><span class="num">#${t.number}</span>${esc(t.title.replace(/^\[(検証|テスト|作業)\]\s*/, ''))}</a></div>
+    <div class="t">${typeChip}<a href="${esc(href)}" target="_blank" rel="noopener"><span class="num">#${t.number}</span>${esc(t.title.replace(/^\[(検証|テスト|作業|要望)\]\s*/, ''))}</a></div>
     <div class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>${prog}${subHtml}${note}</div>`;
 }
 function tiles(list) {
@@ -303,17 +309,50 @@ document.addEventListener('click', e => {
   try { navigator.clipboard.writeText(text).then(done, () => {}); } catch {}
 });
 
-const TABS = [{ id: '全体' }, ...TYPES.map(t => ({ id: t })), { id: '協力者' }, { id: '始め方' }];
+const REQ_SOURCES = ['自分（管理者）の気づき', '協力者から', '人から直接聞いた話', 'その他'];
+function viewRequest(D) {
+  const list = D ? D.tasks.filter(t => labelsOf(t).includes('要望')) : [];
+  return `<form class="form" id="reqform" onsubmit="return false">
+    <div><b>改善したいことを送る</b><div class="hint">協力者の声や、人から直接聞いた話を、そのまま貼り付けてください。送ると GitHub の Issue になり、自動で「検証」タスク（未着手）になります。</div></div>
+    <label>誰からの話か<select id="rq_source">${REQ_SOURCES.map(x => `<option>${esc(x)}</option>`).join('')}</select></label>
+    <label>話をくれた人（わかれば）<input id="rq_who" placeholder="例）○○さん／@github名"></label>
+    <label>関係する版（わかれば）<input id="rq_version" placeholder="v0.4.16"></label>
+    <label>内容（コピペのままで OK）<textarea id="rq_content" placeholder="聞いた話・メッセージ・メモなど"></textarea></label>
+    <button type="button" class="go" id="rq_go">GitHub で送る（次の画面でファイルも添付できます）</button>
+    <div class="hint">GitHub へのログインが必要です。ファイル（画像・動画など）は、次の画面の「添付」欄にドラッグするか、スマホは欄の下から選んでください。ROM の中身は添付しないでください。<br>このページは配布ページからリンクしていませんが、送った内容は公開の Issue になります。</div>
+    <div class="hint" id="rq_msg"></div>
+  </form>` + (D ? `<h2>届いた要望<span class="n">${list.length}件</span></h2>` + (list.length ? list.sort((a, b) => b.number - a.number).map(t => card(t, false)).join('') : '<div class="empty">まだありません</div>') : '');
+}
+document.addEventListener('click', e => {
+  if (!e.target.closest('#rq_go')) return;
+  const v = id => document.getElementById(id).value.trim();
+  const content = v('rq_content');
+  const msg = document.getElementById('rq_msg');
+  if (!content) { msg.textContent = '内容を入れてください'; return; }
+  const title = '[要望] ' + content.split('\n')[0].slice(0, 40);
+  const q = { template: 'request.yml', title, source: v('rq_source'), who: v('rq_who'), version: v('rq_version'), content };
+  let url = `https://github.com/${REPO}/issues/new?` + Object.entries(q).filter(([, x]) => x).map(([k, x]) => k + '=' + encodeURIComponent(x)).join('&');
+  if (url.length > 7000) {   // 長すぎるとき: 内容はコピーして、次の画面で貼ってもらう
+    delete q.content;
+    url = `https://github.com/${REPO}/issues/new?` + Object.entries(q).filter(([, x]) => x).map(([k, x]) => k + '=' + encodeURIComponent(x)).join('&');
+    try { navigator.clipboard.writeText(content); } catch {}
+    msg.textContent = '内容が長いのでコピーしました。次の画面の「内容」欄に貼り付けてください。';
+  }
+  window.open(url, '_blank', 'noopener');
+});
+
+const TABS = [{ id: '全体' }, { id: '要望' }, ...TYPES.map(t => ({ id: t })), { id: '協力者' }, { id: '始め方' }];
 let DATA = null;
 function current() { const h = decodeURIComponent(location.hash.slice(1)); return TABS.some(t => t.id === h) ? h : '全体'; }
 function draw() {
   const cur = current();
   const cnt = id => !DATA ? '' : id === '全体' ? DATA.tasks.filter(t => t.status !== 'done').length
-    : id === '協力者' ? people(DATA).length : id === '始め方' ? '' : DATA.tasks.filter(t => t.type === id && t.status !== 'done').length;
+    : id === '協力者' ? people(DATA).length : id === '始め方' ? '' : id === '要望' ? DATA.tasks.filter(t => labelsOf(t).includes('要望') && t.status !== 'done').length : DATA.tasks.filter(t => t.type === id && t.status !== 'done').length;
   document.getElementById('nav').innerHTML = TABS.map(t =>
     `<a href="#${encodeURIComponent(t.id)}" class="${t.id === cur ? 'on' : ''}">${t.id}${DATA && t.id !== '始め方' ? `<span class="c">${cnt(t.id)}</span>` : ''}</a>`).join('');
   const out = document.getElementById('out');
   if (cur === '始め方') { out.innerHTML = viewHowto(); document.title = '始め方 — 共同作業のまとめ'; return; }
+  if (cur === '要望') { out.innerHTML = viewRequest(DATA); document.title = '要望 — 共同作業のまとめ'; return; }
   if (!DATA) return;
   out.innerHTML = cur === '全体' ? viewAll(DATA) : cur === '協力者' ? viewPeople(DATA) : viewType(DATA, cur);
   document.title = (cur === '全体' ? '' : cur + ' — ') + '共同作業のまとめ';
@@ -354,7 +393,7 @@ async function load() {
       all.push(...list.filter(i => !i.pull_request));
       if (list.length < 100) break;
     }
-    const tasks = all.map(normalize).filter(t => t.type);
+    const tasks = all.map(normalize).filter(t => t.type || labelsOf(t).includes('要望'));
     const forks = await getJSON(`${API}/forks?per_page=100`).catch(() => []);
     let collab = {};
     try { const r = await fetch('collaborators.json', { cache: 'no-store' }); if (r.ok) collab = await r.json(); } catch {}

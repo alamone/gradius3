@@ -56,3 +56,4 @@
 - 旧 pikadrum/gradius3 は docs/index.html だけ新ページへの転送ページ。stereo/・cube/・patches と履歴は残してある（ステレオの結果を受け取るまで残し、その後ユーザーが削除予定）。
 - pikadrum（ピカドラム）は hknroms/gradius3 の共同編集者。Claude の GitHub アプリは hknroms に入っていて gradius3 だけ許可。
 - 共同作業の仕組み（2026-10-26〜）: Issue のコメントコマンド＋まとめページ https://hknroms.github.io/gradius3/status.html 。手順は VERIFY.md・COLLAB.md。
+- まとめページは配布ページからはリンクしない（協力者に URL を直接渡す）。「要望」タブから送った改善したいことは Issue（ラベル「要望」）になり、ボットが自動で検証タスク（基本の確認項目3つ付き）にする。

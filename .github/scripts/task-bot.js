@@ -19,6 +19,13 @@
 //   /reject ひとこと         直してほしい点を伝えて「担当中」に戻す
 
 const TYPES = ['検証', '調査', '実装', '素材', '資料'];
+const REQUEST = '要望';
+const REQUEST_ITEMS = [
+  '書かれている現象・要望について、今の版での動きを確かめる（再現手順も書く）',
+  '純正（改造なし）ではどうなるかと比べる',
+  '直し方・変え方の案と、影響しそうなところをまとめる',
+];
+
 const L = { todo: '未着手', doing: '担当中', review: '確認待ち', human: '要人間確認', done: '完了' };
 const STATUS = [L.todo, L.doing, L.review, L.human, L.done];
 const LABEL_DEFS = [
@@ -27,6 +34,7 @@ const LABEL_DEFS = [
   { name: '実装', color: '0e8a16', description: '作業: 改造・修正のコードを書く' },
   { name: '素材', color: 'e16f24', description: '作業: 画像・パレット・タイル・文字など' },
   { name: '資料', color: '0969da', description: '作業: 説明書・翻訳・ページ' },
+  { name: REQUEST, color: 'fbca04', description: '改善したいこと（協力者の声・人から聞いた話）。自動で検証タスクになる' },
   { name: L.todo, color: 'bfbfbf', description: 'まだ誰も担当していない' },
   { name: L.doing, color: 'd29922', description: '担当者が作業中' },
   { name: L.review, color: '1d76db', description: '提出済み・管理者の確認待ち' },
@@ -174,6 +182,14 @@ module.exports = async ({ github, context, core }) => {
     const picked = section(body, '作業の種類');
     const fromForm = TYPES.find(t => picked.startsWith(t));
     if (fromForm) type = fromForm;
+    // 「要望」（改善したいこと）は自動で検証タスクにし、確認項目が無ければ基本の3項目を付ける
+    if (labels.includes(REQUEST) && !type) {
+      type = '検証';
+      if (!items(body).length) {
+        body = body.replace(MARK, '').replace(/\s*$/, '') + '\n\n### 確認項目\n' + REQUEST_ITEMS.map(t => '- [ ] ' + t).join('\n') + '\n';
+        await github.rest.issues.update({ owner, repo, issue_number: num, body });
+      }
+    }
     if (!type) return;
     const status = STATUS.find(s => labels.includes(s)) ? null : L.todo;
     await setLabels(num, labels, { status, type });
