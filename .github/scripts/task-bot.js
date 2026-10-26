@@ -17,6 +17,8 @@
 //   /type 種類               作業の種類を変える（検証・調査・実装・素材・資料）
 //   /accept [ひとこと]       提出物を取り込んだ／確認できた → 完了
 //   /reject ひとこと         直してほしい点を伝えて「担当中」に戻す
+//   /fixed 版 [ひとこと]     （どの Issue でも）その版で直した → 閉じる。配布ページの「報告の状況」に「v0.4.17 で直しました」と出る
+//   /wontfix 理由            （どの Issue でも）見送る → 閉じる。配布ページには「見送り」と出る
 
 const TYPES = ['検証', '調査', '実装', '素材', '資料'];
 const REQUEST = '要望';
@@ -101,7 +103,7 @@ function parseCommands(text) {
   const cmds = [];
   lines.forEach((raw, i) => {
     const line = raw.trim();
-    const m = line.match(/^\/(claim|check|submit|done|human|release|items|type|accept|reject)\b\s*(.*)$/i);
+    const m = line.match(/^\/(claim|check|submit|done|human|release|items|type|accept|reject|fixed|wontfix)\b\s*(.*)$/i);
     if (!m) return;
     const c = { name: m[1].toLowerCase(), arg: m[2].trim() };
     if (c.name === 'items') {
@@ -214,8 +216,24 @@ module.exports = async ({ github, context, core }) => {
   const isTask = () => !!type || status !== null;
   const did = new Set();
 
+  let close = null;   // 'completed' | 'not_planned'
   for (const cmd of cmds) {
     const n = cmd.name;
+    if (n === 'fixed' || n === 'wontfix') {
+      if (!isAdmin) { errors.push(`\`/${n}\` は管理者だけが使えます`); continue; }
+      if (n === 'fixed') {
+        const m = cmd.arg.match(/^v?(\d+(?:\.\d+)+)\s*(.*)$/i);
+        if (!m) { errors.push('`/fixed` の後に版を書いてください（例: `/fixed v0.4.17`）'); continue; }
+        st.fixed_in = 'v' + m[1]; delete st.wontfix; if (m[2]) st.note = m[2];
+        close = 'completed';
+      } else {
+        if (!cmd.arg) { errors.push('`/wontfix` の後に理由を書いてください'); continue; }
+        st.wontfix = cmd.arg; delete st.fixed_in; close = 'not_planned';
+      }
+      if (isTask()) status = L.done;
+      changed = true; did.add(n);
+      continue;
+    }
     if (n === 'items' || n === 'type') {
       if (!isAdmin) { errors.push(`\`/${n}\` は管理者だけが使えます`); continue; }
       if (n === 'type') {
@@ -286,8 +304,8 @@ module.exports = async ({ github, context, core }) => {
     st.last_by = actor;
     st.last_comment = c.html_url;
     for (const what of did) push(st, actor, what);
-    await github.rest.issues.update({ owner, repo, issue_number: num, body: setState(body, st) });
-    await setLabels(num, labels, { status, type });
+    await github.rest.issues.update({ owner, repo, issue_number: num, body: setState(body, st), ...(close ? { state: 'closed', state_reason: close } : {}) });
+    if (status || type) await setLabels(num, labels, { status, type });
   }
   if (errors.length) { await react(c.id, 'confused'); await reply(num, `@${actor} ` + errors.map(e => `- ${e}`).join('\n')); }
   else if (changed) await react(c.id, '+1');
