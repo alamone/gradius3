@@ -41,6 +41,14 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 .bigl:hover{background:color-mix(in srgb,var(--acc) 20%,transparent)}
 /* 会員承認ゲート */
 #site-content{display:none}
+.rep{display:flex;gap:8px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.rep:last-child{border-bottom:none}
+.rep .t{flex:1;min-width:0;overflow-wrap:anywhere}
+.rep .t a{color:var(--text);text-decoration:none}
+.rep .k{font-size:11.5px;color:var(--sub);border:1px solid var(--line);border-radius:99px;padding:0 7px;white-space:nowrap}
+.rep .s{font-size:12.5px;white-space:nowrap;font-weight:600}
+.rs-new{color:var(--sub)}.rs-wip{color:var(--warn)}.rs-fix{color:var(--ok)}.rs-done{color:var(--ok)}.rs-no{color:var(--sub)}
+#reports summary{font-size:15px}
 #auth-gate{max-width:520px;margin:10vh auto;padding:24px 18px;text-align:center}
 #auth-gate h1{margin-bottom:14px}
 #auth-gate p{color:var(--sub)}
@@ -66,7 +74,11 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 
 <h2>テストプレイの報告</h2>
 <a class="bigl" id="report" href="https://github.com/hknroms/gradius3/issues/new?template=testplay.yml" target="_blank" rel="noopener"><b>▶ テストプレイを報告する</b><span>不具合・気づいたこと・要望を、項目に沿って書けます。スクリーンショットや動画も付けられます（GitHub のアカウントでログインが必要です。ボタンなど一部は英語ですが、入力欄は日本語です）</span></a>
-<div class="sub">これまでの報告：<a href="https://github.com/hknroms/gradius3/issues" target="_blank" rel="noopener" style="color:var(--acc)">報告の一覧</a>（同じ内容がすでにあれば、そこに書き足してください）。報告は公開されます。</div>
+<div class="sub">同じ内容がすでにあれば、その報告に書き足してください。報告は公開されます。</div>
+<details id="reports" class="panel"><summary>これまでの報告と、いまの状況 <span class="tag" id="rep-count"></span></summary>
+  <div id="rep-list" class="sub">読み込み中…</div>
+  <div class="sub" style="margin-top:6px"><a href="https://github.com/hknroms/gradius3/issues" target="_blank" rel="noopener" style="color:var(--acc)">GitHub ですべての報告を見る</a></div>
+</details>
 
 <h2>ステレオ化 聞き比べ（試作）</h2>
 <a class="bigl" href="stereo/sim.html"><b>▶ ステレオの聞き比べはこちら</b><span>全35曲・10パターンをボタン1つで切り替え。チャンネルごとの細かい設定と、曲ごとの評価の記録もできます（ヘッドホン推奨）</span></a>
@@ -140,6 +152,36 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 <script>
 const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// ---- これまでの報告と状況（GitHub の Issue から。報告した人の名前は出さない）----
+(async function reports() {
+  const box = $('#rep-list');
+  try {
+    const r = await fetch('https://api.github.com/repos/hknroms/gradius3/issues?state=all&per_page=100', { headers: { Accept: 'application/vnd.github+json' } });
+    if (!r.ok) throw new Error(r.status);
+    const all = (await r.json()).filter(i => !i.pull_request);
+    const labels = i => i.labels.map(l => typeof l === 'string' ? l : l.name);
+    const isReport = i => /^\[テスト\]/.test(i.title) || labels(i).includes('要望');
+    const sec = (b, n) => { const m = (b || '').match(new RegExp('^### ' + n + '\\s*\\n+([^]*?)(?=\\n### |\\n<!--|$)', 'm')); const v = m ? m[1].trim() : ''; return v === '_No response_' ? '' : v; };
+    const state = i => { const m = (i.body || '').match(/<!-- (?:verify|task)-state (\{[^]*?\}) -->/); try { return m ? JSON.parse(m[1]) : {}; } catch { return {}; } };
+    const status = i => {
+      const st = state(i), L = labels(i);
+      if (st.fixed_in) return ['fix', st.fixed_in + ' で直しました'];
+      if (st.wontfix || i.state_reason === 'not_planned' || L.includes('wontfix')) return ['no', '見送り'];
+      if (i.state === 'closed') return ['done', '対応しました'];
+      if (L.some(x => ['担当中', '確認待ち', '要人間確認', '完了'].includes(x))) return ['wip', '調べています'];
+      return ['new', '受け付けました'];
+    };
+    const kind = i => labels(i).includes('要望') && !/^\[テスト\]/.test(i.title) ? '要望' : (sec(i.body, '報告の種類') || '報告').replace('気づいたこと・感想', '気づいたこと');
+    const list = all.filter(isReport).sort((a, b) => b.number - a.number);
+    $('#rep-count').textContent = list.length ? list.length + '件' : '';
+    if (!list.length) { box.textContent = 'まだありません'; return; }
+    const row = i => { const [c, t] = status(i); return '<div class="rep"><span class="k">' + esc(kind(i)) + '</span><span class="t"><a href="' + esc(i.html_url) + '" target="_blank" rel="noopener">' + esc(i.title.replace(/^\[(テスト|要望)\]\s*/, '')) + '</a></span><span class="s rs-' + c + '">' + esc(t) + '</span></div>'; };
+    const N = 10;
+    box.innerHTML = list.slice(0, N).map(row).join('') + (list.length > N ? '<div class="rep"><a href="#" id="rep-more" style="color:var(--acc)">ほか ' + (list.length - N) + ' 件を表示</a></div>' : '');
+    const more = $('#rep-more'); if (more) more.onclick = e => { e.preventDefault(); box.innerHTML = list.map(row).join(''); };
+    box.classList.remove('sub');
+  } catch (e) { box.textContent = '読み込めませんでした（' + e.message + '）。下のリンクから見られます。'; }
+})();
 // ---- CRC32 ----
 const CT = (() => { const t = new Uint32Array(256); for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; } return t; })();
 function crc32(u8) { let c = 0xffffffff; for (let i = 0; i < u8.length; i++) c = CT[(c ^ u8[i]) & 0xff] ^ (c >>> 8); return ((c ^ 0xffffffff) >>> 0).toString(16).padStart(8, '0'); }
