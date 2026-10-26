@@ -35,21 +35,18 @@
 
 ## 2. MAME はビルドしない（ビルド済みを使う）
 
-gradius3 だけを入れた MAME（`g3`）のビルド済みを Releases に置いてある。**自分でビルドしないこと**（数十分かかるうえ、環境によっては失敗する）。
+gradius3 だけを入れた MAME（`g3`、0.289・SDL 同梱）のビルド済みを、このリポジトリの枝 **`mame-g3-bin`** に置いてある。**自分でビルドしないこと**（数十分かかるうえ、環境によっては失敗する）。
 
 ```bash
-# 準備（その会話で1回だけ・数分）
-curl -fsSL -o g3-linux-x64.tar.gz \
-  https://github.com/hknroms/gradius3/releases/download/mame-g3/g3-linux-x64.tar.gz \
-|| { git clone -q --depth 1 -b mame-g3-bin https://github.com/hknroms/gradius3.git g3pkg \
-     && cp g3pkg/g3-linux-x64.tar.gz .; }      # Releases から取れない環境では枝から取る
-tar xzf g3-linux-x64.tar.gz -C "$HOME"
-export G3="$HOME/g3/g3"     # SDL 同梱。ライブラリの場所はこのラッパーが自分で設定する
-"$G3" -version              # 動作確認（バージョンが出れば OK）
+# 準備（その会話で1回だけ・数秒）
+git clone -q --depth 1 -b mame-g3-bin https://github.com/hknroms/gradius3.git g3pkg
+tar xzf g3pkg/g3-linux-x64.tar.gz -C "$HOME"
+export G3="$HOME/g3/g3"     # ライブラリの場所と画面なしの設定はこのラッパーが自分でする
+"$G3" -version              # 「0.289」と出れば OK
 ```
 
 - 動かし方は `src/lua/run.sh`（`G3` 環境変数を見る）と `src/lua/g3run.lua` の先頭のコメント。画面・音なしで高速に回せる。
-- 上の方法で取れない・動かない場合だけ、tar.gz の中の `BUILD.md` の手順でビルドする。
+- 上の方法で取れない・動かない場合だけ、枝の `BUILD.md`（`tools/build_env.sh` も参考）の手順でビルドする。
 
 ## 3. ROM の扱い（必ず守る）
 
