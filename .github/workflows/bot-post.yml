@@ -1,0 +1,45 @@
+name: 代理の書き込み
+
+# Claude（作業用アカウント）が Issue に書くとき、名前を出さずに github-actions[bot] として書く。
+# REST で dispatch する: POST /repos/hknroms/gradius3/actions/workflows/bot-post.yml/dispatches
+#   { "ref": "main", "inputs": { "mode": "comment", "issue": "12", "body": "..." } }
+# mode: comment（コメント）/ create（Issue を作る。title・labels を使う）/ edit（本文を置き換える）
+# 注意: このボットのコメントは共同作業ボットのコマンドとしては扱われない（/claim などは本人のアカウントで書く）
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:  { description: 'comment / create / edit', required: true, default: comment }
+      issue: { description: 'Issue 番号（comment・edit）', required: false, default: '' }
+      title: { description: 'タイトル（create）', required: false, default: '' }
+      labels: { description: 'ラベル（create、カンマ区切り）', required: false, default: '' }
+      body:  { description: '本文', required: true }
+
+permissions:
+  issues: write
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        env:
+          MODE: ${{ inputs.mode }}
+          ISSUE: ${{ inputs.issue }}
+          TITLE: ${{ inputs.title }}
+          LABELS: ${{ inputs.labels }}
+          BODY: ${{ inputs.body }}
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const e = process.env;
+            if (e.MODE === 'comment') {
+              const r = await github.rest.issues.createComment({ owner, repo, issue_number: +e.ISSUE, body: e.BODY });
+              core.info(r.data.html_url);
+            } else if (e.MODE === 'create') {
+              const labels = e.LABELS ? e.LABELS.split(',').map(s => s.trim()).filter(Boolean) : [];
+              const r = await github.rest.issues.create({ owner, repo, title: e.TITLE, body: e.BODY, labels });
+              core.info(r.data.html_url);
+            } else if (e.MODE === 'edit') {
+              await github.rest.issues.update({ owner, repo, issue_number: +e.ISSUE, body: e.BODY });
+            } else core.setFailed('mode が違います: ' + e.MODE);
