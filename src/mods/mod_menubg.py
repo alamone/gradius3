@@ -11,8 +11,13 @@ SHD_X, SHD_Y = int(os.environ.get('SHDX', '293')), int(os.environ.get('SHDY', '1
 SHIP, SHIP_OX, SHIP_OY = 71, int(os.environ.get('SHIPX', '184')), int(os.environ.get('SHIPY', '148'))   # 自機のスプライト番号と位置（スプライト座標）          # 記録時の A面スクロール(0x160) → メニュー中(0x1b0) の差 = 80ドット = 10タイル
 
 def _load():
-    v = open(os.path.join(D, 'vram_%d.bin' % F), 'rb').read(); K = bytes(v[2*i+1] for i in range(0x4000))
-    chr_ = open(os.path.join(D, 'chr_%d.bin' % F), 'rb').read()
+    """pal・spr はリポジトリにある（メニュー背景に使うのはこの2つだけ）。
+    vram・chr（A面の岩の背景）は今は使っていないので、無ければ読まない（ROM 由来なのでリポジトリには入れない）"""
+    def opt(name):
+        f = os.path.join(D, '%s_%d.bin' % (name, F))
+        return open(f, 'rb').read() if os.path.exists(f) else None
+    v = opt('vram'); K = bytes(v[2*i+1] for i in range(0x4000)) if v else None
+    chr_ = opt('chr')
     pal = open(os.path.join(D, 'pal_%d.bin' % F), 'rb').read()
     s = open(os.path.join(D, 'spr_%d.bin' % F), 'rb').read(); spr = bytes(s[i] for i in range(1, len(s), 2))
     return K, chr_, pal, spr
@@ -21,7 +26,7 @@ def blobs():
     K, chr_, pal, spr = _load()
     blank = 16
     cells = []; codes = set()
-    for r in range(32):
+    for r in (range(32) if K is not None and chr_ is not None else ()):
         for c in range(64):
             i = r * 64 + c
             a = K[0x800 + i]; lo = K[0x2800 + i]
