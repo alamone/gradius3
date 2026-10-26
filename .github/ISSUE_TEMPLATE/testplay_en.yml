@@ -29,9 +29,9 @@ body:
   - type: input
     id: build
     attributes:
-      label: BUILD date/time (boot screen)
-      description: The BUILD date and time shown under "RAM ROM CHECK" right after power-on (if you know it)
-      placeholder: 2026 10 23 11:13:59
+      label: Boot screen numbers (version and build time)
+      description: "The numbers shown under RAM ROM CHECK right after power-on (if you know them) — version, then year month day hour:minute"
+      placeholder: 0 4 17  26 10 23 11:13
   - type: dropdown
     id: env
     attributes:

@@ -30,9 +30,9 @@ body:
   - type: input
     id: build
     attributes:
-      label: BUILD 日時（起動画面）
-      description: 電源を入れた直後の「RAM ROM CHECK」の下に出る BUILD の日時（わかれば）
-      placeholder: 2026 10 23 11:13:59
+      label: 起動画面の数字（版・ビルド日時）
+      description: 電源を入れた直後の「RAM ROM CHECK」の下に出る数字（わかれば）。例の形は「版  年 月 日 時:分」
+      placeholder: 0 4 17  26 10 23 11:13
   - type: dropdown
     id: env
     attributes:

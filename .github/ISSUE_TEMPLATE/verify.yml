@@ -18,9 +18,9 @@ body:
   - type: input
     id: build
     attributes:
-      label: BUILD 日時
-      description: 対象のビルドの起動画面の BUILD 日時（docs/versions.json の build。空なら対象の版の build を使う）
-      placeholder: 2026 10 23 11:13:59
+      label: 起動画面の数字（版・ビルド日時）
+      description: 対象のビルドの起動画面の行（空なら docs/versions.json の対象の版の build を使う）
+      placeholder: 0 4 17  26 10 23 11:13
   - type: dropdown
     id: mode
     attributes:

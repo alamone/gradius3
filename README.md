@@ -23,7 +23,7 @@
 
 ## リリース手順（開発用）
 ```
-python3 src/mods/build_all.py <出力>            # 改造ROMをビルド（純正ROMが必要）
+VERSION=<版> python3 src/mods/build_all.py <出力>   # 改造ROMをビルド（純正ROMが必要）。起動画面に版と日時が入る
 python3 tools/release.py <版> <出力> <313メインのフォルダ> <gradius3.zip> notes.json
 ```
 

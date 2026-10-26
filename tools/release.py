@@ -42,13 +42,18 @@ data['set'] = {'name': 'gradius3', 'files': [{'name': n, 'crc': crc(b), 'size': 
 data['required'] = {'313main': {'945_313.f15': crc(g313['f15']), '945_312.e15': crc(g313['e15'])}}
 n = json.load(open(notes))
 if 'en' not in n: print('注意: notes.json に en（英語の説明）がありません。英語ページでは日本語のまま表示されます')
-# ビルド日時: 改造メインROMの起動画面の文字列（BUILD 年 月 日 時:分:秒）から読む
+# 版とビルド日時: 改造メインROMの起動画面の行（「0 4 17  26 10 23 11:13」。古い版は「BUILD 2026 10 23 11:13:59」）から読む
+sys.path.insert(0, os.path.join(REPO, 'src', 'mods'))
+import mod_boot
 mm = bytes(x for p in zip(mod['945_313.f15'], mod['945_312.e15']) for x in p)
-k = mm.find(b'BUILD@')
-build = None
-if k >= 0:
-    t = mm[k + 6:mm.index(b'#', k)].decode().replace('@', ' ').replace('>', ':').split()
-    build = '%s-%s-%s %s' % (t[0], t[1], t[2], t[3])      # 例 2026-10-20 22:21:45 (日本時間)
+info = mod_boot.read(mm) or {}
+build = info.get('build')
+romver = info.get('version')
+want = ver.lstrip('vV')
+if romver != want:
+    sys.exit('中止: ROM に書き込まれた版（%s）が、リリースの版（%s）と違います。VERSION=%s を付けてビルドし直してください（起動画面: %r）'
+             % (romver, want, want, info.get('raw')))
+print('起動画面:', info.get('raw'), '→ 版', romver, '/ build', build)
 entry = {'version': ver, 'date': datetime.date.today().isoformat(), **({'build': build} if build else {}), **n, 'patches': patches}
 data['versions'] = [v for v in data['versions'] if v['version'] != ver]
 data['versions'].insert(0, entry)
