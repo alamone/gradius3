@@ -1,0 +1,39 @@
+# 技術メモ（TECH）
+
+ROM の解析で分かったこと・改造で使っている場所のメモ。新しく分かったことはここに足して push する（ROM の中身は書かず、番地と意味だけ）。
+
+## メモリ
+
+- メイン/サブ共有RAM: メイン 0x100000 = サブ 0x200000。MB = 0x103f00（サブ 0x203f00）。
+- MB の使用: 0x06 MBS_PAUS（0通常 1ポーズ中 2再開 3ゲームオーバー）, 0x0b キューブラッシュ, 0x0c CUBE INFO, 0x0e RANK DISP, 0x1c CUBE LINE V, 0x20 無敵, 0x21 1P START, 0x2b POS DISP, 0x33 CUBE HUNTER, 0x34 CUBE COLOR, **0x3b CUBE LINE H**。0x24–0x2a, 0x2c–0x32 は CmdCalc が使用。
+- 空き共有RAM（死亡をまたいで確認済み）: 0x103cf0–0x103dff, 0x1039c4–0x103abf。0x103cb0–0x103cef はゲームが死亡/再開時に使う（使うと面が3面に飛ぶバグになった）。
+- 使用中: 0x103ed0–ed6（フラグ。ed3 CrEnd, ed4 CUBE COLOR, ed5 V_HAVE, ed6 V_CEW）, 0x103ed8–eff V_LBUF, 0x103ec8–ecf V_LBUF2, 0x103ef0 V_LINV, 0x103dec〜 パレット6の6〜15番（10ワード。サブ Frame が LNPAL から毎フレーム書き、メイン HudPal が 0x800cc へ写す）。CUBE COLOR の写し 0x103cf0（9ブロック×[dest.l, 12ワード]）。
+- サブ専用RAM 0x100f00.., 0x1012xx はステージ開始/再開で消える。V_LNL=$101232（CUBE LINE の描画済み組み合わせ+1）, V_PSAV=$101300（ポーズ窓の退避 11行×21桁）。
+- 文字の面 TILEA = サブ 0x24c000。セル(段,桁) = (段*64+桁)*2、属性 +1、番号 +$4001。属性 0xdd = パレット6 + 番号上位 0xf。画面 x = 桁*8−96, y = 段*8−16。
+- 文字RAM サブ 0x280000（1文字 32B, 4bpp）。0xa00–0xfff は9面で未使用。CUBE LINE は 0xf00〜0xf43（0x29e000〜）、0xf43 は透明の目印（段27・桁51）。
+- パレットRAM 0x80000（メインのみ）。パレット6 はゲーム未使用。
+- 自機 0x101000: $1 状態(4=死亡中), $27 死亡演出終了, $6a ゲージ位置, $2c 速度。キューブ中心 画面 x = objx+5, y = 240−objy。
+- サウンド Z80: 0x0000–0xEFFF の合計 0x73B5（0xef00 で補正）。A1 の音量 50%（0x0992/0x0B3B、空き 0xeca0）。
+
+## ROM の空き・特別な場所（メイン）
+
+- 空き領域: A=0xd4aa(425B) B=0xd8f6(532B) C=0x3fd9a〜0x3ffbf（`src/mods/mod_main.py` の先頭）。
+- 起動画面の文字列: 0x3ffc0〜0x3ffef（48バイト）。ポインタ 0x4c2（純正 0x52e）。残りは ROM 合計の微調整に使う（`src/mods/mod_boot.py`）。
+- ROM 合計の期待値: メイン 0x73c（奇数側）/0x740（偶数側）、サブ合計の写し 0x744/0x748（`src/tools/g3build.py` の finalize）。
+
+## エミュレータ（MAME）の画面・メモリ（gradius3 ドライバ）
+
+- メイン: K052109 タイル 0x14c000–0x153fff（16bit の下位バイト）, 文字RAM 0x180000–0x19ffff, パレット 0x080000–0x080fff, 共有RAM 0x100000–0x103fff。
+- サブ: 共有RAM 0x200000, K052109 0x24c000, 文字RAM 0x280000, K051960 スプライト 0x2c0800–0x2c0fff（下位バイト）。
+
+## ビルド・テスト
+
+- ビルド: `VERSION=<版> G3BASE=<ROMの置き場> python3 src/mods/build_all.py <出力>`（出力/mame/gradius3 に MAME 用一式）。
+  - G3BASE の中身: `rom/genuine/313_main/945_313.f15`・`945_312.e15`、`rw/945_m09.r17`・`945_m08.n17`、`rom/gradius3_313_for_MAME.zip`。純正ROMはユーザーに添付してもらう（リポジトリには無い）。
+- MAME は CLAUDE.md の手順でビルド済みを使う。
+- アセンブラ（`src/tools/asm68.py`）の制約: オペランドに式は書けない（`TILEA+$298` は不可、数値で書く）。bcc.s が届かないときは .w に。奇数番地のワード読みは不可。
+- テスト: `src/lua/run.sh <romdir> src/lua/g3run.lua <outdir>`、環境変数 SEQ / HOLDK / POKE / WATCH / SNAP / OUTLOG / END。
+  - キューブラッシュ開始: `SEQ="1400:COIN,1500:START,1620:D,1640:R,1700:START,1820:B1,2120:B1,2420:B1" HOLDK="1495:U:20"`（約2700フレームでプレイ開始）
+  - ポーズ: START を約1秒押す（`HOLDK=...,3400:START:70`）。ポーズ内は上下で項目、左右/ショットで値、CONTINUE で B1。
+- 調査用の小さなスクリプトは `src/lua/research/`（前の会話の作業フォルダのパスが残っているものは、使う前に直す）。
+- リリース: `docs/dev/notes/<版>.json` を作って `python3 tools/release.py <版> <出力> <313メインのフォルダ> <gradius3.zip> docs/dev/notes/<版>.json` → docs/index.html の説明を更新 → commit → **ユーザーに確認してから push**（CLAUDE.md）→ リンクを伝える。前の版の notes の known の項目は次の版にも引き継ぐ。
