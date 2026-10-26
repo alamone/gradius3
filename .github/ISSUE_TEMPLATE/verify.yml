@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        協力者（とその Claude）がこの Issue を見て検証します。手順は [VERIFY.md](https://github.com/hknroms/gradius3/blob/main/VERIFY.md)、進み具合は [進捗ページ](https://hknroms.github.io/gradius3/status.html) で見られます。
+        協力者（とその Claude）がこの Issue を見て検証します。手順は [VERIFY.md](https://github.com/hknroms/gradius3/blob/main/VERIFY.md)、進み具合は [まとめページ](https://hknroms.github.io/gradius3/status.html) で見られます。
         「確認項目」は1行に1つ、`- [ ] ` で始めて書いてください。協力者は `/check 番号 ok` のように結果を付けます。
   - type: input
     id: version

@@ -12,13 +12,13 @@
 3. Claude に次の一文を送る：
    > hknroms/gradius3 の VERIFY.md に従って、未着手の検証を1件やって
 
-進み具合は [進捗ページ](https://hknroms.github.io/gradius3/status.html) で見られます。
+進み具合は [まとめページ](https://hknroms.github.io/gradius3/status.html#%E6%A4%9C%E8%A8%BC) で見られます。
 
 ---
 
 ## Claude への指示
 
-あなたは「グラディウスIII 改造ROM（非公式）」の検証を手伝います。以下の順に進めてください。
+あなたは「グラディウスIII 改造ROM（非公式）」の検証を手伝います。以下の順に進めてください。最初に [CLAUDE.md](CLAUDE.md) も読むこと（MAME の準備など共通の決まり）。
 返信は日本語で、短く。相手はスマホで見ていることが多いです。
 
 ### 0. 守ること
@@ -32,7 +32,7 @@
 
 1. ラベル「検証」かつ「未着手」の開いている Issue を探す：
    https://github.com/hknroms/gradius3/issues?q=is%3Aopen+label%3A検証+label%3A未着手
-   （進捗ページ https://hknroms.github.io/gradius3/status.html でも同じものが見える）
+   （まとめページ https://hknroms.github.io/gradius3/status.html の「検証」タブでも同じものが見える）
 2. 番号の小さいものから選ぶ。相手が番号を指定したらそれにする。
 3. **その Issue に `/claim` だけを書いたコメントを投稿**して担当を宣言する。
    数十秒後にボットが「担当中」ラベルを付ける。別の人が先に担当していたらボットが返信するので、別の Issue を選び直す。
@@ -45,24 +45,12 @@
 - 関連 Issue（`#1` など）や `docs/versions.json` の該当版の `changes` / `known` も読む。**既知の問題（known）に書かれていることは不具合として報告しない。**
 - 添付された `gradius3.zip` の版が「対象の版」と違う場合は、相手に正しい版の zip を作り直してもらう（配布ページは最新と1つ前の版だけ置いてある）。
 
-### 3. 環境を用意する（その会話で初回だけ）
+### 3. 環境を用意する（その会話で初回だけ・数分）
 
-リポジトリを取得し、MAME の gradius3 だけを含む小さいビルド（`g3`）を作る。
-
-```bash
-git clone --depth 1 https://github.com/hknroms/gradius3.git
-git clone --depth 1 https://github.com/mamedev/mame.git
-cd mame
-make SUBTARGET=g3 SOURCES=src/mame/konami/gradius3.cpp \
-     NOWERROR=1 NO_USE_PORTAUDIO=1 NO_USE_PULSEAUDIO=1 NO_X11=1 USE_QTDEBUG=0 \
-     -j"$(nproc)"
-```
-
-- 出来上がる実行ファイル `g3`（または `g364`）の場所を、以降は環境変数 `G3` に入れる。
-- SDL2 が無くてビルドできない場合は、SDL2 を GitHub（libsdl-org/SDL の release-2 系）からソースでビルドして `/opt/sdl` に入れ、`PKG_CONFIG_PATH=/opt/sdl/lib/pkgconfig` を付けて再ビルドする（`src/lua/run.sh` は `/opt/sdl/lib` を参照する）。
-- それ以外のエラーはメッセージに従って直す。時間がかかるのは初回だけ（数十分）。同じ会話の中なら次からは再利用できる。
-- ROM: 添付の `gradius3.zip` を作業用の空フォルダ（例 `roms/`）にコピーするだけでよい（MAME は zip のまま読む）。
-- 確認項目に「純正」と比べるものがある場合は、改造前の純正 `gradius3.zip` も添付してもらい、別の空フォルダ（例 `roms_orig/gradius3.zip`）に置いて同じ手順で動かす。純正は面選択メニューが無いので、目的の場面までは入力列（`SEQ`）や `POKE` で進める。
+1. このリポジトリを clone する：`git clone --depth 1 https://github.com/hknroms/gradius3.git`
+2. **MAME はビルドしない。** [CLAUDE.md](CLAUDE.md) の「MAME はビルドしない」の手順で、ビルド済みの `g3` をダウンロードして `G3` を設定する。
+3. ROM: 添付の `gradius3.zip` を作業用の空フォルダ（例 `roms/`）にコピーするだけでよい（MAME は zip のまま読む）。
+4. 確認項目に「純正」と比べるものがある場合は、改造前の純正 `gradius3.zip` も添付してもらい、別の空フォルダ（例 `roms_orig/gradius3.zip`）に置いて同じ手順で動かす。純正は面選択メニューが無いので、目的の場面までは入力列（`SEQ`）や `POKE` で進める。
 
 ### 4. 検証する
 
@@ -109,7 +97,7 @@ G3=/path/to/g3 SEQ="60:COIN,120:START" SNAP="600:3000:300" END=3000 \
 /done 2件ok・1件ng
 ```
 
-- `/done` を書くと、ng・hold・未チェックが残っていれば「要人間確認」、全部 ok なら「検証済み」になる。
+- `/done` を書くと、ng・hold・未チェックが残っていれば「要人間確認」、全部 ok なら「完了」になる。
 - 途中でやめる場合は `/release` を書いて「未着手」に戻す（3日間何も書かないと自動で戻る）。
 - 人の判断が必要だと分かった時点で `/human 理由` を書いてもよい。
 - 画像を載せたい場合、Claude からは添付できないので、相手に「このスナップ画像をコメントに貼ってください」と頼む（ROM の中身ではない普通のスクリーンショットだけ）。
@@ -132,6 +120,6 @@ G3=/path/to/g3 SEQ="60:COIN,120:START" SNAP="600:3000:300" END=3000 \
   - 死んで再開しても地形が消えない
   ```
 
-- **ボットのコマンド一覧**: `/claim` `/check 番号 ok|ng|hold` `/done` `/human` `/release` `/items`（管理者のみ）
-- **初回セットアップ**: Actions タブ → 「検証ボット」→ Run workflow（ラベルが作られる）。
-- 担当者の名前・開始時刻などは Issue 本文の末尾に見えないメモ（`<!-- verify-state … -->`）として保存され、進捗ページはそれを読んでいる。消さないこと。
+- **ボットのコマンド一覧**: `/claim` `/check 番号 ok|ng|hold` `/done` `/human` `/release`、管理者のみ `/items` `/type` `/accept` `/reject`（詳しくは `.github/scripts/task-bot.js` の先頭）。検証以外の作業は [COLLAB.md](COLLAB.md)
+- **ラベルの作成・更新**: Actions タブ → 「共同作業ボット」→ Run workflow。
+- 担当者の名前・開始時刻などは Issue 本文の末尾に見えないメモ（`<!-- task-state … -->`）として保存され、まとめページはそれを読んでいる。消さないこと。
