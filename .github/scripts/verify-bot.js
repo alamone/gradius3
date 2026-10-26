@@ -80,8 +80,8 @@ function parseCommands(text) {
       const rest = [];
       for (let j = i + 1; j < lines.length; j++) {
         const t = lines[j].trim();
-        if (t.startsWith('/')) break;
-        const im = t.match(/^(?:[-*・]|\d+[.)])\s*(?:\[[ xX]\]\s*)?(.+)$/);
+        if (t.startsWith('/') || /^(-{3,}|\*{3,}|_{3,})$/.test(t)) break;
+        const im = t.match(/^(?:[-*・]|\d+[.)])\s+(?:\[[ xX]\]\s*)?(.+)$/);
         if (im) rest.push(im[1].trim());
       }
       c.items = rest;
