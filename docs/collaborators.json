@@ -14,6 +14,6 @@
       "note": "hknroms の作業用アカウント"
     }
   ],
-  "admin_url": "",
+  "admin_url": "https://script.google.com/macros/s/AKfycbzHzy2UvScNSpUBcZareJUrHeKzMQlpNf1gZ5VO5Fbcn0tCSgY4Z_5awyJqt-Kqc-ja2A/exec",
   "_admin_url": "申請の管理画面（Apps Script のウェブアプリの URL。管理者だけが開ける）。まとめページの上にリンクが出る"
 }
