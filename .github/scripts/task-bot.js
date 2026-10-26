@@ -245,7 +245,10 @@ module.exports = async ({ github, context, core }) => {
   const c = context.payload.comment;
   const actor = c.user.login;
   if (c.user.type === 'Bot') return;
-  const isAdmin = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(c.author_association);
+  // 管理者 = リポジトリの共同編集者、または docs/collaborators.json の admins_github に名前がある人（まとめページに入れる人）
+  let extraAdmins = [];
+  try { extraAdmins = (JSON.parse(require('fs').readFileSync((process.env.GITHUB_WORKSPACE || '.') + '/docs/collaborators.json', 'utf8')).admins_github || []).map(x => String(x).toLowerCase()); } catch {}
+  const isAdmin = ['OWNER', 'MEMBER', 'COLLABORATOR'].includes(c.author_association) || extraAdmins.includes(String(actor).toLowerCase());
   const cmds = parseCommands(c.body);
   if (!cmds.length) return;
 

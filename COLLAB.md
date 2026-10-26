@@ -7,12 +7,12 @@
 
 ## 協力してくれる人へ（人間向け）
 
-1. **GitHub アカウント**と、Claude への **GitHub 連携**（claude.ai の設定 → コネクタ）を用意する。
+1. **GitHub アカウント**を用意する。Claude はコード実行ができる状態で使う。Claude に **GitHub 連携**（claude.ai の設定 → コネクタ）があると楽ですが、なくても参加できます（Claude が出すコメントの文と成果物のファイルを、自分で Issue とフォークに置く）。
 2. このリポジトリを自分の GitHub に**フォーク**する（右上の Fork ボタン。1回だけ）：
    https://github.com/hknroms/gradius3/fork
-3. 作業に ROM が要る場合は、配布ページで作った `gradius3.zip`（と、頼まれたら純正の zip）を Claude の会話に添付する。
+3. 作業に ROM が要る場合は、配布ページ（Google でログインして承認が要る）で作った改造版の zip（`gradius3j.zip`。頼まれたら純正の zip も）を Claude の会話に添付する。
 4. Claude に次の一文を送る：
-   > hknroms/gradius3 の COLLAB.md に従って、未着手の作業を1件やって
+   > https://github.com/hknroms/gradius3 の COLLAB.md に従って、未着手の作業を1件やって
 
    作業の種類を選びたいときは「…未着手の**調査**を1件やって」のように書く。
 5. 成果物は**あなたのフォーク**に置かれ、その場所が Issue に書き込まれます。管理者が確認して取り込みます。

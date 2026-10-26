@@ -90,6 +90,7 @@ details{margin-top:28px;font-size:13.5px}
 summary{cursor:pointer;font-weight:600}
 code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:1px 5px;border-radius:4px}
 .closed{opacity:.75}
+.lk.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .acts button{font-size:12.5px;padding:5px 11px}
 .acts .pri{background:var(--acc);border-color:var(--acc);color:#fff}
@@ -265,7 +266,7 @@ const LS = { get: k => { try { return localStorage.getItem(k) || ''; } catch { r
 const token = () => LS.get('g3_gh_token');
 function claudeSay(n, type) {
   const guide = type === '検証' ? 'VERIFY.md' : 'COLLAB.md';
-  return `hknroms/gradius3 の ${guide} に従って、#${n} をやって（まとめページで Claude の担当にしてある）`;
+  return `https://github.com/hknroms/gradius3 の ${guide} に従って、#${n} をやって（まとめページで Claude の担当にしてある）`;
 }
 async function copy(text) { try { await navigator.clipboard.writeText(text); return true; } catch { return false; } }
 document.addEventListener('click', async e => {
@@ -389,26 +390,54 @@ function viewPeople(D) {
 }
 
 
-const HOWTO = [
-  { title: '開発の続き（管理者）', who: '管理者の会話。改造・修正・リリース',
-    steps: ['Claude の新しい会話で、GitHub の hknroms/gradius3 をつなぐ', 'ROM を使う作業なら、純正ROMの zip（313版メイン2本と MAME 用 gradius3 一式）を添付する', '下の一文を送る（引き継ぎファイルは不要）'],
-    say: 'hknroms/gradius3 の CLAUDE.md と docs/dev/STATUS.md を読んで、続きをやって' },
-  { title: 'テストプレイの検証（協力者）', who: '確認項目のある「検証」の Issue を1件やる',
-    steps: ['Claude に GitHub を連携しておく（claude.ai の設定 → コネクタ。なくても参加できる）', '配布ページで作った gradius3.zip（改造版）を添付する', '下の一文を送る'],
-    say: 'hknroms/gradius3 の VERIFY.md に従って、未着手の検証を1件やって' },
-  { title: '調査・実装・素材・資料（協力者）', who: '「調査」「実装」「素材」「資料」の Issue を1件やる',
-    steps: ['GitHub アカウントを用意し、Claude に連携する', 'gradius3 を自分の GitHub にフォークする（1回だけ）： github.com/hknroms/gradius3/fork', 'ROM が要る作業なら gradius3.zip を添付する', '下の一文を送る（種類を選ぶなら「未着手の調査を1件」のように）'],
-    say: 'hknroms/gradius3 の COLLAB.md に従って、未着手の作業を1件やって' },
+const REPO_URL = 'https://github.com/hknroms/gradius3';
+const PAGE_URL = 'https://hknroms.github.io/gradius3/';
+const COMMON = [
+  `GitHub のアカウントを用意する（報告やコメントを書くのに要る。作り方は配布ページの「テストプレイの報告」→「GitHub のアカウントを作る」）`,
+  `配布ページ ${PAGE_URL} に Google でログインして申請し、管理者の承認を待つ（承認されるとメールが届く）`,
+  `配布ページの「MAME用 zip を作る」で改造版の zip を作る（出力は gradius3j のままでよい）`,
+  `Claude はコード実行（ファイルの作成・実行）ができる状態で使う（claude.ai の Claude Code、またはアプリの設定でコード実行をオン）`,
 ];
+const HOWTO = [
+  { title: '開発の続き（管理者）', who: '管理者の会話。改造・修正・リリース', admin: true,
+    steps: ['Claude の新しい会話で、GitHub の hknroms/gradius3 をつなぐ（リポジトリを選ぶ）', 'ROM を使う作業なら、純正ROMの zip（313版メイン2本と MAME 用 gradius3 一式）を添付する', '下の一文を送る（引き継ぎファイルは不要）'],
+    say: `${REPO_URL} の CLAUDE.md と docs/dev/STATUS.md を読んで、続きをやって` },
+  { title: 'テストプレイの検証（協力者）', who: '確認項目のある「検証」の Issue を1件やる',
+    yes: [...COMMON, 'Claude に GitHub を連携しておく（claude.ai の設定 → コネクタ → GitHub）', '新しい会話を開き、リポジトリに hknroms/gradius3（一覧に無ければ、自分のフォーク）を選ぶ', '作った zip を添付して、下の一文を送る'],
+    no:  [...COMMON, '新しい会話を開く（リポジトリは選ばなくてよい）', '作った zip を添付して、下の一文を送る', 'Claude が Issue に書くコメントの文を出すので、その Issue のコメント欄に自分で貼って「Comment」を押す'],
+    sayYes: `${REPO_URL} の VERIFY.md に従って、未着手の検証を1件やって`,
+    sayNo:  `${REPO_URL} の VERIFY.md に従って、未着手の検証を1件やって。私の Claude は GitHub に連携していないので、Issue に書くコメントは文を出してくれれば私が貼ります` },
+  { title: '調査・実装・素材・資料（協力者）', who: '「調査」「実装」「素材」「資料」の Issue を1件やる',
+    yes: [...COMMON, 'gradius3 を自分の GitHub にフォークする（1回だけ）： github.com/hknroms/gradius3/fork', 'Claude に GitHub を連携しておく（claude.ai の設定 → コネクタ → GitHub）', '新しい会話を開き、リポジトリに自分のフォーク（自分の名前/gradius3）を選ぶ', 'ROM が要る作業なら zip を添付して、下の一文を送る（種類を選ぶなら「未着手の調査を1件」のように）'],
+    no:  [...COMMON, 'gradius3 を自分の GitHub にフォークする（1回だけ）： github.com/hknroms/gradius3/fork', '新しい会話を開き、ROM が要る作業なら zip を添付して、下の一文を送る', '成果物は Claude がファイルで渡すので、自分のフォークに置く（やり方は Claude が案内する）。Issue に書くコメントは自分で貼る'],
+    sayYes: `${REPO_URL} の COLLAB.md に従って、未着手の作業を1件やって`,
+    sayNo:  `${REPO_URL} の COLLAB.md に従って、未着手の作業を1件やって。私の Claude は GitHub に連携していないので、Issue に書くコメントは文を出してくれれば私が貼り、成果物はファイルでもらって自分のフォークに置きます` },
+];
+let LINKED = (() => { try { return localStorage.getItem('g3_linked') || 'yes'; } catch { return 'yes'; } })();
+const sayOf = h => h.admin ? h.say : (LINKED === 'yes' ? h.sayYes : h.sayNo);
 function viewHowto() {
-  return `<div class="howto">${HOWTO.map((h, i) => `<div class="box"><h3>${esc(h.title)}</h3><div class="who">${esc(h.who)}</div>
-    <ol>${h.steps.map(x => `<li>${esc(x).replace('github.com/hknroms/gradius3/fork', '<a href="https://github.com/hknroms/gradius3/fork" target="_blank" rel="noopener">github.com/hknroms/gradius3/fork</a>')}</li>`).join('')}</ol>
-    <div class="say" id="say${i}">${esc(h.say)}<button type="button" data-i="${i}">コピー</button></div></div>`).join('')}
-    <div class="sub">どの会話でも、決まりごと（ROM を公開しない・push のルールなど）は CLAUDE.md、いまの状態は docs/dev/STATUS.md にあり、リポジトリをつなぐと Claude が読みます。会話をまたいで情報を持ち運ぶ必要はありません。</div></div>`;
+  const link = x => esc(x).replace('github.com/hknroms/gradius3/fork', '<a href="https://github.com/hknroms/gradius3/fork" target="_blank" rel="noopener">github.com/hknroms/gradius3/fork</a>').replace(esc(PAGE_URL), `<a href="${PAGE_URL}" target="_blank" rel="noopener">${PAGE_URL}</a>`);
+  const q = `<div class="box"><h3>協力者の Claude は GitHub に連携していますか？</h3>
+    <div class="who">答えに合わせて、下の協力者向けの手順と一文が変わります。協力者に聞いて、合う方をコピーして渡してください。</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="lk${LINKED === 'yes' ? ' on' : ''}" data-v="yes">連携している</button><button type="button" class="lk${LINKED === 'no' ? ' on' : ''}" data-v="no">していない・わからない</button></div></div>`;
+  return `<div class="howto">${q}${HOWTO.map((h, i) => `<div class="box"><h3>${esc(h.title)}</h3><div class="who">${esc(h.who)}${h.admin ? '' : (LINKED === 'yes' ? '（GitHub 連携あり）' : '（GitHub 連携なし）')}</div>
+    <ol>${(h.admin ? h.steps : LINKED === 'yes' ? h.yes : h.no).map(x => `<li>${link(x)}</li>`).join('')}</ol>
+    <div class="say" id="say${i}">${esc(sayOf(h))}<button type="button" data-i="${i}">コピー</button></div>
+    ${h.admin ? '' : `<button type="button" class="allc" data-i="${i}" style="margin-top:6px">手順と一文をまとめてコピー（協力者に送る用）</button>`}</div>`).join('')}
+    <div class="sub">どの会話でも、決まりごと（ROM を公開しない・push のルールなど）は CLAUDE.md、いまの状態は docs/dev/STATUS.md にあり、Claude が読みます。会話をまたいで情報を持ち運ぶ必要はありません。</div></div>`;
 }
 document.addEventListener('click', e => {
+  const lk = e.target.closest('.lk');
+  if (lk) { LINKED = lk.dataset.v; try { localStorage.setItem('g3_linked', LINKED); } catch {} draw(); return; }
+  const all = e.target.closest('.allc');
+  if (all) {
+    const h = HOWTO[+all.dataset.i];
+    const text = `【${h.title.replace(/（.*?）/, '')}の始め方】\n` + (LINKED === 'yes' ? h.yes : h.no).map((x, k) => `${k + 1}. ${x}`).join('\n') + `\n\n▼ Claude に送る一文（そのままコピーして貼ってください）\n${sayOf(h)}`;
+    try { navigator.clipboard.writeText(text).then(() => { all.textContent = 'コピーしました'; setTimeout(() => all.textContent = '手順と一文をまとめてコピー（協力者に送る用）', 1500); }); } catch {}
+    return;
+  }
   const b = e.target.closest('.say button'); if (!b) return;
-  const text = HOWTO[+b.dataset.i].say;
+  const text = sayOf(HOWTO[+b.dataset.i]);
   const done = () => { b.textContent = 'コピーしました'; setTimeout(() => b.textContent = 'コピー', 1500); };
   try { navigator.clipboard.writeText(text).then(done, () => {}); } catch {}
 });
