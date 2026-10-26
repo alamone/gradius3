@@ -167,7 +167,8 @@ function card(t, showType) {
   const ver = section(t.body, '対象の版') || section(t.body, '版');
   const stage = section(t.body, '面・エリア');
   const meta = [];
-  if (ver) meta.push(esc(ver));
+  const build = section(t.body, 'BUILD 日時（起動画面）') || section(t.body, 'BUILD 日時');
+  if (ver) meta.push(esc(ver) + (build ? ' <span title="BUILD 日時">(' + esc(build) + ')</span>' : ''));
   if (stage) meta.push(esc(stage));
   if ((t.status === 'doing' || t.status === 'review') && st.claimer) meta.push(`<span class="who">@${esc(st.claimer)}</span> が ${ago(st.claimed_at)}から担当`);
   else if ((t.status === 'done' || t.status === 'human') && (st.done_by || st.claimer)) meta.push(`<span class="who">@${esc(st.done_by || st.claimer)}</span>`);

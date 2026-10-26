@@ -27,6 +27,12 @@ body:
       placeholder: v0.4.16
     validations:
       required: true
+  - type: input
+    id: build
+    attributes:
+      label: BUILD 日時（起動画面）
+      description: 電源を入れた直後の「RAM ROM CHECK」の下に出る BUILD の日時（わかれば）
+      placeholder: 2026 10 23 11:13:59
   - type: dropdown
     id: env
     attributes:
