@@ -53,16 +53,16 @@
 
 ## 5. リポジトリ・アカウント
 
-- リポジトリ: **hknroms/gradius3**（2026-10-24 に旧 pikadrum/gradius3 から履歴ごと移行）。GitHub Pages は main の `/docs`。
-- 旧 pikadrum/gradius3 は docs/index.html だけ新ページへの転送ページ。stereo/・cube/・patches と履歴は残してある（ステレオの結果を受け取るまで残し、その後ユーザーが削除予定）。
-- pikadrum（ピカドラム）は hknroms/gradius3 の共同編集者。Claude の GitHub アプリは hknroms に入っていて gradius3 だけ許可。
+- リポジトリ: **hknroms/gradius3**（2026-10-24 に旧リポジトリ（作業用アカウントの gradius3） から履歴ごと移行）。GitHub Pages は main の `/docs`。
+- 旧リポジトリ（作業用アカウントの gradius3） は docs/index.html だけ新ページへの転送ページ。stereo/・cube/・patches と履歴は残してある（ステレオの結果を受け取るまで残し、その後ユーザーが削除予定）。
+- 作業用アカウント（名前は CLAUDE.md）は hknroms/gradius3 の共同編集者。Claude の GitHub アプリは hknroms に入っていて gradius3 だけ許可。
 - 共同作業の仕組み（2026-10-26〜）: Issue のコメントコマンド＋まとめページ https://hknroms.github.io/gradius3/status.html 。手順は VERIFY.md・COLLAB.md。
 - ひな形・ノウハウ集: hknroms/arcade-mod-kit（2026-10-26 作成。紹介ページ https://hknroms.github.io/arcade-mod-kit/ ）。gradius3 の仕組みを一般化したもの。
 - まとめページ（status.html）は**管理者3人だけ**が見られる（2026-10-26 決定。協力者は手順書の一文と Issue だけで作業でき、見られる利点が小さいため）。Google ログインの扉 `docs/auth-gate.js`（data-gate="admin"）、管理者は Firestore の `admins/{email}`（申請の管理画面で登録）。配布ページからはリンクしない。各タスクに操作ボタン（Claude に頼む・自分がやる・終わった・人の確認へ・担当をやめる・完了にする・差し戻す）がある（2026-10-26）。ボタンは Issue にコマンドを書く（GitHub のトークンをブラウザに保存すれば直接、無ければコピーして Issue を開く）。担当の印は `/claim claude`（🤖 Claude）・`/claim 人`（👤 人）。「要望」タブから送った改善したいことは Issue（ラベル「要望」）になり、ボットが自動で検証タスク（基本の確認項目3つ付き）にする。
 
 ## 5.4 Issue の書き込み者の名前（2026-10-26）
 
-- pikadrum の名前を Issue に出さない（ユーザーの希望）。旧 #7〜#17 は github-actions[bot] で #18〜#28 に作り直した（旧番号はユーザーが削除。#18 は誤って消えたので #29 に作り直し）。pikadrum のコメントも bot で書き直した。以後は「代理の書き込み」ワークフローで書く（CLAUDE.md §4）。
+- 作業用アカウントの名前を Issue・公開ページに出さない（ユーザーの希望。CLAUDE.md §0）。旧 #7〜#17 は github-actions[bot] で #18〜#28 に作り直した（旧番号はユーザーが削除。#18 は誤って消えたので #29 に作り直し）。作業用アカウントのコメントも bot で書き直した。以後は「代理の書き込み」ワークフローで書く（CLAUDE.md §4）。
 
 ## 5.5 直ったかの確認（2026-10-26〜）
 
