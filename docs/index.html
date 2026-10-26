@@ -128,8 +128,9 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 </div>
 </details>
 
-<h2>最新版</h2>
-<div id="latest" class="panel">読み込み中…</div>
+<details class="panel" id="latestbox"><summary style="font-size:16px">▶ 最新版 <span class="tag" id="latest-ver"></span></summary>
+<div id="latest" style="margin-top:8px">読み込み中…</div>
+</details>
 
 <h2>MAME用 zip を作る</h2>
 <div class="panel">
@@ -314,7 +315,7 @@ function verHtml(v, open) {
   try { DATA = await (await fetch('versions.json', { cache: 'no-store' })).json(); }
   catch (e) { $('#latest').textContent = '版情報を読み込めませんでした。'; return; }
   const L = DATA.versions[0];
-  $('#latest').innerHTML = verHtml(L, true);
+  $('#latest').innerHTML = verHtml(L, true); $('#latest-ver').textContent = 'v' + L.version + (L.date ? '（' + L.date + '）' : '');
   $('#history').innerHTML = DATA.versions.map((v, i) => `<div class="panel">${verHtml(v, i === 0)}</div>`).join('');
   $('#ver').innerHTML = DATA.versions.filter(v => v.patches).map(v => `<option value="${esc(v.version)}">v${esc(v.version)}（${esc(v.build ? 'ビルド ' + v.build : v.date)}）</option>`).join('');
   $('#ver').onchange = refresh;

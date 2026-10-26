@@ -112,8 +112,9 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
 </div>
 </details>
 
-<h2>Latest Version</h2>
-<div id="latest" class="panel">Loading…</div>
+<details class="panel" id="latestbox"><summary style="font-size:16px">▶ Latest version <span class="tag" id="latest-ver"></span></summary>
+<div id="latest" style="margin-top:8px">Loading…</div>
+</details>
 
 <h2>Build a zip for MAME</h2>
 <div class="panel">
@@ -299,7 +300,7 @@ function verHtml(v0, open) {
   try { DATA = await (await fetch('../versions.json', { cache: 'no-store' })).json(); }
   catch (e) { $('#latest').textContent = 'Could not load version information.'; return; }
   const L = DATA.versions[0];
-  $('#latest').innerHTML = verHtml(L, true);
+  $('#latest').innerHTML = verHtml(L, true); $('#latest-ver').textContent = 'v' + L.version + (L.date ? ' (' + L.date + ')' : '');
   // (version is filled in on testplay.html)   // 報告ページの「版」を入力済みに
   $('#history').innerHTML = DATA.versions.map((v, i) => `<div class="panel">${verHtml(v, i === 0)}</div>`).join('');
   $('#ver').innerHTML = DATA.versions.filter(v => v.patches).map(v => `<option value="${esc(v.version)}">v${esc(v.version)} (${esc(v.build ? 'build ' + v.build : v.date)})</option>`).join('');
