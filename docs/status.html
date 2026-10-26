@@ -55,6 +55,15 @@ tr:last-child td{border-bottom:none}
 th{font-size:12px;color:var(--sub);font-weight:500}
 td.z{color:var(--sub)}
 .tblwrap{overflow-x:auto}
+.howto{display:grid;gap:12px;margin-top:16px}
+.howto .box{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:14px}
+.howto h3{font-size:15px;margin:0 0 4px}
+.howto .who{font-size:12.5px;color:var(--sub);margin-bottom:8px}
+.howto ol{margin:6px 0;padding-left:20px;font-size:14px}
+.howto li{margin:3px 0}
+.say{position:relative;margin:8px 0 2px;padding:10px 12px;padding-right:64px;border-radius:8px;background:color-mix(in srgb,var(--acc) 10%,transparent);border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);font-size:14px;overflow-wrap:anywhere;white-space:pre-wrap}
+.say button{position:absolute;top:6px;right:6px;font-size:12px;padding:4px 10px}
+.startlink{display:inline-block;margin-top:8px;font-size:13.5px}
 .feed{list-style:none;padding:0;margin:0;background:var(--panel);border:1px solid var(--line);border-radius:10px}
 .feed li{padding:8px 12px;border-bottom:1px solid var(--line);font-size:13.5px;display:flex;gap:10px;align-items:baseline}
 .feed li:last-child{border-bottom:none}
@@ -86,6 +95,7 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
     </div>
     <button id="reload" type="button">更新</button>
   </div>
+  <a class="startlink" href="#%E5%A7%8B%E3%82%81%E6%96%B9">▶ 新しいチャットで始めるには（始め方）</a>
   <nav id="nav"></nav>
   <div id="out"><div class="sub" style="margin-top:16px">読み込み中…</div></div>
   <div class="sub" id="stamp" style="margin-top:14px"></div>
@@ -268,17 +278,43 @@ function viewPeople(D) {
   }).join('')}</div>`;
 }
 
-const TABS = [{ id: '全体' }, ...TYPES.map(t => ({ id: t })), { id: '協力者' }];
+
+const HOWTO = [
+  { title: '開発の続き（管理者）', who: 'hknroms・ピカドラムの会話。改造・修正・リリース',
+    steps: ['Claude の新しい会話で、GitHub の hknroms/gradius3 をつなぐ', 'ROM を使う作業なら、純正ROMの zip（313版メイン2本と MAME 用 gradius3 一式）を添付する', '下の一文を送る（引き継ぎファイルは不要）'],
+    say: 'hknroms/gradius3 の CLAUDE.md と docs/dev/STATUS.md を読んで、続きをやって' },
+  { title: 'テストプレイの検証（協力者）', who: '確認項目のある「検証」の Issue を1件やる',
+    steps: ['Claude に GitHub を連携しておく（claude.ai の設定 → コネクタ。なくても参加できる）', '配布ページで作った gradius3.zip（改造版）を添付する', '下の一文を送る'],
+    say: 'hknroms/gradius3 の VERIFY.md に従って、未着手の検証を1件やって' },
+  { title: '調査・実装・素材・資料（協力者）', who: '「調査」「実装」「素材」「資料」の Issue を1件やる',
+    steps: ['GitHub アカウントを用意し、Claude に連携する', 'gradius3 を自分の GitHub にフォークする（1回だけ）： github.com/hknroms/gradius3/fork', 'ROM が要る作業なら gradius3.zip を添付する', '下の一文を送る（種類を選ぶなら「未着手の調査を1件」のように）'],
+    say: 'hknroms/gradius3 の COLLAB.md に従って、未着手の作業を1件やって' },
+];
+function viewHowto() {
+  return `<div class="howto">${HOWTO.map((h, i) => `<div class="box"><h3>${esc(h.title)}</h3><div class="who">${esc(h.who)}</div>
+    <ol>${h.steps.map(x => `<li>${esc(x).replace('github.com/hknroms/gradius3/fork', '<a href="https://github.com/hknroms/gradius3/fork" target="_blank" rel="noopener">github.com/hknroms/gradius3/fork</a>')}</li>`).join('')}</ol>
+    <div class="say" id="say${i}">${esc(h.say)}<button type="button" data-i="${i}">コピー</button></div></div>`).join('')}
+    <div class="sub">どの会話でも、決まりごと（ROM を公開しない・push のルールなど）は CLAUDE.md、いまの状態は docs/dev/STATUS.md にあり、リポジトリをつなぐと Claude が読みます。会話をまたいで情報を持ち運ぶ必要はありません。</div></div>`;
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('.say button'); if (!b) return;
+  const text = HOWTO[+b.dataset.i].say;
+  const done = () => { b.textContent = 'コピーしました'; setTimeout(() => b.textContent = 'コピー', 1500); };
+  try { navigator.clipboard.writeText(text).then(done, () => {}); } catch {}
+});
+
+const TABS = [{ id: '全体' }, ...TYPES.map(t => ({ id: t })), { id: '協力者' }, { id: '始め方' }];
 let DATA = null;
 function current() { const h = decodeURIComponent(location.hash.slice(1)); return TABS.some(t => t.id === h) ? h : '全体'; }
 function draw() {
   const cur = current();
   const cnt = id => !DATA ? '' : id === '全体' ? DATA.tasks.filter(t => t.status !== 'done').length
-    : id === '協力者' ? people(DATA).length : DATA.tasks.filter(t => t.type === id && t.status !== 'done').length;
+    : id === '協力者' ? people(DATA).length : id === '始め方' ? '' : DATA.tasks.filter(t => t.type === id && t.status !== 'done').length;
   document.getElementById('nav').innerHTML = TABS.map(t =>
-    `<a href="#${encodeURIComponent(t.id)}" class="${t.id === cur ? 'on' : ''}">${t.id}${DATA ? `<span class="c">${cnt(t.id)}</span>` : ''}</a>`).join('');
-  if (!DATA) return;
+    `<a href="#${encodeURIComponent(t.id)}" class="${t.id === cur ? 'on' : ''}">${t.id}${DATA && t.id !== '始め方' ? `<span class="c">${cnt(t.id)}</span>` : ''}</a>`).join('');
   const out = document.getElementById('out');
+  if (cur === '始め方') { out.innerHTML = viewHowto(); document.title = '始め方 — 共同作業のまとめ'; return; }
+  if (!DATA) return;
   out.innerHTML = cur === '全体' ? viewAll(DATA) : cur === '協力者' ? viewPeople(DATA) : viewType(DATA, cur);
   document.title = (cur === '全体' ? '' : cur + ' — ') + '共同作業のまとめ';
 }
