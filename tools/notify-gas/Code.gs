@@ -155,6 +155,12 @@ function apiData() {
   };
 }
 
+// ステレオの聞き比べの記録（stereo_results）。data は記録の JSON（文字列）
+function apiStereo() {
+  return listDocs_('stereo_results').map(d => ({ uid: d._id, name: d.name || '', email: d.email || '', count: d.count || 0, favs: d.favs || 0, updatedAt: d.updatedAt || '', data: d.data || '' }))
+    .sort((a, b) => String(b.updatedAt).localeCompare(String(a.updatedAt)));
+}
+
 function apiDecide(uid, status) {
   if (['approved', 'rejected', 'pending'].indexOf(status) < 0) throw new Error('status が違う');
   const u = getUser_(uid); if (!u) throw new Error('申請が見つかりません');
@@ -338,6 +344,10 @@ const ADMIN_HTML = `
 <div class="sub" id="top">読み込み中…</div>
 <div class="tabs" id="tabs"></div>
 <div id="list"></div>
+<h2>ステレオの結果</h2>
+<div class="card"><div class="sub">聞き比べのページで「記録を管理者に送る」を押した人の記録です（1人1件・最新のもの）。</div>
+<div class="row"><button class="pri" onclick="loadStereo()">読み込む</button><button id="stdl" onclick="dlStereo()" style="display:none">全員分をダウンロード（JSON）</button></div>
+<div id="stereo"></div></div>
 <h2>管理者（共同作業のまとめページを見られる人）</h2>
 <div class="card"><div class="sub">ここに入れた Google アカウントの人だけが「共同作業のまとめ」を開けます（1行に1つ）。管理者は配布ページも自動で承認されます。</div>
 <textarea id="admins" style="min-height:90px" placeholder="example@gmail.com"></textarea>
@@ -387,5 +397,14 @@ function saveNote(uid){ call('apiSaveNote', uid, document.getElementById('tw_'+u
 function decide(uid, st){ if (st!=='pending' && !confirm((st==='approved'?'承認':'却下')+'しますか？'+(st==='approved'?'（本人にメールが届きます）':''))) return; call('apiDecide', uid, st); }
 function saveAllow(){ call('apiSaveAllowlist', document.getElementById('allow').value); }
 function saveAdmins(){ call('apiSaveAdmins', document.getElementById('admins').value); }
+let SR = [];
+function loadStereo(){ document.getElementById('stereo').textContent='読み込み中…'; google.script.run.withSuccessHandler(r=>{ SR=r; renderStereo(); }).withFailureHandler(e=>{ document.getElementById('stereo').textContent='エラー: '+e.message; }).apiStereo(); }
+function renderStereo(){
+  document.getElementById('stdl').style.display = SR.length ? '' : 'none';
+  document.getElementById('stereo').innerHTML = SR.length ? '<table style="width:100%;font-size:13px;border-collapse:collapse">'+SR.map((r,i)=>'<tr style="border-top:1px solid #ddd"><td>'+esc(r.name||'(名前なし)')+'<div class="sub">'+esc(r.email)+'</div></td><td>記録 '+r.count+'・合うパターン '+r.favs+' 曲</td><td class="sub">'+fmt(r.updatedAt)+'</td><td><button onclick="dlOne('+i+')">ダウンロード</button></td></tr>').join('')+'</table>' : '<div class="sub">まだ届いていません</div>';
+}
+function save(name, text){ try { const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([text],{type:'application/json'})); a.download=name; document.body.appendChild(a); a.click(); a.remove(); } catch(e) {} let t=document.getElementById('stout'); if(!t){ t=document.createElement('textarea'); t.id='stout'; t.style.minHeight='120px'; document.getElementById('stereo').after(t); } t.value=text; msg('ダウンロードされないときは、下の欄の文字を全部コピーしてください（'+name+'）'); setTimeout(()=>msg(''),4000); }
+function dlOne(i){ const r=SR[i]; save('stereo_'+(r.name||r.uid).replace(/[^\w\-]+/g,'_')+'.json', r.data); }
+function dlStereo(){ save('stereo_all.json', JSON.stringify(SR.map(r=>{ let d=null; try{ d=JSON.parse(r.data); }catch(e){} return {name:r.name, email:r.email, updatedAt:r.updatedAt, count:r.count, favs:r.favs, data:d}; }), null, 1)); }
 load();
 </script>`;

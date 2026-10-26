@@ -122,6 +122,8 @@ a{color:var(--acc)}
   <h2 style="margin-top:14px">パターン別の集計</h2>
   <div class="sub">「合うパターン」に選ばれた曲の数。</div>
   <table id="psum"></table>
+  <div class="row"><button id="send">記録を管理者に送る</button><span id="sendmsg" class="small"></span></div>
+  <div class="sub">「記録を管理者に送る」を押すと、このブラウザの記録（評価・メモ・合うパターン）が管理者に届きます。何度送っても、いちばん新しい記録で置き換わります。前に書き出したファイルは「記録を読み込む」で読み込んでから送れます。</div>
   <div class="row"><button id="exp" class="ghost">記録を書き出す（ファイル）</button><button id="cpy" class="ghost">記録をコピー（文字）</button>
     <label class="ghost" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:7px 14px">記録を読み込む<input type="file" id="imp" accept=".json,application/json" hidden></label>
     <span id="msg" class="small"></span></div>
@@ -415,6 +417,24 @@ onAuthStateChanged(auth, async (user) => {
     if (sequence === authSequence) showGate('利用申請を登録できませんでした。Firestoreのルールを確認してください。\n' + e.code, false, true);
   }
 });
+
+// ---- 記録を管理者に送る（Firestore の stereo_results/{uid}。本人だけが書ける。ルールは docs/dev/firebase/firestore.rules）----
+const sendMsg = t => { document.getElementById('sendmsg').textContent = t; };
+async function showLastSent(user) {
+  try { const s = await getDoc(doc(db, 'stereo_results', user.uid)); if (s.exists() && s.data().updatedAt) sendMsg('前回送った日時: ' + s.data().updatedAt.toDate().toLocaleString()); } catch (e) {}
+}
+document.getElementById('send').addEventListener('click', async () => {
+  const user = auth.currentUser; if (!user) { sendMsg('ログインし直してください。'); return; }
+  const recs = loadRecs(), favs = loadFavs();
+  if (!recs.length && !Object.keys(favs).length) { sendMsg('まだ記録がありません。'); return; }
+  const btn = document.getElementById('send'); btn.disabled = true; sendMsg('送っています…');
+  try {
+    await setDoc(doc(db, 'stereo_results', user.uid), { uid: user.uid, name: user.displayName || '', email: user.email || '', count: recs.length, favs: Object.keys(favs).length, data: exportText(), updatedAt: serverTimestamp() });
+    sendMsg('送りました（{n} 件）。ありがとうございます！'.replace('{n}', recs.length));
+  } catch (e) { sendMsg('送れませんでした: ' + (e.code || e.message)); }
+  btn.disabled = false;
+});
+onAuthStateChanged(auth, user => { if (user) showLastSent(user); });
 </script>
 </body>
 </html>

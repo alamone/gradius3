@@ -33,5 +33,22 @@ service cloud.firestore {
         && request.auth.token.email.lower() == email;
       allow write: if false;
     }
+
+    // ステレオの聞き比べの記録（docs/stereo/sim.html の「記録を管理者に送る」）。
+    // 承認された本人だけが自分の分を書ける・読める。管理者は申請の管理画面（Apps Script）で全員分を見る。
+    match /stereo_results/{userId} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.status == 'approved'
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'count', 'favs', 'data', 'updatedAt'])
+        && request.resource.data.uid == userId
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string && request.resource.data.name.size() <= 200
+        && request.resource.data.count is int && request.resource.data.favs is int
+        && request.resource.data.data is string && request.resource.data.data.size() <= 900000
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
   }
 }

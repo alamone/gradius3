@@ -122,6 +122,8 @@ The recordings are reference audio made by adding left/right outputs to MAME (th
   <h2 style="margin-top:14px">Totals by Pattern</h2>
   <div class="sub">Number of tracks for which each pattern was chosen as the "best pattern".</div>
   <table id="psum"></table>
+  <div class="row"><button id="send">Send records to the admin</button><span id="sendmsg" class="small"></span></div>
+  <div class="sub">"Send records to the admin" sends the records in this browser (ratings, notes, best pattern) to the administrator. Sending again replaces your earlier records with the latest. To send a file you exported earlier, load it with "Import records" first.</div>
   <div class="row"><button id="exp" class="ghost">Export records (file)</button><button id="cpy" class="ghost">Copy records (text)</button>
     <label class="ghost" style="cursor:pointer;border:1px solid var(--line);border-radius:8px;padding:7px 14px">Import records<input type="file" id="imp" accept=".json,application/json" hidden></label>
     <span id="msg" class="small"></span></div>
@@ -415,6 +417,24 @@ onAuthStateChanged(auth, async (user) => {
     if (sequence === authSequence) showGate('Unable to submit application. Check Firestore rules.\n' + e.code, false, true);
   }
 });
+
+// ---- 記録を管理者に送る（Firestore の stereo_results/{uid}。本人だけが書ける。ルールは docs/dev/firebase/firestore.rules）----
+const sendMsg = t => { document.getElementById('sendmsg').textContent = t; };
+async function showLastSent(user) {
+  try { const s = await getDoc(doc(db, 'stereo_results', user.uid)); if (s.exists() && s.data().updatedAt) sendMsg('Last sent: ' + s.data().updatedAt.toDate().toLocaleString()); } catch (e) {}
+}
+document.getElementById('send').addEventListener('click', async () => {
+  const user = auth.currentUser; if (!user) { sendMsg('Please sign in again.'); return; }
+  const recs = loadRecs(), favs = loadFavs();
+  if (!recs.length && !Object.keys(favs).length) { sendMsg('There are no records yet.'); return; }
+  const btn = document.getElementById('send'); btn.disabled = true; sendMsg('Sending…');
+  try {
+    await setDoc(doc(db, 'stereo_results', user.uid), { uid: user.uid, name: user.displayName || '', email: user.email || '', count: recs.length, favs: Object.keys(favs).length, data: exportText(), updatedAt: serverTimestamp() });
+    sendMsg('Sent ({n} records). Thank you!'.replace('{n}', recs.length));
+  } catch (e) { sendMsg('Could not send: ' + (e.code || e.message)); }
+  btn.disabled = false;
+});
+onAuthStateChanged(auth, user => { if (user) showLastSent(user); });
 </script>
 </body>
 </html>

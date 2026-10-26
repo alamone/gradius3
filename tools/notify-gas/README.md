@@ -36,6 +36,12 @@ Firebase のプロジェクトを作った **Google アカウント**で行う�
 3. 下の「実行ログ」に出る **回答する URL** を、テストプレイの案内ページ（docs/testplay.html と docs/en/testplay.html の `FORM_URL`）に入れる。
 - 写真をフォームで受け取りたいときは、Google フォームの画面で「ファイルのアップロード」の質問を足す（回答者は Google ログインが要る。ファイルは作った人の Google ドライブに入る）。
 
+## ステレオの聞き比べの記録
+
+- 聞き比べのページ（docs/stereo/sim.html・英語版）の「記録を管理者に送る」で、Firestore の `stereo_results/{uid}` に届く（1人1件・送り直すと置き換え）。
+- 管理画面の「ステレオの結果」→「読み込む」で一覧。1人ずつ／全員分をダウンロード（ダウンロードされないときは、下に出る欄の文字をコピー）。
+- 使う前に：Firestore のルールを `docs/dev/firebase/firestore.rules` で貼り直し、Code.gs を貼り替えて「デプロイを管理」→ 新バージョンでデプロイ。
+
 ## うまくいかないとき
 
 - 「Firestore（403）」で `has not been used in project` などと出る: 歯車「プロジェクトの設定」→「Google Cloud Platform（GCP）プロジェクト」→「プロジェクトを変更」→ プロジェクト番号 **570590177142** を入れる。その後もう一度 `setup`。
