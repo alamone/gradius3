@@ -16,6 +16,7 @@ body:
         - Bug
         - Finding / impression
         - Request
+        - Re-check of a fix
     validations:
       required: true
   - type: input
@@ -32,6 +33,18 @@ body:
       label: Boot screen numbers (version and build time)
       description: "The numbers shown under RAM ROM CHECK right after power-on (if you know them) — version, then year month day hour:minute"
       placeholder: 0 4 17  26 10 23 11:13
+  - type: input
+    id: origin
+    attributes:
+      label: Original report checked
+      description: Only when checking whether a fix works (filled in from the patch page)
+      placeholder: "#12"
+  - type: input
+    id: recheck
+    attributes:
+      label: Re-check result
+      description: "\"fixed\" or \"still broken\""
+      placeholder: fixed
   - type: dropdown
     id: env
     attributes:

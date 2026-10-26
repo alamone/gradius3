@@ -162,7 +162,8 @@ const ST = [
 ];
 const STL = Object.fromEntries(ST.map(s => [s.key, s.label]));
 const ACT = { open: 'を立てた', claim: 'を担当した', check: 'に確認結果を記録', submit: 'に提出した', done: 'を報告した', human: 'を要人間確認にした',
-  release: 'の担当をやめた', accept: 'を完了にした', reject: 'を差し戻した', timeout: 'が期限切れで未着手に戻った' };
+  release: 'の担当をやめた', accept: 'を完了にした', reject: 'を差し戻した', timeout: 'が期限切れで未着手に戻った',
+  confirm: 'が直っていたと確認した', still: 'がまだおかしいと報告した' };
 const ITEM = /^\s*- \[( |x|X)\] (.*)$/;
 
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));

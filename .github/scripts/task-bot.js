@@ -20,6 +20,10 @@
 //   /reject ひとこと         直してほしい点を伝えて「担当中」に戻す
 //   /fixed 版 [ひとこと]     （どの Issue でも）その版で直した → 閉じる。配布ページの「報告の状況」に「v0.4.17 で直しました」と出る
 //   /wontfix 理由            （どの Issue でも）見送る → 閉じる。配布ページには「見送り」と出る
+//
+// 直ったかの確認（コマンドではなく、テストプレイ報告のフォームから）:
+//   配布ページの「確かめてほしいこと」（/fixed した報告）のボタンから報告を送ると、「確認した元の報告」「確認の結果」が入っている。
+//   直っていた → 元の報告に「確認済み」を記録 / まだおかしい → 元の報告を開き直して「未着手」に戻す。どちらも確認の報告自体は閉じる。
 
 const TYPES = ['検証', '調査', '実装', '素材', '資料'];
 const REQUEST = '要望';
@@ -179,6 +183,43 @@ module.exports = async ({ github, context, core }) => {
   const labels = issue.labels.map(l => l.name);
   let body = issue.body || '';
 
+  if (ev === 'issues' && context.payload.action === 'opened') {
+    const om = (section(body, '確認した元の報告') || section(body, 'Original report checked')).match(/#?(\d+)/);
+    const res = section(body, '確認の結果') || section(body, 'Re-check result');
+    const bad = /まだ|おかしい|直って(い)?な|治って(い)?な|still|broken|not/i.test(res);
+    const ok = !bad && /直っ|治っ|fixed|ok/i.test(res);
+    if (om && +om[1] !== num && (ok || bad)) {
+      const on = +om[1];
+      const who = issue.user.login;
+      const ver = section(body, '版') || section(body, 'Version');
+      let o;
+      try { o = (await github.rest.issues.get({ owner, repo, issue_number: on })).data; } catch { o = null; }
+      if (o && !o.pull_request) {
+        const ost = getState(o.body);
+        const olabels = o.labels.map(l => typeof l === 'string' ? l : l.name);
+        if (ok) {
+          ost.confirmed = (ost.confirmed || []).concat([{ by: who, at: now, ver, issue: num }]).slice(-10);
+          ost.updated_at = now; push(ost, who, 'confirm');
+          await github.rest.issues.update({ owner, repo, issue_number: on, body: setState(o.body, ost) });
+          await reply(on, `✅ ${ver || ''} で直っていたと確認がありました（#${num}、@${who} さん）。`);
+          await reply(num, `ありがとうございます。#${on} に「確認済み」として記録しました。`);
+        } else {
+          const was = ost.fixed_in;
+          delete ost.fixed_in; delete ost.wontfix; delete ost.claimer; delete ost.claimed_at; delete ost.worker;
+          ost.still = { by: who, at: now, ver, issue: num, was: was || '' };
+          ost.note = `まだおかしい（${ver || '版不明'}・#${num}）`;
+          ost.updated_at = now; push(ost, who, 'still');
+          await github.rest.issues.update({ owner, repo, issue_number: on, body: setState(o.body, ost), state: 'open', state_reason: 'reopened' });
+          if (typeOf(olabels) || STATUS.some(x => olabels.includes(x))) await setLabels(on, olabels, { status: L.todo, type: null });
+          await reply(on, `⚠️ ${ver || ''} でもまだおかしいと報告がありました（#${num}、@${who} さん）。開き直して「未着手」に戻しました。詳しくは #${num} を見てください。`);
+          await reply(num, `ありがとうございます。#${on} を開き直して、もう一度直す対象にしました。`);
+        }
+        await github.rest.issues.update({ owner, repo, issue_number: num, state: 'closed', state_reason: 'completed' });
+        return;
+      }
+    }
+  }
+
   if (ev === 'issues') {
     // テンプレートから作られた・種類ラベルが付いた → 種類と「未着手」を整え、状態欄を用意
     let type = typeOf(labels);
@@ -225,7 +266,7 @@ module.exports = async ({ github, context, core }) => {
       if (n === 'fixed') {
         const m = cmd.arg.match(/^v?(\d+(?:\.\d+)+)\s*(.*)$/i);
         if (!m) { errors.push('`/fixed` の後に版を書いてください（例: `/fixed v0.4.17`）'); continue; }
-        st.fixed_in = 'v' + m[1]; delete st.wontfix; if (m[2]) st.note = m[2];
+        st.fixed_in = 'v' + m[1]; delete st.wontfix; delete st.confirmed; delete st.still; if (m[2]) st.note = m[2];
         close = 'completed';
       } else {
         if (!cmd.arg) { errors.push('`/wontfix` の後に理由を書いてください'); continue; }
