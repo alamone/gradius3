@@ -352,7 +352,7 @@ module.exports = async ({ github, context, core }) => {
     await github.rest.issues.update({ owner, repo, issue_number: num, body: setState(body, st), ...(close ? { state: 'closed', state_reason: close } : {}) });
     if (status || type) await setLabels(num, labels, { status, type });
   }
-  if (errors.length) { await react(c.id, 'confused'); await reply(num, `@${actor} ` + errors.map(e => `- ${e}`).join('\n')); }
+  if (errors.length) { await react(c.id, 'confused'); await reply(num, (c.synthetic ? "" : `@${actor} `) + errors.map(e => `- ${e}`).join('\n')); }
   else if (changed) await react(c.id, '+1');
 };
 

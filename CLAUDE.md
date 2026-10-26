@@ -60,6 +60,7 @@ export G3="$HOME/g3/g3"     # ライブラリの場所と画面なしの設定�
 まず、この会話で連携している GitHub アカウントが gradius3 に書き込めるか（共同編集者か）で分かれる。
 
 - **共同編集者（hknroms・pikadrum・招待された人）**：誰でも main に直接 push してよい。push の前に必ず `git fetch origin main` して最新に合わせる（rebase）。協力者の提出物（`/submit` のリンク先）は、取り寄せて中身を確かめてから取り込み、Issue に `/accept` か `/reject` を書く。
+- **管理者の会話（作業用アカウント pikadrum）で Issue に書くとき**：pikadrum の名前を出さない。Issue・コメントは直接書かず、ワークフロー「代理の書き込み」（`.github/workflows/bot-post.yml`）を REST で dispatch して github-actions[bot] として書く（使い方はファイルの先頭）。コマンド（`/claim` `/items` `/fixed` など）もこれで書けば、その場で実行される（担当者名は「claude」）。git のコミットの名前も pikadrum にしない（`git -c user.name=hknroms-claude -c user.email=noreply@hknroms.invalid commit …` のように）。
 - **それ以外の協力者**：hknroms/gradius3 には push しない。書くのは Issue のコメントと、自分のフォーク（枝 `task-<Issue番号>`）だけ。
 
 ### リリース（パッチの公開）

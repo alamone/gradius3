@@ -4,7 +4,7 @@ name: 代理の書き込み
 # REST で dispatch する: POST /repos/hknroms/gradius3/actions/workflows/bot-post.yml/dispatches
 #   { "ref": "main", "inputs": { "mode": "comment", "issue": "12", "body": "..." } }
 # mode: comment（コメント）/ create（Issue を作る。title・labels を使う）/ edit（本文を置き換える）
-# 注意: このボットのコメントは共同作業ボットのコマンドとしては扱われない（/claim などは本人のアカウントで書く）
+# コメントに共同作業ボットのコマンド（/claim /items /fixed など）があれば、その場で実行する（担当者名は「claude」、管理者として扱う）
 
 on:
   workflow_dispatch:
@@ -17,11 +17,13 @@ on:
 
 permissions:
   issues: write
+  contents: read
 
 jobs:
   post:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/github-script@v7
         env:
           MODE: ${{ inputs.mode }}
@@ -36,6 +38,13 @@ jobs:
             if (e.MODE === 'comment') {
               const r = await github.rest.issues.createComment({ owner, repo, issue_number: +e.ISSUE, body: e.BODY });
               core.info(r.data.html_url);
+              // コマンドがあれば共同作業ボットをその場で動かす（GITHUB_TOKEN の書き込みでは別のワークフローが起動しないため）
+              if (/^\s*\/(claim|check|submit|done|human|release|items|type|accept|reject|fixed|wontfix)\b/im.test(e.BODY)) {
+                const issue = (await github.rest.issues.get({ owner, repo, issue_number: +e.ISSUE })).data;
+                const comment = { ...r.data, user: { login: 'claude', type: 'User' }, author_association: 'COLLABORATOR', synthetic: true };
+                const bot = require(process.env.GITHUB_WORKSPACE + '/.github/scripts/task-bot.js');
+                await bot({ github, context: { ...context, eventName: 'issue_comment', repo: { owner, repo }, payload: { issue, comment } }, core });
+              }
             } else if (e.MODE === 'create') {
               const labels = e.LABELS ? e.LABELS.split(',').map(s => s.trim()).filter(Boolean) : [];
               const r = await github.rest.issues.create({ owner, repo, title: e.TITLE, body: e.BODY, labels });
