@@ -47,6 +47,49 @@ function testMail() {
   Logger.log('送りました: ' + adminEmail_());
 }
 
+// ═══ テストプレイの報告フォーム（Google フォーム）═══
+// 関数 createReportForm を1回実行すると、日本語と英語の両方で書いた報告フォームを作り、URL をログに出す。
+// もう一度実行しても作り直さない（作り直すときは「プロジェクトの設定」→ スクリプト プロパティの REPORT_FORM_ID を消す）。
+// 写真のアップロードの質問は、Google フォームの画面で手で足せる（「ファイルのアップロード」。回答者は Google ログインが要る）。
+function createReportForm() {
+  const props = PropertiesService.getScriptProperties();
+  const old = props.getProperty('REPORT_FORM_ID');
+  if (old) {
+    try { const f = FormApp.openById(old); Logger.log('もう作ってあります。\n回答する URL: ' + f.getPublishedUrl() + '\n編集する URL: ' + f.getEditUrl()); return; } catch (e) {}
+  }
+  const form = FormApp.create(SITE_NAME + ' テストプレイの報告 / Test play report');
+  form.setDescription([
+    'テストプレイにご協力いただき、ありがとうございます。わかる範囲で書いてください（全部埋めなくても大丈夫です）。',
+    '内容は GitHub の報告として公開することがあります（お名前は公開しません）。ROM のファイルや中身は送らないでください。',
+    '',
+    'Thank you for test playing! Fill in what you can (English or Japanese). Your report may be published on GitHub (your name is not). Please do not send ROM files.'
+  ].join('\n'));
+  form.setCollectEmail(false);
+  form.setAllowResponseEdits(false);
+  form.setShowLinkToRespondAgain(true);
+  form.setConfirmationMessage('送信しました。ありがとうございます！ / Thank you! Your report has been sent.');
+
+  const choice = (title, help, opts, req) => { const q = form.addMultipleChoiceItem().setTitle(title).setChoiceValues(opts).setRequired(!!req); if (help) q.setHelpText(help); return q; };
+  const text = (title, help, req) => { const q = form.addTextItem().setTitle(title).setRequired(!!req); if (help) q.setHelpText(help); return q; };
+  const para = (title, help, req) => { const q = form.addParagraphTextItem().setTitle(title).setRequired(!!req); if (help) q.setHelpText(help); return q; };
+
+  choice('報告の種類 / Type of report', '', ['不具合 / Bug', '気づいたこと・感想 / Finding', '要望 / Request', '直ったかの確認 / Re-check of a fix'], true);
+  text('版 / Version', '配布ページで zip を作った版（例 v0.4.16） / The version you made the zip with (e.g. v0.4.16)', true);
+  text('起動画面の数字 / Boot screen numbers', '電源を入れた直後の「RAM ROM CHECK」の下の数字（わかれば。例 0 4 17  26 10 26 10:12） / The numbers under RAM ROM CHECK right after power-on (if you know them)');
+  choice('遊んだ環境 / Where you played', '', ['MAMEUI（Windows）', 'MAME（その他 / other）', 'MAME4droid（Android）', '実機（基板） / Real hardware', 'その他 / Other'], true);
+  text('環境の詳しいこと / Details of your setup', '例）MAMEUI 0.289 / Windows 11 / PS5 コントローラー');
+  choice('モード / Mode', '', ['NORMAL（メニューから開始 / from the menu）', 'CUBE RUSH（キューブラッシュ）', 'BOSS RUSH（ボスラッシュ）', '純正どおりの開始 / Original start (no menu)', 'メニュー・ポーズ画面 / Menu or pause screen', 'わからない / Not sure'], false);
+  text('面・エリア・位置 / Stage, area, position', '例）5面 ❷ X:1CA0 Y:0000（ポーズメニューの POS DISP を ON にすると右上に出ます） / e.g. Stage 5 area 2, X:1CA0 Y:0000 (turn on POS DISP in the pause menu)');
+  para('何が起きたか / What happened', 'プレイ中のメモをそのまま貼り付けて大丈夫です。本当はどうなってほしいかも / You can paste your notes as they are. Also what should have happened', true);
+  para('起こし方 / How to make it happen', 'どうすると起きるか。毎回か、たまにか / Steps, and whether it happens every time');
+  para('写真・動画のリンク / Links to photos or videos', 'Google ドライブや Google フォトなどで共有したリンク（あれば） / Shared links from Google Drive, Google Photos, etc. (if any)');
+  text('確認した元の報告 / Original report checked', '「直ったかの確認」のときだけ。配布ページの「確かめてほしいこと」の報告の番号（例 #23）と、直っていたか / Only for re-checks: the report number (e.g. #23) and whether it was fixed');
+  text('お名前（任意・公開しません） / Your name (optional, not published)', '');
+
+  props.setProperty('REPORT_FORM_ID', form.getId());
+  Logger.log('作りました。\n回答する URL（案内ページに載せる）: ' + form.getPublishedUrl() + '\n編集する URL: ' + form.getEditUrl());
+}
+
 // ═══ 定期実行 ═══
 
 function check() {

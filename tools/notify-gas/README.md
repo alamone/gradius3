@@ -29,6 +29,13 @@ Firebase のプロジェクトを作った **Google アカウント**で行う�
 
 コードを直したときは「デプロイ」→「デプロイを管理」→ 鉛筆 →「バージョン：新バージョン」→「デプロイ」（URL は変わらない）。
 
+## テストプレイの報告フォーム（Google フォーム）
+
+1. [Code.gs](Code.gs) と [appsscript.json](appsscript.json) を、新しいものに貼り替えて保存する（appsscript.json に Google フォームの許可が増えた）。
+2. 関数 **`createReportForm`** を選んで「実行」→ 許可を求められたら許可する。
+3. 下の「実行ログ」に出る **回答する URL** を、テストプレイの案内ページ（docs/testplay.html と docs/en/testplay.html の `FORM_URL`）に入れる。
+- 写真をフォームで受け取りたいときは、Google フォームの画面で「ファイルのアップロード」の質問を足す（回答者は Google ログインが要る。ファイルは作った人の Google ドライブに入る）。
+
 ## うまくいかないとき
 
 - 「Firestore（403）」で `has not been used in project` などと出る: 歯車「プロジェクトの設定」→「Google Cloud Platform（GCP）プロジェクト」→「プロジェクトを変更」→ プロジェクト番号 **570590177142** を入れる。その後もう一度 `setup`。
