@@ -39,8 +39,17 @@ export G3="$HOME/g3/g3"     # SDL 同梱。ライブラリの場所はこのラ�
 
 ## 4. 書き込みのルール
 
-- **協力者**：hknroms/gradius3 には push しない。書くのは Issue のコメントと、自分のフォーク（枝 `task-<Issue番号>`）だけ。
-- **管理者のチャット**：main に直接 push してよい。協力者の提出物（`/submit` のリンク先）は、取り寄せて中身を確かめてから取り込み、Issue に `/accept` か `/reject` を書く。
+まず、この会話で連携している GitHub アカウントが gradius3 に書き込めるか（共同編集者か）で分かれる。
+
+- **共同編集者（hknroms・pikadrum・招待された人）**：誰でも main に直接 push してよい。push の前に必ず `git fetch origin main` して最新に合わせる（rebase）。協力者の提出物（`/submit` のリンク先）は、取り寄せて中身を確かめてから取り込み、Issue に `/accept` か `/reject` を書く。
+- **それ以外の協力者**：hknroms/gradius3 には push しない。書くのは Issue のコメントと、自分のフォーク（枝 `task-<Issue番号>`）だけ。
+
+### リリース（パッチの公開）
+
+- リリースできるのは **hknroms と pikadrum**（どちらの会話からでもよい）。
+- 始める前に main を最新にし、`docs/versions.json` の最新の版を確かめて、その次の番号を付ける。
+- push が拒否された（先に誰かが push していた）ときは、**上書きしない**。最新を取り込み、`versions.json` を見直して、版番号がぶつかっていたら付け直してから、ビルド・パッチ作成をやり直す。
+- 終わったら、関係する Issue に版番号を書く（例「v0.4.17 で修正」）。
 
 ## 5. 引き継ぎのまとめを作るとき
 
