@@ -57,7 +57,7 @@
 - pikadrum（ピカドラム）は hknroms/gradius3 の共同編集者。Claude の GitHub アプリは hknroms に入っていて gradius3 だけ許可。
 - 共同作業の仕組み（2026-10-26〜）: Issue のコメントコマンド＋まとめページ https://hknroms.github.io/gradius3/status.html 。手順は VERIFY.md・COLLAB.md。
 - ひな形・ノウハウ集: hknroms/arcade-mod-kit（2026-10-26 作成。紹介ページ https://hknroms.github.io/arcade-mod-kit/ ）。gradius3 の仕組みを一般化したもの。
-- まとめページは配布ページからはリンクしない（協力者に URL を直接渡す）。「要望」タブから送った改善したいことは Issue（ラベル「要望」）になり、ボットが自動で検証タスク（基本の確認項目3つ付き）にする。
+- まとめページ（status.html）は**管理者3人だけ**が見られる（2026-10-26 決定。協力者は手順書の一文と Issue だけで作業でき、見られる利点が小さいため）。Google ログインの扉 `docs/auth-gate.js`（data-gate="admin"）、管理者は Firestore の `admins/{email}`（申請の管理画面で登録）。配布ページからはリンクしない。「要望」タブから送った改善したいことは Issue（ラベル「要望」）になり、ボットが自動で検証タスク（基本の確認項目3つ付き）にする。
 
 ## 6. 配布ページのログイン（2026-10-26〜）
 

@@ -12,7 +12,7 @@
 3. Claude に次の一文を送る：
    > hknroms/gradius3 の VERIFY.md に従って、未着手の検証を1件やって
 
-進み具合は [まとめページ](https://hknroms.github.io/gradius3/status.html#%E6%A4%9C%E8%A8%BC) で見られます。
+（進み具合は管理者がまとめページで見ています。）
 
 ---
 
@@ -32,7 +32,6 @@
 
 1. ラベル「検証」かつ「未着手」の開いている Issue を探す：
    https://github.com/hknroms/gradius3/issues?q=is%3Aopen+label%3A検証+label%3A未着手
-   （まとめページ https://hknroms.github.io/gradius3/status.html の「検証」タブでも同じものが見える）
 2. 番号の小さいものから選ぶ。相手が番号を指定したらそれにする。
 3. **その Issue に `/claim` だけを書いたコメントを投稿**して担当を宣言する。
    数十秒後にボットが「担当中」ラベルを付ける。別の人が先に担当していたらボットが返信するので、別の Issue を選び直す。

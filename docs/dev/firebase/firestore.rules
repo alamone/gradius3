@@ -24,5 +24,14 @@ service cloud.firestore {
       // 承認はFirebase管理画面から実施
       allow update, delete: if false;
     }
+
+    // 管理者の一覧（共同作業のまとめページの扉が使う）。本人が自分の分だけ読める。
+    // 書き込みは申請の管理画面（Apps Script・持ち主の権限）から。ページからは書けない。
+    match /admins/{email} {
+      allow read: if request.auth != null
+        && request.auth.token.email != null
+        && request.auth.token.email.lower() == email;
+      allow write: if false;
+    }
   }
 }

@@ -32,7 +32,7 @@
 | 調査・実装・素材・資料（「COLLAB.md に従って…」） | [COLLAB.md](COLLAB.md) |
 | 管理者の改造・修正・リリース作業 | [docs/dev/STATUS.md](docs/dev/STATUS.md)・[docs/dev/TECH.md](docs/dev/TECH.md) と `src/` |
 
-作業の担当・進み具合・提出物は Issue のコメントコマンドで記録する（一覧は `.github/scripts/task-bot.js` の先頭）。まとめページ：https://hknroms.github.io/gradius3/status.html
+作業の担当・進み具合・提出物は Issue のコメントコマンドで記録する（一覧は `.github/scripts/task-bot.js` の先頭）。まとめページ：https://hknroms.github.io/gradius3/status.html（**管理者だけ**が Google ログインで見られる。協力者には URL を渡さない）
 
 ## 2. MAME はビルドしない（ビルド済みを使う）
 

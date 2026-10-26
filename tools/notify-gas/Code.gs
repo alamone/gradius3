@@ -4,6 +4,7 @@
  * Firestore
  *   users/{uid}        … 申請（本人が pending で作る。ルールは docs/dev/firebase/firestore.rules）
  *   admin_notes/{uid}  … 管理者だけのメモ（Twitter・コメント・決めた日時と方法・履歴）。ルールに無いのでページからは読めない
+ *   admins/{email}     … 管理者（共同作業のまとめページを見られる人）。本人が自分の分だけ読める。管理画面で登録
  *
  * 動き
  *   - 5分ごとに users を見る（check）
@@ -105,7 +106,8 @@ function apiData() {
   const auth = authInfo_(users.map(u => u.uid));
   return {
     users: users.map(u => Object.assign({}, u, notes[u.uid] || {}, auth[u.uid] || {})),
-    allowlist: allowlist_().join('\n'),
+    allowlist: autoList_().join('\n'),
+    admins: adminList_().join('\n'),
     me: adminEmail_(), consoleUrl: CONSOLE_URL, pageUrl: PAGE_URL,
   };
 }
@@ -124,9 +126,22 @@ function apiSaveNote(uid, twitter, comment) {
   return apiData();
 }
 
+function parseEmails_(text) { return Array.from(new Set(String(text || '').split(/[\s,;]+/).map(s => s.trim().toLowerCase()).filter(s => /^[^@\s]+@[^@\s]+$/.test(s)))); }
+
+/** 管理者（まとめページを見られる人）を保存。Firestore の admins/{email} を作り直す。管理者は配布ページも自動で承認する */
+function apiSaveAdmins(text) {
+  const want = parseEmails_(text);
+  const have = listDocs_('admins').map(d => d._id);
+  want.filter(e => have.indexOf(e) < 0).forEach(e => patchDoc_('admins/' + e, { email: e, addedAt: new Date() }));
+  have.filter(e => want.indexOf(e) < 0).forEach(e => req_('delete', DOCS + 'admins/' + encodeURIComponent(e)));
+  PropertiesService.getScriptProperties().setProperty('admins', JSON.stringify(want));
+  check();
+  return apiData();
+}
+
 function apiSaveAllowlist(text) {
-  const list = String(text || '').split(/[\s,;]+/).map(s => s.trim().toLowerCase()).filter(s => /@/.test(s));
-  PropertiesService.getScriptProperties().setProperty('allowlist', JSON.stringify(Array.from(new Set(list))));
+  const list = parseEmails_(text);
+  PropertiesService.getScriptProperties().setProperty('allowlist', JSON.stringify(list));
   check();   // 一覧に入った承認待ちをすぐ通す
   return apiData();
 }
@@ -178,7 +193,10 @@ function mailRejected_(u) {
     body: (u.name ? u.name + ' さん\n\n' : '') + '申請していただいたページへのログインは、今回は見送らせていただきました。\n\n※ このメールは自動で送っています。' });
 }
 
-function allowlist_() { return JSON.parse(PropertiesService.getScriptProperties().getProperty('allowlist') || '[]'); }
+function autoList_() { return JSON.parse(PropertiesService.getScriptProperties().getProperty('allowlist') || '[]'); }
+function adminList_() { return JSON.parse(PropertiesService.getScriptProperties().getProperty('admins') || '[]'); }
+/** 自動で承認する人 = 自動承認の一覧 ＋ 管理者 */
+function allowlist_() { return Array.from(new Set(autoList_().concat(adminList_()))); }
 
 // ═══ Firestore（REST・持ち主の権限なのでルールに関係なく読み書きできる） ═══
 
@@ -277,6 +295,10 @@ const ADMIN_HTML = `
 <div class="sub" id="top">読み込み中…</div>
 <div class="tabs" id="tabs"></div>
 <div id="list"></div>
+<h2>管理者（共同作業のまとめページを見られる人）</h2>
+<div class="card"><div class="sub">ここに入れた Google アカウントの人だけが「共同作業のまとめ」を開けます（1行に1つ）。管理者は配布ページも自動で承認されます。</div>
+<textarea id="admins" style="min-height:90px" placeholder="example@gmail.com"></textarea>
+<div class="row"><button class="pri" onclick="saveAdmins()">保存</button></div></div>
 <h2>自動で承認する Google アカウント</h2>
 <div class="card"><div class="sub">ここにあるアドレスの人が申請したら、すぐ承認して本人にメールします（1行に1つ）。</div>
 <textarea id="allow" style="min-height:110px" placeholder="example@gmail.com"></textarea>
@@ -315,10 +337,12 @@ function render(){
       (u.history?'<div class="hist">'+esc(u.history)+'</div>':'')+'</div>';
   }).join('') : '<div class="sub">ありません</div>';
   const a = document.getElementById('allow'); if (document.activeElement !== a) a.value = D.allowlist;
+  const ad = document.getElementById('admins'); if (document.activeElement !== ad) ad.value = D.admins;
   document.getElementById('links').innerHTML = '<a href="'+esc(D.pageUrl)+'" target="_blank">配布ページ</a>　<a href="'+esc(D.consoleUrl)+'" target="_blank">Firebase の管理画面</a>';
 }
 function saveNote(uid){ call('apiSaveNote', uid, document.getElementById('tw_'+uid).value, document.getElementById('cm_'+uid).value); }
 function decide(uid, st){ if (st!=='pending' && !confirm((st==='approved'?'承認':'却下')+'しますか？'+(st==='approved'?'（本人にメールが届きます）':''))) return; call('apiDecide', uid, st); }
 function saveAllow(){ call('apiSaveAllowlist', document.getElementById('allow').value); }
+function saveAdmins(){ call('apiSaveAdmins', document.getElementById('admins').value); }
 load();
 </script>`;
