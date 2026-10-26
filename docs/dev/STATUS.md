@@ -58,3 +58,11 @@
 - 共同作業の仕組み（2026-10-26〜）: Issue のコメントコマンド＋まとめページ https://hknroms.github.io/gradius3/status.html 。手順は VERIFY.md・COLLAB.md。
 - ひな形・ノウハウ集: hknroms/arcade-mod-kit（2026-10-26 作成。紹介ページ https://hknroms.github.io/arcade-mod-kit/ ）。gradius3 の仕組みを一般化したもの。
 - まとめページは配布ページからはリンクしない（協力者に URL を直接渡す）。「要望」タブから送った改善したいことは Issue（ラベル「要望」）になり、ボットが自動で検証タスク（基本の確認項目3つ付き）にする。
+
+## 6. 配布ページのログイン（2026-10-26〜）
+
+- 配布ページを Google ログインの内側に置いた（ユーザーが設定。Firebase Authentication、プロジェクト `gradius3-login-41798`、Spark プラン）。
+- 申請: ログインした人が Firestore の `users/{uid}` に `status: "pending"` で自分の申請を作る。**承認は管理者が Firebase の管理画面で `status` を `approved` に変える**。ルールは `docs/dev/firebase/firestore.rules`。
+- メール通知: Google Apps Script（`tools/notify-gas/`）が5分ごとに見て、新しい申請を管理者に、承認を本人に知らせる。設定手順は同フォルダの README.md。
+- これは「入口の扉」で、パッチなどのファイル自体は URL を知っていれば見られる（GitHub Pages の仕組み上）。ユーザーは了解済み。
+- Claude はログインの内側のページを開けない（手順書・Issue はリポジトリから読むので作業には影響しない）。

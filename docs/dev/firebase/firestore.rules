@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{userId} {
+
+      // 本人のみ自分の申請状況を閲覧可能
+      allow read: if request.auth != null
+        && request.auth.uid == userId;
+
+      // 新規申請は本人が pending として作成する場合だけ許可
+      allow create: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasOnly(['uid', 'name', 'email', 'status', 'createdAt'])
+        && request.resource.data.keys().hasAll(['uid', 'name', 'email', 'status', 'createdAt'])
+        && request.resource.data.uid == userId
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string
+        && request.resource.data.name.size() <= 200
+        && request.resource.data.status == 'pending'
+        && request.resource.data.createdAt == request.time;
+
+      // クライアントからの変更・削除は禁止。
+      // 承認はFirebase管理画面から実施
+      allow update, delete: if false;
+    }
+  }
+}
