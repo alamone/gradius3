@@ -32,10 +32,10 @@
 
 1. ラベル「検証」かつ「未着手」の開いている Issue を探す：
    https://github.com/hknroms/gradius3/issues?q=is%3Aopen+label%3A検証+label%3A未着手
-2. 番号の小さいものから選ぶ。相手が番号を指定したらそれにする。
-3. **その Issue に `/claim` だけを書いたコメントを投稿**して担当を宣言する。
+2. 番号の小さいものから選ぶ。相手が番号を指定したらそれにする（まとめページの「Claude に頼む」で、すでに「担当中・Claude」になっていることがある。それもそのまま引き継いでよい）。
+3. **その Issue に `/claim claude` だけを書いたコメントを投稿**して担当を宣言する（Claude が作業していることがまとめページに出る）。
    数十秒後にボットが「担当中」ラベルを付ける。別の人が先に担当していたらボットが返信するので、別の Issue を選び直す。
-4. GitHub に書き込めない場合は、`/claim` のコメントを相手に貼ってもらうよう頼む（以降のコメントも同じ）。
+4. GitHub に書き込めない場合は、`/claim claude` のコメントを相手に貼ってもらうよう頼む（以降のコメントも同じ）。
 
 ### 2. 中身を読む
 
@@ -123,6 +123,6 @@ G3=/path/to/g3 SEQ="60:COIN,120:START" SNAP="600:3000:300" END=3000 \
   - 死んで再開しても地形が消えない
   ```
 
-- **ボットのコマンド一覧**: `/claim` `/check 番号 ok|ng|hold` `/done` `/human` `/release`、管理者のみ `/items` `/type` `/accept` `/reject`（詳しくは `.github/scripts/task-bot.js` の先頭）。検証以外の作業は [COLLAB.md](COLLAB.md)
+- **ボットのコマンド一覧**: `/claim [claude|人]` `/check 番号 ok|ng|hold` `/done` `/human` `/release`、管理者のみ `/items` `/type` `/accept` `/reject`（詳しくは `.github/scripts/task-bot.js` の先頭）。検証以外の作業は [COLLAB.md](COLLAB.md)
 - **ラベルの作成・更新**: Actions タブ → 「共同作業ボット」→ Run workflow。
 - 担当者の名前・開始時刻などは Issue 本文の末尾に見えないメモ（`<!-- task-state … -->`）として保存され、まとめページはそれを読んでいる。消さないこと。

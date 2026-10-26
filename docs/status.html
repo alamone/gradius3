@@ -90,6 +90,18 @@ details{margin-top:28px;font-size:13.5px}
 summary{cursor:pointer;font-weight:600}
 code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:1px 5px;border-radius:4px}
 .closed{opacity:.75}
+.acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.acts button{font-size:12.5px;padding:5px 11px}
+.acts .pri{background:var(--acc);border-color:var(--acc);color:#fff}
+.acts button:disabled{opacity:.5;cursor:default}
+.wk{display:inline-block;font-size:11.5px;padding:0 7px;border-radius:99px;margin-right:4px;vertical-align:1px}
+.wk.ai{background:color-mix(in srgb,var(--rev) 20%,transparent);color:var(--rev)}
+.wk.hu{background:color-mix(in srgb,var(--warn) 22%,transparent);color:var(--warn)}
+.amsg{font-size:12.5px;color:var(--sub);margin-top:6px}
+.tok{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-top:12px;font-size:13px}
+.tok summary{font-weight:600}
+.tok input{font:inherit;font-size:14px;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--text);width:100%;margin:6px 0}
+.tok ol{margin:6px 0;padding-left:20px}
 </style>
 <script type="module" src="auth-gate.js" data-gate="admin"></script>
 </head>
@@ -103,6 +115,22 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
     <button id="reload" type="button">更新</button>
   </div>
   <a class="startlink" href="#%E5%A7%8B%E3%82%81%E6%96%B9">▶ 新しいチャットで始めるには（始め方）</a>　<a class="startlink" id="adminlink" href="#" style="display:none" target="_blank" rel="noopener">🔒 申請の管理（管理者のみ）</a>
+  <details class="tok" id="tokbox">
+    <summary id="toksum">ボタンで操作する（GitHub の連携）</summary>
+    <div class="sub" style="margin-top:6px">各タスクのボタン（担当する・Claude に頼む・終わった など）は、GitHub の Issue にコマンドのコメントを書き込みます。数十秒でボットが状態を変えます。</div>
+    <ul style="margin:6px 0;padding-left:20px">
+      <li><b>連携なし</b>：ボタンを押すとコマンドをコピーして Issue を開くので、いちばん下のコメント欄に貼って「Comment」を押す。</li>
+      <li><b>連携あり</b>：ボタンだけで書き込む。下の手順でトークンを作って貼る（このブラウザにだけ保存されます）。</li>
+    </ul>
+    <ol>
+      <li><a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub のトークン作成画面</a>を開く（Fine-grained token）</li>
+      <li>Repository access →「Only select repositories」→ <code>hknroms/gradius3</code></li>
+      <li>Permissions → Repository permissions →「Issues」を <b>Read and write</b></li>
+      <li>「Generate token」→ 出てきた文字列（<code>github_pat_…</code>）をコピーして下に貼る</li>
+    </ol>
+    <input id="tok" type="password" placeholder="github_pat_…" autocomplete="off">
+    <button type="button" id="toksave">保存</button> <button type="button" id="tokdel">消す</button> <span id="tokmsg" class="sub"></span>
+  </details>
   <nav id="nav"></nav>
   <div id="out"><div class="sub" style="margin-top:16px">読み込み中…</div></div>
   <div class="sub" id="stamp" style="margin-top:14px"></div>
@@ -112,7 +140,8 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
     <ul>
       <li>GitHub の Issue のうち、作業の種類（検証・調査・実装・素材・資料）のラベルが付いたものを一覧にしています。開くたびに最新を読み込みます。</li>
       <li>タブはそれぞれ直接開けます（例：<code>status.html#協力者</code>、<code>status.html#調査</code>）。</li>
-      <li>担当・進み具合・提出物は、協力者（の Claude）が Issue にコメントするコマンド（<code>/claim</code> <code>/check</code> <code>/submit</code> <code>/done</code> など）で自動的に変わります。</li>
+      <li>担当・進み具合・提出物は、協力者（の Claude）が Issue にコメントするコマンド（<code>/claim</code> <code>/check</code> <code>/submit</code> <code>/done</code> など）で自動的に変わります。各タスクのボタンでも同じコマンドを書き込めます。</li>
+      <li>担当の印：<span class="wk ai">🤖 Claude</span> は Claude が作業中（または Claude に頼んで待っている）、<span class="wk hu">👤 人</span> は人が作業中。</li>
       <li>状態：未着手 → 担当中 → 確認待ち（提出済み）→ 完了。人の目や判断が要るものは「要人間確認」。</li>
       <li>バーの色：<span style="color:var(--ok)">緑＝OK</span>／<span style="color:var(--ng)">赤＝おかしい</span>／<span style="color:var(--warn)">黄＝人の目で確認が必要</span>／灰＝まだ</li>
       <li>協力者は、Issue での活動とフォークから自動で載ります。紹介文などは <code>docs/collaborators.json</code> で足せます。</li>
@@ -187,7 +216,8 @@ function card(t, showType) {
   const build = section(t.body, '起動画面の数字（版・ビルド日時）') || section(t.body, 'BUILD 日時（起動画面）') || section(t.body, 'BUILD 日時');
   if (ver) meta.push(esc(ver) + (build ? ' <span title="BUILD 日時">(' + esc(build) + ')</span>' : ''));
   if (stage) meta.push(esc(stage));
-  if ((t.status === 'doing' || t.status === 'review') && st.claimer) meta.push(`<span class="who">@${esc(st.claimer)}</span> が ${ago(st.claimed_at)}から担当`);
+  const wk = st.worker === 'claude' ? '<span class="wk ai">🤖 Claude</span>' : st.worker === 'human' ? '<span class="wk hu">👤 人</span>' : '';
+  if ((t.status === 'doing' || t.status === 'review') && st.claimer) meta.push(`${wk}<span class="who">@${esc(st.claimer)}</span> が ${ago(st.claimed_at)}から担当`);
   else if ((t.status === 'done' || t.status === 'human') && (st.done_by || st.claimer)) meta.push(`<span class="who">@${esc(st.done_by || st.claimer)}</span>`);
   meta.push('更新 ' + ago(st.updated_at || t.updated_at));
   const pct = n => c.total ? (n / c.total * 100) + '%' : '0';
@@ -204,8 +234,71 @@ function card(t, showType) {
   const typeChip = (labelsOf(t).includes('要望') ? '<span class="chip">要望</span>' : '') + (showType && t.type ? `<span class="chip">${esc(t.type)}</span>` : '');
   return `<div class="card${t.state === 'closed' ? ' closed' : ''}">
     <div class="t">${typeChip}<a href="${esc(href)}" target="_blank" rel="noopener"><span class="num">#${t.number}</span>${esc(t.title.replace(/^\[(検証|テスト|作業|要望)\]\s*/, ''))}</a></div>
-    <div class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>${prog}${subHtml}${note}</div>`;
+    <div class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>${prog}${subHtml}${note}${actions(t)}</div>`;
 }
+// ---- 操作ボタン（Issue にコマンドのコメントを書く）
+const ACTIONS = {
+  todo:   [['🤖 Claude に頼む', '/claim claude', 'pri', 'ai'], ['👤 自分がやる', '/claim 人']],
+  doing:  [['✅ 終わった', '/done'], ['🙋 人の確認へ', '/human'], ['↩ 担当をやめる', '/release']],
+  review: [['✔ 完了にする', '/accept', 'pri'], ['↩ 差し戻す', '/reject', '', 'ask']],
+  human:  [['👤 人が担当する', '/claim 人', 'pri'], ['✔ 完了にする', '/accept'], ['🤖 Claude に頼む', '/claim claude', '', 'ai'], ['↩ 差し戻す', '/reject', '', 'ask']],
+  done:   [],
+};
+function actions(t) {
+  if (t.state === 'closed') return '';
+  const list = ACTIONS[t.status] || [];
+  if (!list.length) return '';
+  return `<div class="acts">${list.map(([lb, cmd, cls, opt], i) =>
+    `<button type="button" class="${cls || ''}" data-n="${t.number}" data-type="${esc(t.type || '')}" data-i="${i}" data-s="${t.status}">${lb}</button>`).join('')}</div><div class="amsg" id="am${t.number}"></div>`;
+}
+const LS = { get: k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } }, set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} } };
+const token = () => LS.get('g3_gh_token');
+function claudeSay(n, type) {
+  const guide = type === '検証' ? 'VERIFY.md' : 'COLLAB.md';
+  return `hknroms/gradius3 の ${guide} に従って、#${n} をやって（まとめページで Claude の担当にしてある）`;
+}
+async function copy(text) { try { await navigator.clipboard.writeText(text); return true; } catch { return false; } }
+document.addEventListener('click', async e => {
+  const b = e.target.closest('.acts button'); if (!b) return;
+  const n = +b.dataset.n, [lb, cmd0, , opt] = ACTIONS[b.dataset.s][+b.dataset.i];
+  const msg = document.getElementById('am' + n);
+  let cmd = cmd0;
+  if (opt === 'ask') {
+    const why = prompt('直してほしい点（担当者に伝わります）'); if (!why || !why.trim()) return;
+    cmd += ' ' + why.trim().replace(/\s+/g, ' ');
+  }
+  const after = opt === 'ai' ? `\n\n新しい Claude の会話で、次の一文を送ってください（コピーしました）：\n「${claudeSay(n, b.dataset.type)}」` : '';
+  const tk = token();
+  if (!tk) {
+    await copy(cmd);
+    window.open(`https://github.com/${REPO}/issues/${n}#new_comment_field`, '_blank', 'noopener');
+    msg.textContent = `「${cmd}」をコピーしました。開いた Issue のいちばん下のコメント欄に貼って「Comment」を押してください。` + (opt === 'ai' ? `その後、新しい Claude の会話で「${claudeSay(n, b.dataset.type)}」と送ってください。` : '');
+    return;
+  }
+  b.closest('.acts').querySelectorAll('button').forEach(x => x.disabled = true);
+  msg.textContent = '書き込んでいます…';
+  try {
+    const r = await fetch(`${API}/issues/${n}/comments`, { method: 'POST',
+      headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + tk, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body: cmd }) });
+    if (!r.ok) throw new Error(r.status === 401 ? 'トークンが無効です（期限切れ・貼り間違い）。上の「ボタンで操作する」で貼り直してください。' : r.status === 403 || r.status === 404 ? 'このトークンでは書き込めません（Issues の Read and write と、hknroms/gradius3 の選択を確かめてください）。' : '書き込めませんでした（' + r.status + '）');
+    if (opt === 'ai') await copy(claudeSay(n, b.dataset.type));
+    msg.textContent = `「${lb}」を書き込みました。ボットが反映するまで30秒ほど待って、自動で更新します。` + after.replace(/\n/g, ' ');
+    setTimeout(load, 30000);
+  } catch (err) {
+    msg.textContent = err.message;
+    b.closest('.acts').querySelectorAll('button').forEach(x => x.disabled = false);
+  }
+});
+function tokUi() {
+  const has = !!token();
+  document.getElementById('toksum').textContent = 'ボタンで操作する（GitHub の連携：' + (has ? '連携あり' : '連携なし') + '）';
+}
+document.addEventListener('click', e => {
+  if (e.target.id === 'toksave') { const v = document.getElementById('tok').value.trim(); if (!/^(github_pat_|ghp_)/.test(v)) { document.getElementById('tokmsg').textContent = 'github_pat_ で始まる文字列を貼ってください'; return; } LS.set('g3_gh_token', v); document.getElementById('tok').value = ''; document.getElementById('tokmsg').textContent = '保存しました'; tokUi(); }
+  if (e.target.id === 'tokdel') { LS.set('g3_gh_token', ''); document.getElementById('tokmsg').textContent = '消しました'; tokUi(); }
+});
+
 function tiles(list) {
   return `<div class="tiles">${ST.map(s => `<div class="tile s-${s.key}"><b>${list.filter(t => t.status === s.key).length}</b><span>${s.label}</span></div>`).join('')}</div>`;
 }
@@ -235,7 +328,7 @@ function viewAll(D) {
   return tiles(L) +
     `<h2>種類ごと</h2><div class="tblwrap"><table><tr><th>種類</th>${ST.map(s => `<th>${s.label}</th>`).join('')}</tr>${rows}</table></div>` +
     `<h2>最近の動き</h2>${feedHtml}` +
-    groups(L, true, ['review', 'human', 'doing']);
+    groups(L, true, ['review', 'human', 'doing', 'todo']);
 }
 function viewType(D, ty) {
   const L = D.tasks.filter(t => t.type === ty);
@@ -365,7 +458,7 @@ const DEMO = () => {
     body: body + '\n\n<!-- task-state ' + JSON.stringify(st) + ' -->' });
   return {
     tasks: [
-      mk(1, '[テスト] 地形の表示がおかしい', ['検証','担当中'], '### 版\n\nv0.4.16\n\n### 確認項目\n- [x] ✅ a\n- [x] ❌ b\n- [ ] c', { claimer: 'tanaka', claimed_at: h(5), updated_at: h(1), history: [{ who: 'tanaka', what: 'claim', at: h(5) }] }),
+      mk(1, '[テスト] 地形の表示がおかしい', ['検証','担当中'], '### 版\n\nv0.4.16\n\n### 確認項目\n- [x] ✅ a\n- [x] ❌ b\n- [ ] c', { claimer: 'tanaka', worker: 'claude', claimed_at: h(5), updated_at: h(1), history: [{ who: 'tanaka', what: 'claim', at: h(5) }] }),
       mk(7, '[作業] 4面の自機表示ルーチンを調べる', ['調査','確認待ち'], '### 対象の版\n\nv0.4.16\n\n### 確認項目\n- [x] ✅ 番地の特定\n- [ ] メモ', { claimer: 'suzuki', claimed_at: h(30), updated_at: h(2),
         submissions: [{ url: 'https://github.com/suzuki/gradius3/tree/task-7', by: 'suzuki', at: h(2), note: '解析メモ stage4.md' }],
         history: [{ who: 'suzuki', what: 'claim', at: h(30) }, { who: 'suzuki', what: 'submit', at: h(2) }] }),
@@ -378,7 +471,8 @@ const DEMO = () => {
 };
 
 async function getJSON(url) {
-  const r = await fetch(url, { headers: { Accept: 'application/vnd.github+json' } });
+  const h = { Accept: 'application/vnd.github+json' }; if (token()) h.Authorization = 'Bearer ' + token();
+  const r = await fetch(url, { headers: h, cache: 'no-store' });
   if (r.status === 403 || r.status === 429) throw new Error('GitHub の読み込み回数の上限（1時間に60回）に達しました。しばらくしてから「更新」を押してください。');
   if (!r.ok) throw new Error('GitHub から読み込めませんでした（' + r.status + '）。');
   return r.json();
@@ -409,6 +503,7 @@ async function load() {
 }
 window.addEventListener('hashchange', () => { draw(); window.scrollTo(0, 0); });
 document.getElementById('reload').addEventListener('click', load);
+tokUi();
 draw();
 load();
 </script>

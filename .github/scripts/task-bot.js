@@ -5,7 +5,8 @@
 // 状態（ラベル）      : 未着手 → 担当中 → 確認待ち → 完了（人の確認が必要なものは 要人間確認）
 //
 // コマンド（コメントの行頭に書く。1つのコメントに複数行書いてよい）
-//   /claim                   担当する
+//   /claim [claude|人]       担当する（claude = Claude が作業する／人 = 人が作業する。まとめページに出る）
+//                            Claude 用に予約された担当（/claim claude）は、別のアカウントの Claude が /claim claude で引き継げる
 //   /check 番号 ok|ng|hold   確認項目に結果を付ける（hold = 人の目で確認が必要）
 //   /submit URL [ひとこと]   成果物を提出する（自分のフォークの枝・コミット・PR などの GitHub の URL）
 //   /done [ひとこと]         終わり。検証は ok だけなら完了、ng/hold/未チェックがあれば要人間確認。
@@ -162,7 +163,7 @@ module.exports = async ({ github, context, core }) => {
       const last = Date.parse(st.updated_at || st.claimed_at || is.updated_at);
       if (Date.now() - last > STALE_DAYS * 86400e3) {
         const who = st.claimer;
-        delete st.claimer; delete st.claimed_at; st.updated_at = now;
+        delete st.claimer; delete st.claimed_at; delete st.worker; st.updated_at = now;
         push(st, 'bot', 'timeout', { prev: who });
         await github.rest.issues.update({ owner, repo, issue_number: is.number, body: setState(is.body, st) });
         await setLabels(is.number, is.labels.map(l => l.name), { status: L.todo });
@@ -261,9 +262,12 @@ module.exports = async ({ github, context, core }) => {
     if (!isTask()) { errors.push('このIssueはまだ作業タスクではありません（管理者が `/items` か `/type` で始められます）'); break; }
 
     if (n === 'claim') {
-      if (status === L.doing && st.claimer && st.claimer !== actor) { errors.push(`すでに @${st.claimer} さんが担当中です。別の「未着手」を選んでください`); continue; }
+      const w = /^(claude|ai|クロード)/i.test(cmd.arg) ? 'claude' : /^(人|human|ひと)/i.test(cmd.arg) ? 'human' : '';
+      const takeover = w === 'claude' && st.worker === 'claude';
+      if (status === L.doing && st.claimer && st.claimer !== actor && !takeover) { errors.push(`すでに @${st.claimer} さんが担当中です。別の「未着手」を選んでください`); continue; }
       if (status === L.done) { errors.push('このタスクは「完了」しています'); continue; }
-      st.claimer = actor; st.claimed_at = now; status = L.doing; changed = true; did.add('claim');
+      if (!(takeover && status === L.doing)) st.claimed_at = now;
+      st.claimer = actor; if (w) st.worker = w; else delete st.worker; status = L.doing; changed = true; did.add('claim');
     } else if (n === 'check') {
       if (!canEdit()) { errors.push('`/check` は担当者（先に `/claim`）か管理者だけが使えます'); continue; }
       const m = cmd.arg.match(/^(\d+)\s+(ok|ng|hold)\b/i);
@@ -288,7 +292,7 @@ module.exports = async ({ github, context, core }) => {
       status = L.human; if (cmd.arg) st.note = cmd.arg; changed = true; did.add('human');
     } else if (n === 'release') {
       if (!canEdit()) { errors.push('`/release` は担当者か管理者だけが使えます'); continue; }
-      delete st.claimer; delete st.claimed_at; status = L.todo; changed = true; did.add('release');
+      delete st.claimer; delete st.claimed_at; delete st.worker; status = L.todo; changed = true; did.add('release');
     } else if (n === 'accept') {
       if (!isAdmin) { errors.push('`/accept` は管理者だけが使えます'); continue; }
       status = L.done; st.accepted_at = now; st.accepted_by = actor; if (cmd.arg) st.note = cmd.arg; changed = true; did.add('accept');
