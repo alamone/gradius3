@@ -191,7 +191,6 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
   const box = $('#rep-list');
   let latest = '';
   try { const v = await (await fetch('versions.json', { cache: 'no-store' })).json(); latest = 'v' + v.versions[0].version; } catch {}
-  if (latest) $('#gh').href += '&version=' + encodeURIComponent(latest);   // 報告フォームの「版」を入力済みに
   try {
     const r = await fetch('https://api.github.com/repos/hknroms/gradius3/issues?state=all&per_page=100', { headers: { Accept: 'application/vnd.github+json' } });
     if (!r.ok) throw new Error(r.status);

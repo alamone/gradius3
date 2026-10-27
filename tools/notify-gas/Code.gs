@@ -57,12 +57,12 @@ function createReportForm() {
   if (old) {
     try { const f = FormApp.openById(old); Logger.log('もう作ってあります。\n回答する URL: ' + f.getPublishedUrl() + '\n編集する URL: ' + f.getEditUrl()); return; } catch (e) {}
   }
-  const form = FormApp.create(SITE_NAME + ' テストプレイの報告 / Test play report');
+  const form = FormApp.create(SITE_NAME + ' ご意見・ご要望・不具合報告 / Feedback and bug reports');
   form.setDescription([
-    'テストプレイにご協力いただき、ありがとうございます。わかる範囲で書いてください（全部埋めなくても大丈夫です）。',
+    'ご意見・ご要望・不具合の報告、テストプレイの報告など、どんなことでも受け付けています。わかる範囲で書いてください（全部埋めなくても大丈夫です）。',
     '内容は GitHub の報告として公開することがあります（お名前は公開しません）。ROM のファイルや中身は送らないでください。',
     '',
-    'Thank you for test playing! Fill in what you can (English or Japanese). Your report may be published on GitHub (your name is not). Please do not send ROM files.'
+    'Feedback, requests, bug reports and test play reports are all welcome. Fill in what you can (English or Japanese). Your report may be published on GitHub (your name is not). Please do not send ROM files.'
   ].join('\n'));
   form.setCollectEmail(false);
   form.setAllowResponseEdits(false);
@@ -74,7 +74,7 @@ function createReportForm() {
   const para = (title, help, req) => { const q = form.addParagraphTextItem().setTitle(title).setRequired(!!req); if (help) q.setHelpText(help); return q; };
 
   choice('報告の種類 / Type of report', '', ['不具合 / Bug', '気づいたこと・感想 / Finding', '要望 / Request', '直ったかの確認 / Re-check of a fix'], true);
-  text('版 / Version', '配布ページで zip を作った版（例 v0.4.16） / The version you made the zip with (e.g. v0.4.16)', true);
+  versionItem_(form);
   text('起動画面の数字 / Boot screen numbers', '電源を入れた直後の「RAM ROM CHECK」の下の数字（わかれば。例 0 4 17  26 10 26 10:12） / The numbers under RAM ROM CHECK right after power-on (if you know them)');
   choice('遊んだ環境 / Where you played', '', ['MAMEUI（Windows）', 'MAME（その他 / other）', 'MAME4droid（Android）', '実機（基板） / Real hardware', 'その他 / Other'], true);
   text('環境の詳しいこと / Details of your setup', '例）MAMEUI 0.289 / Windows 11 / PS5 コントローラー');
@@ -88,6 +88,33 @@ function createReportForm() {
 
   props.setProperty('REPORT_FORM_ID', form.getId());
   Logger.log('作りました。\n回答する URL（案内ページに載せる）: ' + form.getPublishedUrl() + '\n編集する URL: ' + form.getEditUrl());
+}
+
+// 「版」の質問：選ぶ形（最新版／1つ前の版／その他に書く）。空なら最新版として扱う
+function versionItem_(form) {
+  return form.addMultipleChoiceItem().setTitle('版 / Version').setHelpText('ふつうは「最新版」。空のままなら最新版として扱います / Usually "Latest". Blank means the latest')
+    .setChoiceValues(['最新版 / Latest', '1つ前の版 / Previous']).showOtherOption(true).setRequired(false);
+}
+// 作ってあるフォームを新しい形に直す（題名・説明・「版」の質問）。1回実行すればよい
+function updateReportForm() {
+  const form = FormApp.openById(PropertiesService.getScriptProperties().getProperty('REPORT_FORM_ID'));
+  form.setTitle(SITE_NAME + ' ご意見・ご要望・不具合報告 / Feedback and bug reports');
+  form.setDescription(form.getDescription().replace(/^テストプレイにご協力いただき、ありがとうございます。/, 'ご意見・ご要望・不具合の報告、テストプレイの報告など、どんなことでも受け付けています。').replace(/Thank you for test playing! /, 'Feedback, requests, bug reports and test play reports are all welcome. '));
+  const old = form.getItems().find(it => it.getTitle().indexOf('版 / Version') === 0);
+  if (old) {
+    const idx = old.getIndex();
+    if (old.getType() !== FormApp.ItemType.MULTIPLE_CHOICE) { form.deleteItem(old); const q = versionItem_(form); form.moveItem(q.getIndex(), idx); }
+  }
+  Logger.log('直しました: ' + form.getPublishedUrl());
+}
+// 版を番号にする（最新版・1つ前の版・空 → 配布ページの versions.json の番号）
+function resolveVersion_(v) {
+  v = String(v || '').trim();
+  let vs = [];
+  try { vs = JSON.parse(UrlFetchApp.fetch(PAGE_URL + 'versions.json', { muteHttpExceptions: true }).getContentText()).versions.map(x => 'v' + x.version); } catch (e) {}
+  if ((!v || /^最新|Latest/.test(v)) && vs[0]) return vs[0] + '（最新版）';
+  if (/^1つ前|Previous/.test(v) && vs[1]) return vs[1] + '（1つ前の版）';
+  return v;
 }
 
 // ═══ 報告フォーム → GitHub の報告（Issue）═══
@@ -133,10 +160,10 @@ function forwardResponse_(r) {
     const res = A['確認した元の報告'].replace(/#?\d+/, '').trim() + ' ' + what;
     const bad = /まだ|おかしい|直って(い)?な|still|broken|not/i.test(res);
     title = '[確認] #' + origin[1] + ' ' + (bad ? 'まだおかしい' : '直っていた');
-    body += sec('報告の種類', '直ったかの確認') + sec('版', A['版']) + sec('確認した元の報告', '#' + origin[1]) + sec('確認の結果', bad ? 'まだおかしい' : '直っていた');
+    body += sec('報告の種類', '直ったかの確認') + sec('版', resolveVersion_(A['版'])) + sec('確認した元の報告', '#' + origin[1]) + sec('確認の結果', bad ? 'まだおかしい' : '直っていた');
   } else {
     title = '[テスト] ' + (what.split('\n')[0].slice(0, 40) || '（題名なし）');
-    body += sec('報告の種類', kind) + sec('版', A['版']);
+    body += sec('報告の種類', kind) + sec('版', resolveVersion_(A['版']));
   }
   body += sec('起動画面の数字（版・ビルド日時）', A['起動画面の数字']) + sec('遊んだ環境', A['遊んだ環境']) + sec('環境の詳しいこと（わかれば）', A['環境の詳しいこと']) +
     sec('モード', A['モード']) + sec('面・エリア', A['面・エリア・位置']) + sec('何が起きたか', what) + sec('起こし方（再現手順）', A['起こし方']) +

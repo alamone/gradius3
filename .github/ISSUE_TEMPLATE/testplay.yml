@@ -1,11 +1,11 @@
-name: テストプレイの報告
-description: 不具合・気づいたこと・要望を報告する
+name: ご意見・ご要望・不具合報告
+description: ご意見・ご要望・不具合・テストプレイの報告など
 title: "[テスト] "
 body:
   - type: markdown
     attributes:
       value: |
-        テストプレイありがとうございます。わかる範囲で書いてください（全部埋めなくても大丈夫です）。
+        ご意見・ご要望・不具合の報告、テストプレイの報告など、どんなことでも受け付けています。わかる範囲で書いてください（全部埋めなくても大丈夫です）。
         GitHub のボタンや一部の文字は英語ですが、入力する欄はすべて日本語です。
         - 一番上の **Title**（タイトル）：「[テスト] 」の後に、ひとことで内容を（例: 5面の中ボスでボスの曲にならない）
         - 下の各欄をわかる範囲で書いて、最後に一番下の緑のボタン（**Create** または **Submit new issue**）で送信
@@ -20,14 +20,23 @@ body:
         - 直ったかの確認
     validations:
       required: true
+  - type: dropdown
+    id: version_pick
+    attributes:
+      label: 版
+      description: 遊んだ版。ふつうは「最新版」のままで大丈夫です
+      options:
+        - 最新版
+        - 1つ前の版
+        - それ以外・わからない（下の欄に書く）
+      default: 0
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
-      label: 版
-      description: 配布ページのボタンから開くと入力済みになります
-      placeholder: v0.4.16
-    validations:
-      required: true
+      label: 版（「それ以外」のとき・わかれば）
+      placeholder: v0.4.15
   - type: input
     id: build
     attributes:

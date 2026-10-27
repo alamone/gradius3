@@ -1,11 +1,11 @@
-name: Test play report (English)
+name: Feedback, requests and bug reports (English)
 description: Report a bug, a finding or a request
 title: "[Test] "
 body:
   - type: markdown
     attributes:
       value: |
-        Thank you for test playing! Fill in what you can (you do not have to fill in everything).
+        Feedback, requests, bug reports and test play reports are all welcome. Fill in what you can (you do not have to fill in everything).
         - **Title**: after "[Test] ", describe the issue in a few words (e.g. Boss music does not play at stage 5 mid-boss)
         - Fill in the fields below, then press the green button at the bottom (**Create** or **Submit new issue**)
   - type: dropdown
@@ -19,14 +19,23 @@ body:
         - Re-check of a fix
     validations:
       required: true
+  - type: dropdown
+    id: version_pick
+    attributes:
+      label: Version
+      description: The version you played. Usually leave it as "Latest"
+      options:
+        - Latest
+        - Previous
+        - Other / not sure (write below)
+      default: 0
+    validations:
+      required: true
   - type: input
     id: version
     attributes:
-      label: Version
-      description: Filled in automatically when opened from the button on the patch page
-      placeholder: v0.4.16
-    validations:
-      required: true
+      label: Version (if "Other", if you know)
+      placeholder: v0.4.15
   - type: input
     id: build
     attributes:

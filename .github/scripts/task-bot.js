@@ -184,6 +184,21 @@ module.exports = async ({ github, context, core }) => {
   const labels = issue.labels.map(l => l.name);
   let body = issue.body || '';
 
+  // 報告フォームの「版」（最新版／1つ前の版／それ以外）を、実際の版の番号に置き換える（docs/versions.json）
+  if (ev === 'issues' && context.payload.action === 'opened' && /^### (版|Version)\s*$/m.test(body) && /^### (版（|Version \()/m.test(body)) {
+    let vs = [];
+    try { vs = JSON.parse(require('fs').readFileSync((process.env.GITHUB_WORKSPACE || '.') + '/docs/versions.json', 'utf8')).versions.map(v => 'v' + v.version); } catch {}
+    const pick = section(body, '版') || section(body, 'Version');
+    const typed = section(body, '版（「それ以外」のとき・わかれば）') || section(body, 'Version (if "Other", if you know)');
+    let ver = typed;
+    if (!ver && /^(最新|Latest)/.test(pick) && vs[0]) ver = vs[0] + '（最新版）';
+    else if (!ver && /^(1つ前|Previous)/.test(pick) && vs[1]) ver = vs[1] + '（1つ前の版）';
+    if (ver) {
+      body = body.replace(/^(### (?:版|Version)\s*\n+)([^\n]*)/m, (m, h) => h + ver);
+      await github.rest.issues.update({ owner, repo, issue_number: num, body });
+    }
+  }
+
   if (ev === 'issues' && context.payload.action === 'opened') {
     const om = (section(body, '確認した元の報告') || section(body, 'Original report checked')).match(/#?(\d+)/);
     const res = section(body, '確認の結果') || section(body, 'Re-check result');
