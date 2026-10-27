@@ -56,6 +56,8 @@ kbd{border:1px solid var(--line)}
 .mic .ph{flex:1;color:var(--sub);font-size:13px}
 .mic .ic{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
 .mic .ic.on{outline:2px solid var(--ok);outline-offset:2px}
+.say{position:relative;margin:6px 0;padding:10px 12px;padding-right:70px;border-radius:8px;background:color-mix(in srgb,var(--acc) 10%,transparent);border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);font-size:13.5px;color:var(--text)}
+.say button{position:absolute;top:6px;right:6px;font:inherit;font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}
 .mic .lbl{font-size:11px;text-align:center;line-height:1.2}
 </style>
 <script type="module" src="auth-gate.js"></script>
@@ -107,6 +109,10 @@ kbd{border:1px solid var(--line)}
   </div>
   <ul class="sub" style="margin-top:0">
     <li>緑の丸のマイクのボタン（音声入力）を使います。押して話し、終わったらもう一度押すと文字になります。</li>
+    <li><b>文字になったら、そのまま送信します。</b>遊び終わるまで、気づくたびに話して送るのを繰り返します。</li>
+    <li>最初に、次の文を送っておくのがおすすめです。言い間違いや聞き間違いを直しながら覚えておいて、最後にまとめて出してくれます。
+      <div class="say" id="prompt-ja">これからゲームのテストプレイのメモを、音声入力で何回かに分けて送ります。聞き間違い・言い間違い・誤字を、ゲームの話の流れに合わせて直しながら覚えておいてください。途中は「了解」とだけ返事をしてください。最後に「まとめて」と送ったら、それまでのメモを、起きた順に、面・場所・やった操作・起きたこと・写真を撮った所が分かるように整理して出してください。<button type="button" onclick="cp('prompt-ja',this)">コピー</button></div></li>
+    <li>最後に「まとめて」と送って出てきた文を、報告に貼り付けてください。</li>
     <li>その横の波の形のボタンは「会話モード」（声でやり取りする）なので、ここでは使いません。</li>
     <li>ボタンの形や場所は、アプリの版によって少し違います。</li>
     <li>スマホのキーボードのマイクでも入力できますが、日本語では正確さが落ちることがあります。</li>
@@ -178,6 +184,7 @@ kbd{border:1px solid var(--line)}
 </main>
 
 <script>
+function cp(id, b) { const d = document.getElementById(id); const t = d.firstChild.textContent.trim(); const done = () => { const o = b.textContent; b.textContent = 'コピーしました'; setTimeout(() => b.textContent = o, 1500); }; try { navigator.clipboard.writeText(t).then(done, () => {}); } catch (e) {} }
 // Google フォームの URL（日本語と英語の両方で書かれた1つのフォーム）。空のあいだはボタンを「準備中」にする
 const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfOa5F6KOShf0Y36YEohi0G2BpBHW4WNkibvGfBxJ4d7bTdcA/viewform';
 const $ = s => document.querySelector(s);

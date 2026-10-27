@@ -56,6 +56,8 @@ kbd{border:1px solid var(--line)}
 .mic .ph{flex:1;color:var(--sub);font-size:13px}
 .mic .ic{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex:none}
 .mic .ic.on{outline:2px solid var(--ok);outline-offset:2px}
+.say{position:relative;margin:6px 0;padding:10px 12px;padding-right:70px;border-radius:8px;background:color-mix(in srgb,var(--acc) 10%,transparent);border:1px solid color-mix(in srgb,var(--acc) 40%,transparent);font-size:13.5px;color:var(--text)}
+.say button{position:absolute;top:6px;right:6px;font:inherit;font-size:12px;padding:4px 10px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--text);cursor:pointer}
 .mic .lbl{font-size:11px;text-align:center;line-height:1.2}
 </style>
 <script type="module" src="../auth-gate.js"></script>
@@ -107,6 +109,10 @@ kbd{border:1px solid var(--line)}
   </div>
   <ul class="sub" style="margin-top:0">
     <li>Use the microphone button (circled in green). Tap it, talk, and tap it again to get the text.</li>
+    <li><b>When the text appears, send it.</b> Keep talking and sending each time you notice something, until you finish playing.</li>
+    <li>We recommend sending this first. The app will fix mishearings as it goes and give you a tidy summary at the end.
+      <div class="say" id="prompt-en">I will send notes from a video game test play by voice input, in several messages. Please fix mishearings, slips and typos to fit the context of the game, and keep them in mind. Until I finish, just reply "OK". When I send "summarize", organize all the notes in order, making clear the stage, place, what I did, what happened, and where I took photos.<button type="button" onclick="cp('prompt-en',this)">Copy</button></div></li>
+    <li>When you send "summarize", paste the result into your report.</li>
     <li>The wave-shaped button next to it is "voice mode" (a spoken conversation). Don't use that one here.</li>
     <li>The button's shape and position vary a little between app versions.</li>
   </ul>
@@ -168,6 +174,7 @@ kbd{border:1px solid var(--line)}
 </main>
 
 <script>
+function cp(id, b) { const d = document.getElementById(id); const t = d.firstChild.textContent.trim(); const done = () => { const o = b.textContent; b.textContent = 'Copied'; setTimeout(() => b.textContent = o, 1500); }; try { navigator.clipboard.writeText(t).then(done, () => {}); } catch (e) {} }
 // Google Form URL (one form in both Japanese and English). Same as ../testplay.html
 const FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSfOa5F6KOShf0Y36YEohi0G2BpBHW4WNkibvGfBxJ4d7bTdcA/viewform';
 const $ = s => document.querySelector(s);
