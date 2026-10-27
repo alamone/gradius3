@@ -485,11 +485,12 @@ us_r:   rts
 
 ; ---- ゲーム状態2(面の準備)の入口フック: モード別の面設定 ----
 ; MODE: 0=通常 1=キューブラッシュ 2=ボスラッシュ
+sh_pl:  jmp     SHPAL.l         ; 改造プレイの START 表示の2フレーム目から: パレットの出来事も回す（#20）
 StageHook:
         tst.b   MB_RUN.l
         beq.w   sh_go
         tst.b   $4002b.l
-        bne.w   sh_go
+        bne.s   sh_pl
         moveq   #0,d0           ; キューブの数列を初期化(開始・再開のたび同じ並びにする)
         move.b  $103f1d.l,d0
         mulu    #40503,d0
@@ -709,6 +710,11 @@ LOCK_SUSPEND = True        # 解除・ロックのコマンドを一時停止（
 INV_ADDR = 0xd6a0          # 0xd653〜0xd8f5 の未使用データ領域（エディット左右切り替えの後ろ）
 SRC_INV = CONSTS + """
 MB_INV  = $103f20
+; 改造プレイの START 表示（状態2の2フレーム目から）: 元の処理の後で、パレットの出来事の処理（$E318。純正はプレイ中だけ）も回す。
+; 面の途中から始めると、開始位置までのパレットの出来事がプレイの最初のフレームでまとめて実行されるので、START 表示の間は
+; 前の画面のパレットが残って地形などの色が化けていた（#20）。通常プレイ（メニューを出さない）は純正どおり
+ShPal:  jsr     $3790.w
+        jmp     $e318.l
 ; Z=0 なら無敵（改造プレイ中かつ INVINCIBLE=ON）
 InvChk: tst.b   $103ed2.l       ; キューブラッシュの区間が終わった → 無敵でも1機減らす（サブが立てる）
         bne.s   ic_f
@@ -885,7 +891,7 @@ def apply(rom):
     assert INV_ADDR + len(bi) <= 0xd8f5, hex(len(bi))
     rom.img('main')[INV_ADDR:INV_ADDR + len(bi)] = bi
     rom.used.append(('main', INV_ADDR, INV_ADDR + len(bi), 'invincible'))
-    b3, lab3 = asm68.assemble(SRC_C.replace('PENDB', '$%x' % lab2['PendB']).replace('CMDCNT', '$%x' % li['CmdCnt']).replace('BOSSSET', '$%x' % li['BossSet']).replace('PauseChk = $%x', 'PauseChk = $%x' % lab2['PauseChk']).replace('ApplyStage = $%x', 'ApplyStage = $%x' % lab2['ApplyStage']), 0x3fd9a)
+    b3, lab3 = asm68.assemble(SRC_C.replace('PENDB', '$%x' % lab2['PendB']).replace('CMDCNT', '$%x' % li['CmdCnt']).replace('SHPAL', '$%x' % li['ShPal']).replace('BOSSSET', '$%x' % li['BossSet']).replace('PauseChk = $%x', 'PauseChk = $%x' % lab2['PauseChk']).replace('ApplyStage = $%x', 'ApplyStage = $%x' % lab2['ApplyStage']), 0x3fd9a)
     assert 0x3fd9a + len(b3) <= 0x3ffc0, hex(len(b3))
     rom.put('main', 0x3fd9a, b3, 'stubsC')
     rom.put('main', 0x4cfc, bytes.fromhex('4eb9') + lab3['AreaTbl'].to_bytes(4, 'big'), 'areatbl', expect=bytes.fromhex('4df9000054fe'))
