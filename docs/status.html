@@ -23,12 +23,12 @@ nav::-webkit-scrollbar{display:none}
 nav a{flex:none;padding:8px 12px;font-size:14px;color:var(--sub);text-decoration:none;border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
 nav a.on{color:var(--text);border-color:var(--acc);font-weight:600}
 nav a .c{font-size:11.5px;margin-left:4px;padding:0 6px;border-radius:99px;background:color-mix(in srgb,var(--sub) 18%,transparent)}
-.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:16px 0 6px}
+.tiles{display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin:16px 0 6px}
 .tile{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
 .tile b{display:block;font-size:24px;line-height:1.2}
 .tile span{font-size:12px;color:var(--sub)}
 @media (max-width:560px){.tiles{grid-template-columns:repeat(3,1fr)}}
-.s-todo{--sc:var(--todo)}.s-doing{--sc:var(--warn)}.s-review{--sc:var(--rev)}.s-human{--sc:var(--ng)}.s-done{--sc:var(--ok)}
+.s-todo{--sc:var(--todo)}.s-doing{--sc:var(--warn)}.s-review{--sc:var(--rev)}.s-human{--sc:var(--ng)}.s-done{--sc:var(--ok)}.s-fixed{--sc:var(--sub)}
 .tile b{color:var(--sc)}
 .dot{width:10px;height:10px;border-radius:50%;display:inline-block;flex:none;background:var(--sc)}
 .card{display:block;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin:8px 0}
@@ -91,7 +91,7 @@ td.z{color:var(--sub)}
 details{margin-top:28px;font-size:13.5px}
 summary{cursor:pointer;font-weight:600}
 code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);padding:1px 5px;border-radius:4px}
-.closed{opacity:.75}
+.closed{opacity:.55;filter:grayscale(1)}
 .lk.on{background:var(--acc);border-color:var(--acc);color:#fff}
 .acts{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
 .acts button{font-size:12.5px;padding:5px 11px}
@@ -171,6 +171,7 @@ const ST = [
   { key: 'human',  label: '要人間確認' },
   { key: 'todo',   label: '未着手' },
   { key: 'done',   label: '完了' },
+  { key: 'fixed',  label: '修正済み' },
 ];
 const STL = Object.fromEntries(ST.map(s => [s.key, s.label]));
 const ACT = { open: 'を立てた', claim: 'を担当した', check: 'に確認結果を記録', submit: 'に提出した', done: 'を報告した', human: 'を要人間確認にした',
@@ -218,6 +219,7 @@ function normalize(is) {
   else if (names.includes('要人間確認')) status = 'human';
   else if (names.includes('確認待ち')) status = 'review';
   else if (names.includes('担当中')) status = 'doing';
+  if (is.state === 'closed' && getState(is.body).fixed_in) status = 'fixed';   // /fixed で閉じた（直した版を公開した）
   return { ...is, type, status, st: getState(is.body), cnt: count(is.body) };
 }
 
@@ -231,7 +233,7 @@ function card(t, showType) {
   if (stage) meta.push(esc(stage));
   const wk = (st.worker === 'ai' || st.worker === 'claude') ? '<span class="wk ai">🤖 Claude</span>' : st.worker === 'human' ? '<span class="wk hu">👤 人</span>' : '';
   if ((t.status === 'doing' || t.status === 'review') && st.claimer) meta.push(`${wk}<span class="who">@${esc(st.claimer)}</span> が ${ago(st.claimed_at)}から担当`);
-  else if ((t.status === 'done' || t.status === 'human') && (st.done_by || st.claimer)) meta.push(`<span class="who">@${esc(st.done_by || st.claimer)}</span>`);
+  else if ((t.status === 'done' || t.status === 'fixed' || t.status === 'human') && (st.done_by || st.claimer)) meta.push(`<span class="who">@${esc(st.done_by || st.claimer)}</span>`);
   meta.push('更新 ' + ago(st.updated_at || t.updated_at));
   const pct = n => c.total ? (n / c.total * 100) + '%' : '0';
   const left = c.total - c.ok - c.ng - c.hold;
@@ -321,7 +323,7 @@ function tiles(list) {
 }
 function groups(list, showType, keys) {
   return (keys || ST.map(s => s.key)).map(k => {
-    const items = list.filter(t => t.status === k).sort((a, b) => k === 'done'
+    const items = list.filter(t => t.status === k).sort((a, b) => (k === 'done' || k === 'fixed')
       ? Date.parse(b.st.updated_at || b.updated_at) - Date.parse(a.st.updated_at || a.updated_at) : a.number - b.number);
     return `<h2 class="s-${k}"><span class="dot"></span>${STL[k]}<span class="n">${items.length}件</span></h2>` +
       (items.length ? items.map(t => card(t, showType)).join('') : '<div class="empty">ありません</div>');
@@ -345,7 +347,7 @@ function viewAll(D) {
   return tiles(L) +
     `<h2>種類ごと</h2><div class="tblwrap"><table><tr><th>種類</th>${ST.map(s => `<th>${s.label}</th>`).join('')}</tr>${rows}</table></div>` +
     `<h2>最近の動き</h2>${feedHtml}` +
-    groups(L, true, ['review', 'human', 'doing', 'todo']);
+    groups(L, true, ['review', 'human', 'doing', 'todo', 'done', 'fixed']);
 }
 function viewType(D, ty) {
   const L = D.tasks.filter(t => t.type === ty);
@@ -367,7 +369,7 @@ function people(D) {
     }
     if (st.claimer && (t.status === 'doing' || t.status === 'review')) get(st.claimer).doing.push(t);
     const finisher = st.done_by || st.claimer;
-    if (finisher && t.status === 'done') get(finisher).done++;
+    if (finisher && (t.status === 'done' || t.status === 'fixed')) get(finisher).done++;
     for (const s of (st.submissions || [])) { const p = get(s.by); p.subs++; if (s.at > p.last) p.last = s.at; }
   }
   const forks = new Map(D.forks.map(f => [f.owner.login, f.html_url]));
@@ -485,8 +487,8 @@ let DATA = null;
 function current() { const h = decodeURIComponent(location.hash.slice(1)); return TABS.some(t => t.id === h) ? h : '全体'; }
 function draw() {
   const cur = current();
-  const cnt = id => !DATA ? '' : id === '全体' ? DATA.tasks.filter(t => t.status !== 'done').length
-    : id === '協力者' ? people(DATA).length : id === '始め方' ? '' : id === '要望' ? DATA.tasks.filter(t => labelsOf(t).includes('要望') && t.status !== 'done').length : DATA.tasks.filter(t => t.type === id && t.status !== 'done').length;
+  const cnt = id => !DATA ? '' : id === '全体' ? DATA.tasks.filter(t => !['done', 'fixed'].includes(t.status)).length
+    : id === '協力者' ? people(DATA).length : id === '始め方' ? '' : id === '要望' ? DATA.tasks.filter(t => labelsOf(t).includes('要望') && !['done', 'fixed'].includes(t.status)).length : DATA.tasks.filter(t => t.type === id && !['done', 'fixed'].includes(t.status)).length;
   document.getElementById('nav').innerHTML = TABS.map(t =>
     `<a href="#${encodeURIComponent(t.id)}" class="${t.id === cur ? 'on' : ''}">${t.id}${DATA && t.id !== '始め方' ? `<span class="c">${cnt(t.id)}</span>` : ''}</a>`).join('');
   const out = document.getElementById('out');
