@@ -36,6 +36,12 @@ Firebase のプロジェクトを作った **Google アカウント**で行う�
 3. 下の「実行ログ」に出る **回答する URL** を、テストプレイの案内ページ（docs/testplay.html と docs/en/testplay.html の `FORM_URL`）に入れる。
 - 写真をフォームで受け取りたいときは、Google フォームの画面で「ファイルのアップロード」の質問を足す（回答者は Google ログインが要る。ファイルは作った人の Google ドライブに入る）。
 
+### フォームの報告を GitHub に自動で載せる
+
+1. 「プロジェクトの設定」（左の歯車）→ いちばん下の「スクリプト プロパティ」→「スクリプト プロパティを追加」→ プロパティ `GITHUB_TOKEN`、値に hknroms で作ったトークン（`github_pat_…`。gradius3 の Issues: Read and write。まとめページのボタン用と同じでよい）→ 保存。
+2. Code.gs を貼り替えて保存し、関数 **`setupFormToGitHub`** を実行（許可を求められたら許可）。
+3. これから送られた報告は「[テスト] …」の Issue になり、管理者にメールが届く（お名前はメールにだけ書き、Issue には書かない）。それまでの回答も載せたいときは `forwardExisting` を実行。
+
 ## ステレオの聞き比べの記録
 
 - 聞き比べのページ（docs/stereo/sim.html・英語版）の「記録を管理者に送る」で、Firestore の `stereo_results/{uid}` に届く（1人1件・送り直すと置き換え）。

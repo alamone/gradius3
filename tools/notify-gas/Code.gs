@@ -90,6 +90,71 @@ function createReportForm() {
   Logger.log('作りました。\n回答する URL（案内ページに載せる）: ' + form.getPublishedUrl() + '\n編集する URL: ' + form.getEditUrl());
 }
 
+// ═══ 報告フォーム → GitHub の報告（Issue）═══
+// 準備: 「プロジェクトの設定」→ スクリプト プロパティに GITHUB_TOKEN（hknroms で作ったトークン。gradius3 の Issues: Read and write）を足す
+//       → 関数 setupFormToGitHub を1回実行（フォームに送信の合図を付ける。それまでの回答は送らない）
+// 送られた報告は「[テスト] …」の Issue になる（配布ページの「これまでの報告」に出る）。お名前は Issue に書かず、管理者へのメールにだけ書く。
+// それまでの回答も送りたいときは forwardExisting を実行する。
+const GH_REPO = 'hknroms/gradius3';
+function setupFormToGitHub() {
+  const props = PropertiesService.getScriptProperties();
+  const id = props.getProperty('REPORT_FORM_ID');
+  if (!id) throw new Error('先に createReportForm を実行してください');
+  if (!props.getProperty('GITHUB_TOKEN')) throw new Error('スクリプト プロパティに GITHUB_TOKEN を足してください');
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'onReportSubmit').forEach(t => ScriptApp.deleteTrigger(t));
+  const form = FormApp.openById(id);
+  ScriptApp.newTrigger('onReportSubmit').forForm(form).onFormSubmit().create();
+  const done = form.getResponses().map(r => r.getId());
+  props.setProperty('FORWARDED', JSON.stringify(done));
+  Logger.log('設定しました。これから送られた報告は GitHub に載ります（今までの ' + done.length + ' 件は送っていません。送るなら forwardExisting）。');
+}
+function onReportSubmit(e) { forwardResponse_(e.response); }
+function forwardExisting() {
+  const props = PropertiesService.getScriptProperties();
+  const form = FormApp.openById(props.getProperty('REPORT_FORM_ID'));
+  props.setProperty('FORWARDED', '[]');
+  let n = 0; form.getResponses().forEach(r => { if (forwardResponse_(r)) n++; });
+  Logger.log(n + ' 件を GitHub に送りました');
+}
+function forwardResponse_(r) {
+  const props = PropertiesService.getScriptProperties();
+  const done = JSON.parse(props.getProperty('FORWARDED') || '[]');
+  if (done.indexOf(r.getId()) >= 0) return false;
+  const A = {};
+  r.getItemResponses().forEach(it => { const t = it.getItem().getTitle().split(' / ')[0].trim(); const v = it.getResponse(); A[t] = Array.isArray(v) ? v.join(', ') : String(v || '').trim(); });
+  const ja = v => String(v || '').split(' / ')[0].trim();
+  const kind = ja(A['報告の種類']) || '不具合';
+  const what = A['何が起きたか'] || '';
+  const name = A['お名前（任意・公開しません）'] || '';
+  const sec = (h, v) => '### ' + h + '\n\n' + (v ? v : '_No response_') + '\n\n';
+  let title, body = '';
+  const origin = (A['確認した元の報告'] || '').match(/#?(\d+)/);
+  if (kind === '直ったかの確認' && origin) {
+    const res = A['確認した元の報告'].replace(/#?\d+/, '').trim() + ' ' + what;
+    const bad = /まだ|おかしい|直って(い)?な|still|broken|not/i.test(res);
+    title = '[確認] #' + origin[1] + ' ' + (bad ? 'まだおかしい' : '直っていた');
+    body += sec('報告の種類', '直ったかの確認') + sec('版', A['版']) + sec('確認した元の報告', '#' + origin[1]) + sec('確認の結果', bad ? 'まだおかしい' : '直っていた');
+  } else {
+    title = '[テスト] ' + (what.split('\n')[0].slice(0, 40) || '（題名なし）');
+    body += sec('報告の種類', kind) + sec('版', A['版']);
+  }
+  body += sec('起動画面の数字（版・ビルド日時）', A['起動画面の数字']) + sec('遊んだ環境', A['遊んだ環境']) + sec('環境の詳しいこと（わかれば）', A['環境の詳しいこと']) +
+    sec('モード', A['モード']) + sec('面・エリア', A['面・エリア・位置']) + sec('何が起きたか', what) + sec('起こし方（再現手順）', A['起こし方']) +
+    sec('スクリーンショット・動画', A['写真・動画のリンク']) + '---\n_Google フォームから届いた報告です（' + Utilities.formatDate(r.getTimestamp(), 'Asia/Tokyo', 'yyyy-MM-dd HH:mm') + '）。_\n';
+  const res = UrlFetchApp.fetch('https://api.github.com/repos/' + GH_REPO + '/issues', { method: 'post', contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + props.getProperty('GITHUB_TOKEN'), Accept: 'application/vnd.github+json' }, payload: JSON.stringify({ title: title, body: body }) });
+  const code = res.getResponseCode();
+  if (code !== 201) {
+    MailApp.sendEmail({ to: adminEmail_(), subject: '【' + SITE_NAME + '】フォームの報告を GitHub に載せられませんでした', name: SITE_NAME, body: 'GitHub ' + code + ': ' + res.getContentText().slice(0, 500) + '\n\n' + title + '\n\n' + body });
+    return false;
+  }
+  const url = JSON.parse(res.getContentText()).html_url;
+  done.push(r.getId()); props.setProperty('FORWARDED', JSON.stringify(done.slice(-500)));
+  MailApp.sendEmail({ to: adminEmail_(), subject: '【' + SITE_NAME + '】フォームに報告が届きました', name: SITE_NAME,
+    body: title + '\n' + url + '\n\nお名前: ' + (name || '（なし）') + '\n\n' + what.slice(0, 1000) });
+  return true;
+}
+
 // ═══ 定期実行 ═══
 
 function check() {
