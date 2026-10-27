@@ -37,6 +37,8 @@ nav a .c{font-size:11.5px;margin-left:4px;padding:0 6px;border-radius:99px;backg
 .card .t a:hover{text-decoration:underline}
 .card .t .num{color:var(--sub);font-weight:400;margin-right:6px}
 .chip{display:inline-block;font-size:11.5px;font-weight:400;padding:0 7px;border-radius:99px;border:1px solid var(--line);color:var(--sub);margin-right:6px;vertical-align:1px}
+.chip.fx.ok{background:#3fb95022;color:var(--ok);border-color:var(--ok)}
+.chip.fx.todo{background:#d2992222;color:var(--warn);border-color:var(--warn)}
 .meta{display:flex;flex-wrap:wrap;gap:2px 14px;font-size:12.5px;color:var(--sub);margin-top:4px}
 .meta .who{color:var(--text)}
 .bar{display:flex;height:6px;border-radius:3px;overflow:hidden;background:color-mix(in srgb,var(--sub) 22%,transparent);margin-top:10px}
@@ -243,8 +245,12 @@ function card(t, showType) {
   const note = st.note ? `<div class="note">${esc(st.note)}</div>` : '';
   const href = safeUrl(st.last_comment) || t.html_url;
   const typeChip = (labelsOf(t).includes('要望') ? '<span class="chip">要望</span>' : '') + (showType && t.type ? `<span class="chip">${esc(t.type)}</span>` : '');
+  // 直したかの印: /fixed で閉じた → 「vX で修正」、検証・調査が終わってまだ開いている → 「検証済み・未修正」
+  const fixChip = st.fixed_in ? `<span class="chip fx ok">🔧 ${esc(st.fixed_in)} で修正</span>`
+    : st.wontfix ? '<span class="chip fx">見送り</span>'
+    : (t.status === 'done' && t.state !== 'closed' && (t.type === '検証' || t.type === '調査')) ? '<span class="chip fx todo">検証済み・未修正</span>' : '';
   return `<div class="card${t.state === 'closed' ? ' closed' : ''}">
-    <div class="t">${typeChip}<a href="${esc(href)}" target="_blank" rel="noopener"><span class="num">#${t.number}</span>${esc(t.title.replace(/^\[(検証|テスト|作業|要望)\]\s*/, ''))}</a></div>
+    <div class="t">${typeChip}${fixChip}<a href="${esc(href)}" target="_blank" rel="noopener"><span class="num">#${t.number}</span>${esc(t.title.replace(/^\[(検証|テスト|作業|要望)\]\s*/, ''))}</a></div>
     <div class="meta">${meta.map(m => `<span>${m}</span>`).join('')}</div>${prog}${subHtml}${note}${actions(t)}</div>`;
 }
 // ---- 操作ボタン（Issue にコマンドのコメントを書く）
