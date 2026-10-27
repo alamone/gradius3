@@ -16,6 +16,7 @@ body:
         - Bug
         - Finding / impression
         - Request
+        - Several things at once (voice notes, etc.)
         - Re-check of a fix
     validations:
       required: true
@@ -90,7 +91,7 @@ body:
     id: what
     attributes:
       label: What happened
-      description: What happened, and what you expected instead
+      description: What happened, and what you expected instead. For "Several things at once", paste all your play notes here (other fields can be left blank)
     validations:
       required: true
   - type: textarea

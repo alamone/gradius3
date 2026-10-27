@@ -17,6 +17,7 @@ body:
         - 不具合
         - 気づいたこと・感想
         - 要望
+        - いろいろまとめて（音声メモなど）
         - 直ったかの確認
     validations:
       required: true
@@ -91,7 +92,7 @@ body:
     id: what
     attributes:
       label: 何が起きたか
-      description: 起きたこと、本来はどうなってほしいか
+      description: 起きたこと、本来はどうなってほしいか。「いろいろまとめて」のときは、プレイ中のメモを丸ごと貼ってください（ほかの欄は空でも大丈夫です）
     validations:
       required: true
   - type: textarea

@@ -89,7 +89,7 @@ kbd{border:1px solid var(--line)}
     <li><b>Take notes as you play.</b> Voice input on your phone is handy: just talk while you play (see "Voice input" below).</li>
     <li><b>Try it with invincibility first.</b> Turn INVINCIBLE on in the menu so you can see everything to the end. Note anything that looks wrong right away.</li>
     <li><b>To take a picture, pause first.</b> Hold START for about 1 second for the pause menu. Write "took a photo" in your notes so we know which photo goes with which note.</li>
-    <li><b>When you finish, paste your notes into the report as they are and attach the photos.</b> No need to tidy up the text.</li>
+    <li><b>When you finish, paste your notes into the report as they are and attach the photos.</b> No need to tidy up the text. If your notes cover several things, choose "<b>Several things at once (voice notes, etc.)</b>" as the type. We will split them up.</li>
     <li><b>Sections with no problems are useful too</b> (e.g. "Stage 5 was fine to the end").</li>
     <li><b>Tell us whether you played on real hardware or MAME</b> (and the MAME version). The form has a field for this.</li>
   </ol>
@@ -204,7 +204,7 @@ const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':
       if (L.some(x => ['担当中', '確認待ち', '要人間確認', '完了'].includes(x))) return ['wip', 'Investigating'];
       return ['new', 'Received'];
     };
-    const kind = i => labels(i).includes('要望') && !/^\[テスト\]/.test(i.title) ? 'Request' : ({ '不具合': 'Bug', '要望': 'Request', '気づいたこと・感想': 'Finding', '直ったかの確認': 'Re-check', 'Bug': 'Bug', 'Request': 'Request', 'Finding / impression': 'Finding' }[sec(i.body, '報告の種類') || sec(i.body, 'Type of report')] || 'Report');
+    const kind = i => labels(i).includes('要望') && !/^\[テスト\]/.test(i.title) ? 'Request' : ({ '不具合': 'Bug', '要望': 'Request', '気づいたこと・感想': 'Finding', '直ったかの確認': 'Re-check', 'Bug': 'Bug', 'Request': 'Request', 'Finding / impression': 'Finding', 'いろいろまとめて（音声メモなど）': 'Several', 'Several things at once (voice notes, etc.)': 'Several' }[sec(i.body, '報告の種類') || sec(i.body, 'Type of report')] || 'Report');
     const strip = t => t.replace(/^\[(テスト|要望|作業)\]\s*/, '');
     const list = all.filter(isReport).sort((a, b) => b.number - a.number);
     $('#rep-count').textContent = list.length ? list.length + '' : '';
