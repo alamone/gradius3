@@ -118,7 +118,7 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
   <a class="startlink" href="#%E5%A7%8B%E3%82%81%E6%96%B9">▶ 新しいチャットで始めるには（始め方）</a>　<a class="startlink" id="adminlink" href="#" style="display:none" target="_blank" rel="noopener">🔒 申請の管理（管理者のみ）</a>
   <details class="tok" id="tokbox">
     <summary id="toksum">ボタンで操作する（GitHub の連携）</summary>
-    <div class="sub" style="margin-top:6px">各タスクのボタン（担当する・Claude に頼む・終わった など）は、GitHub の Issue にコマンドのコメントを書き込みます。数十秒でボットが状態を変えます。</div>
+    <div class="sub" style="margin-top:6px">各タスクのボタン（担当する・AI に頼む・終わった など）は、GitHub の Issue にコマンドのコメントを書き込みます。数十秒でボットが状態を変えます。</div>
     <ul style="margin:6px 0;padding-left:20px">
       <li><b>連携なし</b>：ボタンを押すとコマンドをコピーして Issue を開くので、いちばん下のコメント欄に貼って「Comment」を押す。</li>
       <li><b>連携あり</b>：ボタンだけで書き込む。下の手順でトークンを作って貼る（このブラウザにだけ保存されます）。</li>
@@ -150,8 +150,8 @@ code{font-size:12.5px;background:color-mix(in srgb,var(--sub) 15%,transparent);p
     <ul>
       <li>GitHub の Issue のうち、作業の種類（検証・調査・実装・素材・資料）のラベルが付いたものを一覧にしています。開くたびに最新を読み込みます。</li>
       <li>タブはそれぞれ直接開けます（例：<code>status.html#協力者</code>、<code>status.html#調査</code>）。</li>
-      <li>担当・進み具合・提出物は、協力者（の Claude）が Issue にコメントするコマンド（<code>/claim</code> <code>/check</code> <code>/submit</code> <code>/done</code> など）で自動的に変わります。各タスクのボタンでも同じコマンドを書き込めます。</li>
-      <li>担当の印：<span class="wk ai">🤖 Claude</span> は Claude が作業中（または Claude に頼んで待っている）、<span class="wk hu">👤 人</span> は人が作業中。</li>
+      <li>担当・進み具合・提出物は、協力者（の AI）が Issue にコメントするコマンド（<code>/claim</code> <code>/check</code> <code>/submit</code> <code>/done</code> など）で自動的に変わります。各タスクのボタンでも同じコマンドを書き込めます。</li>
+      <li>担当の印：<span class="wk ai">🤖 AI</span> は AI が作業中（または AI に頼んで待っている）、<span class="wk hu">👤 人</span> は人が作業中。</li>
       <li>状態：未着手 → 担当中 → 確認待ち（提出済み）→ 完了。人の目や判断が要るものは「要人間確認」。</li>
       <li>バーの色：<span style="color:var(--ok)">緑＝OK</span>／<span style="color:var(--ng)">赤＝おかしい</span>／<span style="color:var(--warn)">黄＝人の目で確認が必要</span>／灰＝まだ</li>
       <li>協力者は、Issue での活動とフォークから自動で載ります。紹介文などは <code>docs/collaborators.json</code> で足せます。</li>
@@ -227,7 +227,7 @@ function card(t, showType) {
   const build = section(t.body, '起動画面の数字（版・ビルド日時）') || section(t.body, 'BUILD 日時（起動画面）') || section(t.body, 'BUILD 日時');
   if (ver) meta.push(esc(ver) + (build ? ' <span title="BUILD 日時">(' + esc(build) + ')</span>' : ''));
   if (stage) meta.push(esc(stage));
-  const wk = st.worker === 'claude' ? '<span class="wk ai">🤖 Claude</span>' : st.worker === 'human' ? '<span class="wk hu">👤 人</span>' : '';
+  const wk = (st.worker === 'ai' || st.worker === 'claude') ? '<span class="wk ai">🤖 AI</span>' : st.worker === 'human' ? '<span class="wk hu">👤 人</span>' : '';
   if ((t.status === 'doing' || t.status === 'review') && st.claimer) meta.push(`${wk}<span class="who">@${esc(st.claimer)}</span> が ${ago(st.claimed_at)}から担当`);
   else if ((t.status === 'done' || t.status === 'human') && (st.done_by || st.claimer)) meta.push(`<span class="who">@${esc(st.done_by || st.claimer)}</span>`);
   meta.push('更新 ' + ago(st.updated_at || t.updated_at));
@@ -249,10 +249,10 @@ function card(t, showType) {
 }
 // ---- 操作ボタン（Issue にコマンドのコメントを書く）
 const ACTIONS = {
-  todo:   [['🤖 Claude に頼む', '/claim claude', 'pri', 'ai'], ['👤 自分がやる', '/claim 人']],
+  todo:   [['🤖 AI に頼む', '/claim ai', 'pri', 'ai'], ['👤 自分がやる', '/claim 人']],
   doing:  [['✅ 終わった', '/done'], ['🙋 人の確認へ', '/human'], ['↩ 担当をやめる', '/release']],
   review: [['✔ 完了にする', '/accept', 'pri'], ['↩ 差し戻す', '/reject', '', 'ask']],
-  human:  [['👤 人が担当する', '/claim 人', 'pri'], ['✔ 完了にする', '/accept'], ['🤖 Claude に頼む', '/claim claude', '', 'ai'], ['↩ 差し戻す', '/reject', '', 'ask']],
+  human:  [['👤 人が担当する', '/claim 人', 'pri'], ['✔ 完了にする', '/accept'], ['🤖 AI に頼む', '/claim ai', '', 'ai'], ['↩ 差し戻す', '/reject', '', 'ask']],
   done:   [],
 };
 function actions(t) {
@@ -264,9 +264,9 @@ function actions(t) {
 }
 const LS = { get: k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } }, set: (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} } };
 const token = () => LS.get('g3_gh_token');
-function claudeSay(n, type) {
+function aiSay(n, type) {
   const guide = type === '検証' ? 'VERIFY.md' : 'COLLAB.md';
-  return `https://github.com/hknroms/gradius3 の ${guide} に従って、#${n} をやって（まとめページで Claude の担当にしてある）`;
+  return `https://github.com/hknroms/gradius3 の ${guide} に従って、#${n} をやって（まとめページで AI の担当にしてある）`;
 }
 async function copy(text) { try { await navigator.clipboard.writeText(text); return true; } catch { return false; } }
 document.addEventListener('click', async e => {
@@ -278,12 +278,12 @@ document.addEventListener('click', async e => {
     const why = prompt('直してほしい点（担当者に伝わります）'); if (!why || !why.trim()) return;
     cmd += ' ' + why.trim().replace(/\s+/g, ' ');
   }
-  const after = opt === 'ai' ? `\n\n新しい Claude の会話で、次の一文を送ってください（コピーしました）：\n「${claudeSay(n, b.dataset.type)}」` : '';
+  const after = opt === 'ai' ? `\n\n新しい AI の会話で、次の一文を送ってください（コピーしました）：\n「${aiSay(n, b.dataset.type)}」` : '';
   const tk = token();
   if (!tk) {
     await copy(cmd);
     window.open(`https://github.com/${REPO}/issues/${n}#new_comment_field`, '_blank', 'noopener');
-    msg.textContent = `「${cmd}」をコピーしました。開いた Issue のいちばん下のコメント欄に貼って「Comment」を押してください。` + (opt === 'ai' ? `その後、新しい Claude の会話で「${claudeSay(n, b.dataset.type)}」と送ってください。` : '');
+    msg.textContent = `「${cmd}」をコピーしました。開いた Issue のいちばん下のコメント欄に貼って「Comment」を押してください。` + (opt === 'ai' ? `その後、新しい AI の会話で「${aiSay(n, b.dataset.type)}」と送ってください。` : '');
     return;
   }
   b.closest('.acts').querySelectorAll('button').forEach(x => x.disabled = true);
@@ -293,7 +293,7 @@ document.addEventListener('click', async e => {
       headers: { Accept: 'application/vnd.github+json', Authorization: 'Bearer ' + tk, 'Content-Type': 'application/json' },
       body: JSON.stringify({ body: cmd }) });
     if (!r.ok) throw new Error(r.status === 401 ? 'トークンが無効です（期限切れ・貼り間違い）。上の「ボタンで操作する」で貼り直してください。' : r.status === 403 || r.status === 404 ? 'このトークンでは書き込めません（Issues の Read and write と、hknroms/gradius3 の選択を確かめてください）。' : '書き込めませんでした（' + r.status + '）');
-    if (opt === 'ai') await copy(claudeSay(n, b.dataset.type));
+    if (opt === 'ai') await copy(aiSay(n, b.dataset.type));
     msg.textContent = `「${lb}」を書き込みました。ボットが反映するまで30秒ほど待って、自動で更新します。` + after.replace(/\n/g, ' ');
     setTimeout(load, 30000);
   } catch (err) {
@@ -396,35 +396,35 @@ const COMMON = [
   `GitHub のアカウントを用意する（報告やコメントを書くのに要る。作り方は配布ページの「テストプレイの報告」→「GitHub のアカウントを作る」）`,
   `配布ページ ${PAGE_URL} に Google でログインして申請し、管理者の承認を待つ（承認されるとメールが届く）`,
   `配布ページの「MAME用 zip を作る」で改造版の zip を作る（出力は gradius3j のままでよい）`,
-  `Claude はコード実行（ファイルの作成・実行）ができる状態で使う（claude.ai の Claude Code、またはアプリの設定でコード実行をオン）`,
+  `AI はコード実行（ファイルの作成・実行）ができる状態で使う（アプリの設定でコード実行をオン）`,
 ];
 const HOWTO = [
   { title: '開発の続き（管理者）', who: '管理者の会話。改造・修正・リリース', admin: true,
-    steps: ['Claude の新しい会話で、GitHub の hknroms/gradius3 をつなぐ（リポジトリを選ぶ）', 'ROM を使う作業なら、純正ROMの zip（313版メイン2本と MAME 用 gradius3 一式）を添付する', '下の一文を送る（引き継ぎファイルは不要）'],
-    say: `${REPO_URL} の CLAUDE.md と docs/dev/STATUS.md を読んで、続きをやって` },
+    steps: ['AI の新しい会話で、GitHub の hknroms/gradius3 をつなぐ（リポジトリを選ぶ）', 'ROM を使う作業なら、純正ROMの zip（313版メイン2本と MAME 用 gradius3 一式）を添付する', '下の一文を送る（引き継ぎファイルは不要）'],
+    say: `${REPO_URL} の CLAUDE.md と dev/STATUS.md を読んで、続きをやって` },
   { title: 'テストプレイの検証（協力者）', who: '確認項目のある「検証」の Issue を1件やる',
-    yes: [...COMMON, 'Claude に GitHub を連携しておく（claude.ai の設定 → コネクタ → GitHub）', '新しい会話を開き、リポジトリに hknroms/gradius3（一覧に無ければ、自分のフォーク）を選ぶ', '作った zip を添付して、下の一文を送る'],
-    no:  [...COMMON, '新しい会話を開く（リポジトリは選ばなくてよい）', '作った zip を添付して、下の一文を送る', 'Claude が Issue に書くコメントの文を出すので、その Issue のコメント欄に自分で貼って「Comment」を押す'],
+    yes: [...COMMON, 'AI に GitHub を連携しておく（アプリの設定 → コネクタ → GitHub）', '新しい会話を開き、リポジトリに hknroms/gradius3（一覧に無ければ、自分のフォーク）を選ぶ', '作った zip を添付して、下の一文を送る'],
+    no:  [...COMMON, '新しい会話を開く（リポジトリは選ばなくてよい）', '作った zip を添付して、下の一文を送る', 'AI が Issue に書くコメントの文を出すので、その Issue のコメント欄に自分で貼って「Comment」を押す'],
     sayYes: `${REPO_URL} の VERIFY.md に従って、未着手の検証を1件やって`,
-    sayNo:  `${REPO_URL} の VERIFY.md に従って、未着手の検証を1件やって。私の Claude は GitHub に連携していないので、Issue に書くコメントは文を出してくれれば私が貼ります` },
+    sayNo:  `${REPO_URL} の VERIFY.md に従って、未着手の検証を1件やって。私の AI は GitHub に連携していないので、Issue に書くコメントは文を出してくれれば私が貼ります` },
   { title: '調査・実装・素材・資料（協力者）', who: '「調査」「実装」「素材」「資料」の Issue を1件やる',
-    yes: [...COMMON, 'gradius3 を自分の GitHub にフォークする（1回だけ）： github.com/hknroms/gradius3/fork', 'Claude に GitHub を連携しておく（claude.ai の設定 → コネクタ → GitHub）', '新しい会話を開き、リポジトリに自分のフォーク（自分の名前/gradius3）を選ぶ', 'ROM が要る作業なら zip を添付して、下の一文を送る（種類を選ぶなら「未着手の調査を1件」のように）'],
-    no:  [...COMMON, 'gradius3 を自分の GitHub にフォークする（1回だけ）： github.com/hknroms/gradius3/fork', '新しい会話を開き、ROM が要る作業なら zip を添付して、下の一文を送る', '成果物は Claude がファイルで渡すので、自分のフォークに置く（やり方は Claude が案内する）。Issue に書くコメントは自分で貼る'],
+    yes: [...COMMON, 'gradius3 を自分の GitHub にフォークする（1回だけ）： github.com/hknroms/gradius3/fork', 'AI に GitHub を連携しておく（アプリの設定 → コネクタ → GitHub）', '新しい会話を開き、リポジトリに自分のフォーク（自分の名前/gradius3）を選ぶ', 'ROM が要る作業なら zip を添付して、下の一文を送る（種類を選ぶなら「未着手の調査を1件」のように）'],
+    no:  [...COMMON, 'gradius3 を自分の GitHub にフォークする（1回だけ）： github.com/hknroms/gradius3/fork', '新しい会話を開き、ROM が要る作業なら zip を添付して、下の一文を送る', '成果物は AI がファイルで渡すので、自分のフォークに置く（やり方は AI が案内する）。Issue に書くコメントは自分で貼る'],
     sayYes: `${REPO_URL} の COLLAB.md に従って、未着手の作業を1件やって`,
-    sayNo:  `${REPO_URL} の COLLAB.md に従って、未着手の作業を1件やって。私の Claude は GitHub に連携していないので、Issue に書くコメントは文を出してくれれば私が貼り、成果物はファイルでもらって自分のフォークに置きます` },
+    sayNo:  `${REPO_URL} の COLLAB.md に従って、未着手の作業を1件やって。私の AI は GitHub に連携していないので、Issue に書くコメントは文を出してくれれば私が貼り、成果物はファイルでもらって自分のフォークに置きます` },
 ];
 let LINKED = (() => { try { return localStorage.getItem('g3_linked') || 'yes'; } catch { return 'yes'; } })();
 const sayOf = h => h.admin ? h.say : (LINKED === 'yes' ? h.sayYes : h.sayNo);
 function viewHowto() {
   const link = x => esc(x).replace('github.com/hknroms/gradius3/fork', '<a href="https://github.com/hknroms/gradius3/fork" target="_blank" rel="noopener">github.com/hknroms/gradius3/fork</a>').replace(esc(PAGE_URL), `<a href="${PAGE_URL}" target="_blank" rel="noopener">${PAGE_URL}</a>`);
-  const q = `<div class="box"><h3>協力者の Claude は GitHub に連携していますか？</h3>
+  const q = `<div class="box"><h3>協力者の AI は GitHub に連携していますか？</h3>
     <div class="who">答えに合わせて、下の協力者向けの手順と一文が変わります。協力者に聞いて、合う方をコピーして渡してください。</div>
     <div style="display:flex;gap:8px;flex-wrap:wrap"><button type="button" class="lk${LINKED === 'yes' ? ' on' : ''}" data-v="yes">連携している</button><button type="button" class="lk${LINKED === 'no' ? ' on' : ''}" data-v="no">していない・わからない</button></div></div>`;
   return `<div class="howto">${q}${HOWTO.map((h, i) => `<div class="box"><h3>${esc(h.title)}</h3><div class="who">${esc(h.who)}${h.admin ? '' : (LINKED === 'yes' ? '（GitHub 連携あり）' : '（GitHub 連携なし）')}</div>
     <ol>${(h.admin ? h.steps : LINKED === 'yes' ? h.yes : h.no).map(x => `<li>${link(x)}</li>`).join('')}</ol>
     <div class="say" id="say${i}">${esc(sayOf(h))}<button type="button" data-i="${i}">コピー</button></div>
     ${h.admin ? '' : `<button type="button" class="allc" data-i="${i}" style="margin-top:6px">手順と一文をまとめてコピー（協力者に送る用）</button>`}</div>`).join('')}
-    <div class="sub">どの会話でも、決まりごと（ROM を公開しない・push のルールなど）は CLAUDE.md、いまの状態は docs/dev/STATUS.md にあり、Claude が読みます。会話をまたいで情報を持ち運ぶ必要はありません。</div></div>`;
+    <div class="sub">どの会話でも、決まりごと（ROM を公開しない・push のルールなど）は CLAUDE.md、いまの状態は dev/STATUS.md にあり、AI が読みます。会話をまたいで情報を持ち運ぶ必要はありません。</div></div>`;
 }
 document.addEventListener('click', e => {
   const lk = e.target.closest('.lk');
@@ -432,7 +432,7 @@ document.addEventListener('click', e => {
   const all = e.target.closest('.allc');
   if (all) {
     const h = HOWTO[+all.dataset.i];
-    const text = `【${h.title.replace(/（.*?）/, '')}の始め方】\n` + (LINKED === 'yes' ? h.yes : h.no).map((x, k) => `${k + 1}. ${x}`).join('\n') + `\n\n▼ Claude に送る一文（そのままコピーして貼ってください）\n${sayOf(h)}`;
+    const text = `【${h.title.replace(/（.*?）/, '')}の始め方】\n` + (LINKED === 'yes' ? h.yes : h.no).map((x, k) => `${k + 1}. ${x}`).join('\n') + `\n\n▼ AI に送る一文（そのままコピーして貼ってください）\n${sayOf(h)}`;
     try { navigator.clipboard.writeText(text).then(() => { all.textContent = 'コピーしました'; setTimeout(() => all.textContent = '手順と一文をまとめてコピー（協力者に送る用）', 1500); }); } catch {}
     return;
   }

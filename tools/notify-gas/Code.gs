@@ -2,7 +2,7 @@
  * 配布ページのログイン申請: メール通知・ワンタップ承認・自動承認・管理画面（Google Apps Script・無料）
  *
  * Firestore
- *   users/{uid}        … 申請（本人が pending で作る。ルールは docs/dev/firebase/firestore.rules）
+ *   users/{uid}        … 申請（本人が pending で作る。ルールは dev/firebase/firestore.rules）
  *   admin_notes/{uid}  … 管理者だけのメモ（Twitter・コメント・決めた日時と方法・履歴）。ルールに無いのでページからは読めない
  *   admins/{email}     … 管理者（共同作業のまとめページを見られる人）。本人が自分の分だけ読める。管理画面で登録
  *

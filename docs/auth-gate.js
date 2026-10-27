@@ -3,7 +3,7 @@
 //   data-gate="admin" を付けると管理者だけ（Firestore の admins/{メールアドレス} がある人。申請の管理画面で登録）:
 //   <script type="module" src="auth-gate.js" data-gate="admin"></script>
 //   - ログインしていない → 「Google でログイン」
-//   - ログインしたが申請が無い → 名前を入れて申請（users/{uid} に status: pending で作る。ルールは docs/dev/firebase/firestore.rules）
+//   - ログインしたが申請が無い → 名前を入れて申請（users/{uid} に status: pending で作る。ルールは dev/firebase/firestore.rules）
 //   - 承認待ち・却下 → その旨を表示
 //   - 承認済み（status: approved）→ 扉を開けてページを見せる
 // 申請の通知・承認・管理画面は tools/notify-gas/（管理者は管理画面の「自動で承認する」一覧に入れておけば、初回ログインで自動承認）。

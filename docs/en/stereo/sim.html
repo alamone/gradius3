@@ -418,7 +418,7 @@ onAuthStateChanged(auth, async (user) => {
   }
 });
 
-// ---- 記録を管理者に送る（Firestore の stereo_results/{uid}。本人だけが書ける。ルールは docs/dev/firebase/firestore.rules）----
+// ---- 記録を管理者に送る（Firestore の stereo_results/{uid}。本人だけが書ける。ルールは dev/firebase/firestore.rules）----
 const sendMsg = t => { document.getElementById('sendmsg').textContent = t; };
 async function showLastSent(user) {
   try { const s = await getDoc(doc(db, 'stereo_results', user.uid)); if (s.exists() && s.data().updatedAt) sendMsg('Last sent: ' + s.data().updatedAt.toDate().toLocaleString()); } catch (e) {}

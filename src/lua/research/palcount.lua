@@ -1,4 +1,4 @@
--- Issue #20 の調査（alamone さん）: START 表示から400フレームの間、パレットRAMへの書き込みを PC ごとに数える。詳しくは docs/dev/research/start-palette.md
+-- Issue #20 の調査（alamone さん）: START 表示から400フレームの間、パレットRAMへの書き込みを PC ごとに数える。詳しくは dev/research/start-palette.md
 -- palcount.lua
 -- mame gradius3j -autoboot_script palcount.lua -autoboot_delay 1 \
 --   -video none -sound none -nothrottle -seconds_to_run 900

@@ -5,8 +5,8 @@
 // 状態（ラベル）      : 未着手 → 担当中 → 確認待ち → 完了（人の確認が必要なものは 要人間確認）
 //
 // コマンド（コメントの行頭に書く。1つのコメントに複数行書いてよい）
-//   /claim [claude|人]       担当する（claude = Claude が作業する／人 = 人が作業する。まとめページに出る）
-//                            Claude 用に予約された担当（/claim claude）は、別のアカウントの Claude が /claim claude で引き継げる
+//   /claim [ai|人]           担当する（ai = AI が作業する／人 = 人が作業する。まとめページに出る。claude も ai と同じ）
+//                            AI 用に予約された担当（/claim ai）は、別のアカウントの AI が /claim ai で引き継げる
 //   /check 番号 ok|ng|hold   確認項目に結果を付ける（hold = 人の目で確認が必要）
 //   /submit URL [ひとこと]   成果物を提出する（自分のフォークの枝・コミット・PR などの GitHub の URL）
 //   /done [ひとこと]         終わり。検証は ok だけなら完了、ng/hold/未チェックがあれば要人間確認。
@@ -307,8 +307,8 @@ module.exports = async ({ github, context, core }) => {
     if (!isTask()) { errors.push('このIssueはまだ作業タスクではありません（管理者が `/items` か `/type` で始められます）'); break; }
 
     if (n === 'claim') {
-      const w = /^(claude|ai|クロード)/i.test(cmd.arg) ? 'claude' : /^(人|human|ひと)/i.test(cmd.arg) ? 'human' : '';
-      const takeover = w === 'claude' && st.worker === 'claude';
+      const w = /^(claude|ai|クロード)/i.test(cmd.arg) ? 'ai' : /^(人|human|ひと)/i.test(cmd.arg) ? 'human' : '';
+      const takeover = w === 'ai' && (st.worker === 'ai' || st.worker === 'claude');
       if (status === L.doing && st.claimer && st.claimer !== actor && !takeover) { errors.push(`すでに @${st.claimer} さんが担当中です。別の「未着手」を選んでください`); continue; }
       if (status === L.done) { errors.push('このタスクは「完了」しています'); continue; }
       if (!(takeover && status === L.doing)) st.claimed_at = now;

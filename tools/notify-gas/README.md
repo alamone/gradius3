@@ -7,14 +7,14 @@
 - **承認したら** → 本人に「見られるようになりました」とメール（Firebase の管理画面で `status` を `approved` に変えた場合も同じ）。
 - **管理者の登録**: 管理画面の「管理者」に入れた Google アカウントの人だけが「共同作業のまとめ」（status.html）を開ける（Firestore の `admins/{メールアドレス}`）。管理者は配布ページも自動で承認。
 - **管理画面**（あなたの Google アカウントだけが開ける）: 申請者の一覧（承認待ち・承認・却下・すべて）、申請日時・決めた日時と方法・決めた人・最後のログイン、Twitter（X）のアカウントとコメントの記入、承認・却下・承認待ちに戻す、自動承認の一覧。
-- データ: 申請は Firestore の `users/{uid}`（本人が作る）。Twitter・コメント・決めた記録は `admin_notes/{uid}`（ルールに無いのでページからは読めない＝本人には見えない）。ルールは `docs/dev/firebase/firestore.rules`。
+- データ: 申請は Firestore の `users/{uid}`（本人が作る）。Twitter・コメント・決めた記録は `admin_notes/{uid}`（ルールに無いのでページからは読めない＝本人には見えない）。ルールは `dev/firebase/firestore.rules`。
 - 5分ごとに確認する。Firestore の読み取りは無料の範囲（1日5万回）に収まる（申請者が百数十人までなら余裕）。
 
 ## 設定（1回だけ・パソコン推奨・15分）
 
 Firebase のプロジェクトを作った **Google アカウント**で行う。前に作った Apps Script のプロジェクトがあれば、それをそのまま使ってよい。
 
-0. **Firestore のルールを更新する**: Firebase の管理画面 → Firestore Database →「ルール」に、`docs/dev/firebase/firestore.rules` の中身を貼り付けて「公開」（管理者の一覧 `admins` を読めるようにする部分が増えた）。
+0. **Firestore のルールを更新する**: Firebase の管理画面 → Firestore Database →「ルール」に、`dev/firebase/firestore.rules` の中身を貼り付けて「公開」（管理者の一覧 `admins` を読めるようにする部分が増えた）。
 
 1. https://script.google.com でプロジェクトを開く（無ければ「新しいプロジェクト」）。
 2. コードを全部消して、このフォルダの [Code.gs](Code.gs) の中身を貼り付けて保存。先頭の「設定」の `PAGE_URL`（承認した人に案内するページ）を確かめる。
@@ -46,7 +46,7 @@ Firebase のプロジェクトを作った **Google アカウント**で行う�
 
 - 聞き比べのページ（docs/stereo/sim.html・英語版）の「記録を管理者に送る」で、Firestore の `stereo_results/{uid}` に届く（1人1件・送り直すと置き換え）。
 - 管理画面の「ステレオの結果」→「読み込む」で一覧。1人ずつ／全員分をダウンロード（ダウンロードされないときは、下に出る欄の文字をコピー）。
-- 使う前に：Firestore のルールを `docs/dev/firebase/firestore.rules` で貼り直し、Code.gs を貼り替えて「デプロイを管理」→ 新バージョンでデプロイ。
+- 使う前に：Firestore のルールを `dev/firebase/firestore.rules` で貼り直し、Code.gs を貼り替えて「デプロイを管理」→ 新バージョンでデプロイ。
 
 ## うまくいかないとき
 
