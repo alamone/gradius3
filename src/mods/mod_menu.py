@@ -1018,7 +1018,16 @@ mf_g3:  cmpi.b  #11,$203f08.l       ; EX STAGE の B → サラマンダ隠し�
         cmpi.b  #2,$203f0a.l
         bne.s   mf_g4
         move.b  #12,$203f08.l
-mf_g4:  move.b  #1,V_HAVE.l
+mf_g4:  clr.w   $203f3c.l       ; 開始時のゲージ（MB+$3c: 0=純正どおり 1=SPEED UP）・開始時のスピード（MB+$3d: キューブラッシュだけ SPEED）
+        cmpi.b  #1,$203f0b.l
+        bne.s   mf_sp
+        move.b  $203f0d.l,$203f3d.l
+mf_sp:  cmpi.w  #$0101,$203f08.l   ; 1周目の1面 A（進み具合 0）だけ純正どおり。それ以外はゲージを SPEED UP に（保険あり・#5）
+        bne.s   mf_gs
+        tst.w   $203f1e.l
+        beq.s   mf_gz
+mf_gs:  move.b  #1,$203f3c.l
+mf_gz:  move.b  #1,V_HAVE.l
         lea     $280620.l,a0     ; 借りた文字を元に戻す
         lea     $203cb0.l,a1
         move.w  #255,d0
@@ -1037,9 +1046,11 @@ mf_cancel:
 
 PAUSE = """
 ; ---- 装備コマンドの回数計算 (改造プレイ中、毎フレーム) ----
-; 目標: START=スピード2・ミサイル・レーザー・オプション4・バリア / SHOT+START=レーザーの代わりにダブル
-;       MISSILE+START=レーザー・ダブルなし（ノーマルショット）のフル装備 / SHOT+MISSILE+START=スピード2・ミサイル・オプション2
-; 結果: MB+$24(1P) / +$2c(2P) に [SPEED,MISSILE,DOUBLE,LASER,OPTION,SHIELD の使用回数, スピードを下げる印]
+; 目標: START=ミサイル・レーザー・オプション4・バリア / SHOT+START=レーザーの代わりにダブル
+;       MISSILE+START=レーザー・ダブルなし（ノーマルショット）のフル装備 / SHOT+MISSILE+START=ミサイル・オプション2
+;       スピードはどれもメニューの SPEED（MB+$0d）にそろえる（#5）
+; ボタン: P1 の bit4=ボタン1（パワーアップ）bit5=ボタン2（ショット）bit6=ボタン3（ミサイル）（#3: 以前は1つずれて読んでいた）
+; 結果: MB+$24(1P) / +$2c(2P) に [SPEED,MISSILE,DOUBLE,LASER,OPTION,SHIELD の使用回数, スピードを下げる印（0=下げない / 目標+1）]
 CmdCalc:
         lea     $201000.l,a0
         lea     $203f24.l,a1
@@ -1049,13 +1060,18 @@ CmdCalc:
 cc_one: move.b  MBS_P1.l,d2
         move.b  $69(a0),d0
         andi.b  #$1f,d0
-        moveq   #2,d1
+        move.b  $203f0d.l,d1    ; 目標のスピード = メニューの SPEED
+        move.b  d1,d3
         sub.b   d0,d1
         bpl.s   cc1
         moveq   #0,d1
 cc1:    move.b  d1,(a1)
-        cmpi.b  #2,d0
-        shi     6(a1)
+        clr.b   6(a1)
+        cmp.b   d3,d0
+        bls.s   cc1b
+        addq.b  #1,d3
+        move.b  d3,6(a1)        ; 今のほうが速い → 目標まで下げる（メインの Command）
+cc1b:
         moveq   #0,d1
         tst.b   $6d(a0)
         bne.s   cc2
@@ -1066,13 +1082,13 @@ cc2:    move.b  d1,1(a1)
         clr.b   5(a1)
         moveq   #2,d3
         move.b  d2,d4
-        andi.b  #$30,d4
-        cmpi.b  #$30,d4         ; ショット＋ミサイル＋START: スピード2・ミサイル・オプション2
+        andi.b  #$60,d4
+        cmpi.b  #$60,d4         ; ショット＋ミサイル＋START: ミサイル・オプション2
         beq.s   cc_op
         moveq   #4,d3
-        cmpi.b  #$20,d4         ; ミサイル＋START: ノーマルショットのフル装備（レーザー・ダブルなし）
+        cmpi.b  #$40,d4         ; ミサイル＋START: ノーマルショットのフル装備（レーザー・ダブルなし）
         beq.s   cc_sh
-        btst    #4,d2
+        btst    #5,d2
         beq.s   cc_l
         move.b  #1,2(a1)        ; ショット＋START: レーザーの代わりにダブル
         bra.s   cc_sh

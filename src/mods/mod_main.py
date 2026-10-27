@@ -419,11 +419,11 @@ ph_np:
 ph_p:   bclr    d0,MB_PEND.l
         beq.s   ph_x
         jsr     PENDB.l         ; ハンターの設定（本体は B 領域）
-        move.b  $103f0d.l,d4    ; SPEED (0〜5): スピードアップを n 回使う
+        move.b  $103f3d.l,d4    ; 開始時のスピード（サブがメニュー確定時に用意。キューブラッシュだけ SPEED、ほかは 0）
         beq.s   ph_g
         moveq   #1,d3
         bsr.w   Use
-ph_g:   move.b  $103f23.l,d0    ; CAPSULE (0=そのまま, 1〜7 = SPEEDUP〜!): カプセルゲージの位置
+ph_g:   move.b  $103f3c.l,d0    ; 開始時のゲージ（1周目1面A は 0=純正どおり、ほかは 1=SPEED UP）
         beq.s   ph_h2
         move.b  d0,$6a(a2)
 ph_h2:
@@ -447,19 +447,22 @@ cm_go:  movem.l d0-d7/a0-a6,-(a7)
         lea     $101080.l,a2
         lea     $103f2c.l,a4
 cm_p:   lea     $101f60.l,a3    ; 取得処理(0x8b0e)と同じ: シールド等のオブジェクト枠
-        tst.b   6(a4)
+        moveq   #0,d0
+        move.b  6(a4),d0        ; スピードを下げる印（目標+1）
         beq.s   cm_s
-        move.w  #$280,$2c(a2)   ; スピード2段階 = 0x100+0xc0*2
-        move.w  #$8102,$1e(a2)
+        subq.b  #1,d0
         andi.b  #$e0,$69(a2)
-        ori.b   #2,$69(a2)
+        or.b    d0,$69(a2)
+        mulu    #$c0,d0         ; 速さ = 0x100+0xc0*段階（自機の絵の番号 $1e は書かない: 4面で化けるため #4）
+        addi.w  #$100,d0
+        move.w  d0,$2c(a2)
 cm_s:   moveq   #1,d3
 cm_lp:  move.b  -1(a4,d3.w),d4
         bsr.s   Use
         addq.w  #1,d3
         cmpi.w  #7,d3
         bne.s   cm_lp
-        move.b  #1,$6a(a2)      ; カプセルゲージの選択位置を SPEED UP に
+        move.b  $103f23.l,$6a(a2) ; カプセルゲージの位置 = メニューの CAPSULE（#5）
         movem.l (a7)+,d0-d7/a0-a6
 cm_r:   rts
 ; d3=枠番号 d4=回数
