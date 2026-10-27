@@ -1,6 +1,107 @@
 {
  "versions": [
   {
+   "version": "0.4.17",
+   "date": "2026-10-28",
+   "build": "2026-10-28 08:22",
+   "title": "地形の欠け・4面の表示・面の途中スタートの色を直した／フル装備のボタンとスピード",
+   "changes": [
+    "2・6・7面やボス戦で地形が四角く欠ける・切れるのを直した（改造の変数がゲームの地形の表と重なっていた）",
+    "メニューから面の途中のエリアで始めたとき、START の画面の間だけ背景の色が化けるのを直した",
+    "4面で装備コマンドを使うと自機が化けるのを直した",
+    "4面でもポーズの RANK DISP・POS DISP が出るようにした",
+    "装備コマンドのボタンを指定どおりに直した：ショット＋START＝ダブル、ミサイル＋START＝ノーマルショット、ショット＋ミサイル＋START＝ミサイル・オプション2（前はボタンが1つずれていて、パワーアップのボタンを押すことになっていた）",
+    "メニューの SPEED・CAPSULE は「装備コマンドを使ったときのスピード・カプセルゲージの位置」になった（スピードは速いときは下げる）",
+    "メニューから始めると、1周目の1面 A は純正どおり、それ以外の面・エリアはカプセルゲージが SPEED UP の状態で始まる（キューブラッシュだけはメニューの SPEED で始まる）",
+    "起動画面（RAM ROM CHECK の下）に版とビルドの日時を出すようにした（0 4 17 …）"
+   ],
+   "verified": [
+    "6面・7面で、0.4.16 では欠けていた地形（ボスの下も）が全部出ること",
+    "面の途中から始めた START の画面で、3面・5面の地形が正しい色で出ること",
+    "装備コマンドの4通りの押し方で、それぞれ正しい装備になること・SPEED 0〜5 のどれでもそのスピードになること（下げる場合も）",
+    "4面で傾けた状態・スピードを上げる／下げる場合とも、装備コマンドで自機が化けないこと",
+    "4面でポーズの RANK DISP・POS DISP が出ること",
+    "ポーズの窓・CUBE INFO・CUBE LINE・RANK・POS が、死んで始め直したあとも今までどおり描き直されること",
+    "メニューを出さずに START で始めたときは、0.4.16 と画面が1ピクセルも変わらないこと（1面・7500フレーム）"
+   ],
+   "known": [
+    "3面 ❶（ボスの手前）は、画面が止まった所で逆さ火山の敵がしばらく続いてからボスが出る（止まっている間の進み方は時間で決まるので、開始位置を後ろにずらしても飛ばせない）",
+    "5面 ❷ は中ボスの止まる区間の中なので、中ボスが出る／ボスの曲にならない（調査中）",
+    "10面 ❹（脱出）の位置はまだ細かく確かめていない",
+    "キューブラッシュでは、9面の左端の地形が出ないので、キューブのくっつき方が実機と変わることがある（直し方を検討中）",
+    "パワーアップで5速にしてから、それより遅い SPEED の装備コマンドを使うと、ゲージの SPEED UP の字が消えたままになる",
+    "オプションハンターは1周目の序盤など、ゲームの条件によってはもともと出ない（タイマーが進まない）",
+    "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
+    "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
+    "無敵中は壁の中に入り込める"
+   ],
+   "en": {
+    "title": "Fixed missing terrain, stage 4 display and mid-stage START colors / power-up command buttons and speed",
+    "changes": [
+     "Fixed square holes and cut-off terrain in stages 2, 6, 7 and boss fights (the mod's variables overlapped the game's terrain table)",
+     "Fixed the background colors being garbled only while the START screen is shown when starting from the menu at an area in the middle of a stage",
+     "Fixed the ship graphics being garbled when using the power-up command in stage 4",
+     "RANK DISP and POS DISP in the pause menu now also appear in stage 4",
+     "Fixed the power-up command buttons to work as intended: Shot + START = Double, Missile + START = normal shot, Shot + Missile + START = Missile and 2 Options (the buttons were shifted by one, so you had to press the Power-up button)",
+     "The menu SPEED and CAPSULE are now the speed and power-up gauge position set by the power-up command (speed is lowered if you are faster)",
+     "When started from the menu, stage 1 area A of the first loop starts as in the original; any other stage or area starts with the power-up gauge on SPEED UP (only Cube Rush starts at the menu SPEED)",
+     "The boot screen (below RAM ROM CHECK) now shows the version and build date (0 4 17 ...)"
+    ],
+    "verified": [
+     "In stages 6 and 7, all the terrain that was missing in 0.4.16 (including under the bosses) appears",
+     "On the START screen when starting in the middle of stages 3 and 5, the terrain appears in the correct colors",
+     "Each of the four power-up command inputs gives the correct equipment, and every SPEED from 0 to 5 is applied (including lowering)",
+     "In stage 4 the ship is not garbled by the power-up command, whether tilted, speeding up or slowing down",
+     "RANK DISP and POS DISP appear in stage 4",
+     "The pause window, CUBE INFO, CUBE LINE, RANK and POS are redrawn after dying, as before",
+     "Starting with START without opening the menu gives exactly the same screen as 0.4.16 (stage 1, 7500 frames)"
+    ],
+    "known": [
+     "Stage 3 ❶ (before the boss): after the screen stops, the upside-down volcano enemies continue for a while before the boss appears (progress while stopped depends on time, so it cannot be skipped by moving the start point later)",
+     "Stage 5 ❷ is inside the section where the screen stops for the mid-boss, so the mid-boss appears / the boss music does not play (under investigation)",
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "In Cube Rush the terrain at the left edge of stage 9 is missing, so cubes can stick differently from the arcade (fix under consideration)",
+     "If you reach speed 5 with power-ups and then use the power-up command with a slower SPEED, the SPEED UP label in the gauge stays blank",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   },
+   "patches": {
+    "945_r13.f15": {
+     "file": "patches/0.4.17/945_r13_f15.bps",
+     "source_crc": "706494e1",
+     "target_crc": "29e2276d",
+     "size": 1310
+    },
+    "945_r12.e15": {
+     "file": "patches/0.4.17/945_r12_e15.bps",
+     "source_crc": "6dcd00ab",
+     "target_crc": "c545ff26",
+     "size": 1287
+    },
+    "945_m09.r17": {
+     "file": "patches/0.4.17/945_m09_r17.bps",
+     "source_crc": "b4a6df25",
+     "target_crc": "423e5902",
+     "size": 12180
+    },
+    "945_m08.n17": {
+     "file": "patches/0.4.17/945_m08_n17.bps",
+     "source_crc": "74e981d2",
+     "target_crc": "7e1eedda",
+     "size": 12180
+    },
+    "945_r05.d9": {
+     "file": "patches/0.4.17/945_r05_d9.bps",
+     "source_crc": "c8c45365",
+     "target_crc": "273411a3",
+     "size": 324
+    }
+   }
+  },
+  {
    "version": "0.4.16",
    "date": "2026-10-23",
    "build": "2026-10-23 11:13:59",
@@ -108,38 +209,6 @@
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
    ],
-   "patches": {
-    "945_r13.f15": {
-     "file": "patches/0.4.15/945_r13_f15.bps",
-     "source_crc": "706494e1",
-     "target_crc": "b0cc693d",
-     "size": 1304
-    },
-    "945_r12.e15": {
-     "file": "patches/0.4.15/945_r12_e15.bps",
-     "source_crc": "6dcd00ab",
-     "target_crc": "a89a9fea",
-     "size": 1281
-    },
-    "945_m09.r17": {
-     "file": "patches/0.4.15/945_m09_r17.bps",
-     "source_crc": "b4a6df25",
-     "target_crc": "411e70a7",
-     "size": 11418
-    },
-    "945_m08.n17": {
-     "file": "patches/0.4.15/945_m08_n17.bps",
-     "source_crc": "74e981d2",
-     "target_crc": "f59a7b78",
-     "size": 11419
-    },
-    "945_r05.d9": {
-     "file": "patches/0.4.15/945_r05_d9.bps",
-     "source_crc": "c8c45365",
-     "target_crc": "273411a3",
-     "size": 324
-    }
-   },
    "en": {
     "title": "CUBE LINE in the pause menu (dotted lines at the cube reacting positions and height marks)",
     "changes": [
