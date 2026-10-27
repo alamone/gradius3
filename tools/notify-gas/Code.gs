@@ -78,7 +78,7 @@ function createReportForm() {
   text('起動画面の数字 / Boot screen numbers', '電源を入れた直後の「RAM ROM CHECK」の下の数字（わかれば。例 0 4 17  26 10 26 10:12） / The numbers under RAM ROM CHECK right after power-on (if you know them)');
   choice('遊んだ環境 / Where you played', '', ['MAMEUI（Windows）', 'MAME（その他 / other）', 'MAME4droid（Android）', '実機（基板） / Real hardware', 'その他 / Other'], true);
   text('環境の詳しいこと / Details of your setup', '例）MAMEUI 0.289 / Windows 11 / PS5 コントローラー');
-  choice('モード / Mode', '', ['NORMAL（メニューから開始 / from the menu）', 'CUBE RUSH（キューブラッシュ）', 'BOSS RUSH（ボスラッシュ）', '純正どおりの開始 / Original start (no menu)', 'メニュー・ポーズ画面 / Menu or pause screen', 'わからない / Not sure'], false);
+  choice('モード / Mode', '', MODES_, false);
   text('面・エリア・位置 / Stage, area, position', '例）5面 ❷ X:1CA0 Y:0000（ポーズメニューの POS DISP を ON にすると右上に出ます） / e.g. Stage 5 area 2, X:1CA0 Y:0000 (turn on POS DISP in the pause menu)');
   para('何が起きたか / What happened', WHAT_HELP_, true);
   para('起こし方 / How to make it happen', 'どうすると起きるか。毎回か、たまにか / Steps, and whether it happens every time');
@@ -91,6 +91,7 @@ function createReportForm() {
 }
 
 const WHAT_HELP_ = 'プレイ中のメモをそのまま貼り付けて大丈夫です。本当はどうなってほしいかも。「いろいろまとめて」のときは、メモを丸ごと貼ってください（ほかの欄は空でも大丈夫です） / Paste your notes as they are. For "Several things at once", paste all your notes here (other fields can be blank)';
+const MODES_ = ['NORMAL（メニューから開始 / from the menu）', 'CUBE RUSH（キューブラッシュ）', 'BOSS RUSH（ボスラッシュ）', '純正どおりの開始 / Original start (no menu)', 'メニュー・ポーズ画面 / Menu or pause screen', 'わからない・その他 / Not sure / Other'];
 const KINDS_ = ['不具合 / Bug', '気づいたこと・感想 / Finding', '要望 / Request', 'いろいろまとめて（音声メモなど） / Several things at once (voice notes, etc.)', '直ったかの確認 / Re-check of a fix'];
 // 「版」の質問：選ぶ形（最新版／1つ前の版／その他に書く）。空なら最新版として扱う
 function versionItem_(form) {
@@ -104,6 +105,8 @@ function updateReportForm() {
   form.setDescription(form.getDescription().replace(/^テストプレイにご協力いただき、ありがとうございます。/, 'ご意見・ご要望・不具合の報告、テストプレイの報告など、どんなことでも受け付けています。').replace(/Thank you for test playing! /, 'Feedback, requests, bug reports and test play reports are all welcome. '));
   const kindItem = form.getItems().find(it => it.getTitle().indexOf('報告の種類') === 0);
   if (kindItem) kindItem.asMultipleChoiceItem().setChoiceValues(KINDS_);
+  const modeItem = form.getItems().find(it => it.getTitle().indexOf('モード') === 0);
+  if (modeItem) modeItem.asMultipleChoiceItem().setChoiceValues(MODES_);
   const whatItem = form.getItems().find(it => it.getTitle().indexOf('何が起きたか') === 0);
   if (whatItem) whatItem.setHelpText(WHAT_HELP_);
   const old = form.getItems().find(it => it.getTitle().indexOf('版 / Version') === 0);
