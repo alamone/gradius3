@@ -181,7 +181,8 @@ fr_ingame:
         jsr     CmdCalc.l
         jsr     CubeCalc.l
         jsr     EditOv.l
-        tst.l   $2038de.l       ; 面が始まってから（武器選択などの画面では出さない）
+        move.w  $20101e.l,d0    ; 面が始まってから（武器選択などの画面では出さない）: 自機の絵の番号（1P/2P）が入っている
+        or.w    $20109e.l,d0    ; （以前は画面の位置 $2038de で見ていたが、4面は位置が 0 のままで出なかった #4）
         beq.w   fr_nr
         jsr     CubeHud.l
         jsr     CubeLine.l

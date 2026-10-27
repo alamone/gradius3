@@ -1255,7 +1255,8 @@ PosChk: tst.b   MBS_RUN.l
         beq.w   po_x
         cmpi.b  #2,TOPSTATE.l
         bne.w   po_x
-        tst.l   $2038de.l
+        move.w  $20101e.l,d0    ; 面が始まってから（fr と同じ判定。#4）
+        or.w    $20109e.l,d0
         beq.w   po_x
         tst.b   $203f2b.l
         bne.s   po_on
