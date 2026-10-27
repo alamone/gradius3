@@ -81,9 +81,9 @@ def sub_data(gfxdump):
 
 SRC = """
 LAYER_ATTR = $24e001
-V_EDON  = $100fc0
-V_EDTX  = $100fc1
-V_PG    = $100fc4           ; 3列分のページ(0/1)
+V_EDON  = $1034c0
+V_EDTX  = $1034c1
+V_PG    = $1034c4           ; 3列分のページ(0/1)
 
 ; ---- 改造プレイ中、毎フレーム: エディット画面なら拡張分の表示 ----
 EditOv:

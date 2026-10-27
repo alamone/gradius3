@@ -1,6 +1,8 @@
 """サブCPU側: ロック/解除コンボ + 60秒自動ロック + メニュー起動
 サブROM空き: 0x37d78〜0x3ffff（サブ連結イメージ上）。メールボックス: 共有RAM 0x103f00 → サブから 0x203f00
-サブ専用変数: 0x100f00〜（サブ私有RAM。要MAME確認: 未使用であること）
+サブ専用変数: 0x103400〜0x1039cf（サブ私有RAM。元のプログラムは起動時のRAMチェックの後は書かない。2026-10-28 に 0x100f00〜0x1014cf から移した:
+  0x100e00〜0x101bff はゲームの地形ブロックの読み込み表で、改造の変数が重なって地形が欠けていた #1）。
+  ゲームが面の開始・再開のたびに 0x100e00〜0x101fff を消す（$0B9C）ので、同じときにこの範囲も消す（ClrHook）
 """
 SUB_FREE = 0x37d78
 MBS = 0x203f00
@@ -15,21 +17,31 @@ MBS_KIND = $203f05
 MBS_PAUS = $203f06
 MBS_RUN  = $203f07
 TOPSTATE = $2037c5
-SV       = $100f00
-V_LAST   = $100f00
-V_PUD    = $100f02
-V_PDU    = $100f03
-V_TUD    = $100f04
-V_TDU    = $100f06
-V_IDLE   = $100f08
-V_LTBL   = $101220          ; 最後に写したエリア表の元（サブ私有RAM。0x101100〜 は元のプログラムが使わない）
-V_CCS    = $101224          ; キューブの色パレットの写しの中身（0=なし 1=色付き 2=元の色）
+SV       = $103400
+V_LAST   = $103400
+V_PUD    = $103402
+V_PDU    = $103403
+V_TUD    = $103404
+V_TDU    = $103406
+V_IDLE   = $103408
+V_LTBL   = $103720          ; 最後に写したエリア表の元
+V_CCS    = $103724          ; キューブの色パレットの写しの中身（0=なし 1=色付き 2=元の色）
 FRAMECNT = $203950          ; メインのVBLANKが共有RAMへ写すフレームカウンタ(サブの$100022は途中で止まるため)
 """
 
 SRC = CONSTS + """
         org $37d78
 ; サブ IRQ1(垂直同期, 毎フレーム) の前に割り込ませる。元のハンドラ 0x5c8 へ続ける
+; 面の開始・再開でゲームが 0x100e00〜0x101fff を消す処理（$0B9C の後半 $0BB6 の lea $101c00,a0 から飛んでくる）:
+; 元の処理の続き＋改造の変数（0x103400〜0x1039cf）も消す（以前は消える範囲に置いていたので、同じ動きにする）
+ClrHook:
+        lea     $101c00.l,a0
+        move.w  #$ff,d0
+        jsr     $bc4.w
+        lea     $103400.l,a0
+        move.w  #$173,d0        ; 0x5d0 バイト = 0x174 ロング
+        jmp     $bc4.w
+
 IrqHook:
         TESTNOIRQ
         movem.l d0-d7/a0-a6,-(a7)
@@ -202,7 +214,7 @@ fr_nr:  jsr     PosChk.l
         cmpi.b  #1,MBS_PAUS.l
         bne.w   fr_np
         jmp     PauseFrame.l
-fr_np:  clr.b   $100f50.l
+fr_np:  clr.b   $103450.l
         rts
 
 
@@ -276,8 +288,8 @@ bk_r:   rts
 ; ---- キューブラッシュのオプションハンター（ポーズの CUBE HUNTER）: OFF = 出さない / ON = キューブラッシュ1回につき最初の1体だけ
 ; ハンター = 種類($28) $4200 のオブジェクト。出させないものは出た瞬間に消す
 V_CEW   = $203ed6               ; キューブラッシュの終わり: 画面が止まったフレーム+1（共有RAMの空き。サブの私有RAMは途中で消されることがある）
-V_HUSED = $101228               ; このキューブラッシュで1体出した
-V_HALLOW = $10122c              ; 出してよいハンターの場所
+V_HUSED = $103728               ; このキューブラッシュで1体出した
+V_HALLOW = $10372c              ; 出してよいハンターの場所
 HuntCtl: cmpi.b #2,TOPSTATE.l
         bne.w   hu_r
         move.w  FRAMECNT.l,d0   ; 4フレームに1回（ハンターは出てから15フレームはこの種類のまま）
@@ -400,9 +412,10 @@ def apply(rom):
     src = CONSTS + consts + SRC.replace(CONSTS, '', 1) + mod_menu.source(dl) + mod_edit.src()
     src = src.replace('V_INIT', 'V_INIT') 
     src = src.replace('TESTNOIRQ', 'cmpi.b  #2,TOPSTATE.l\n        bne.s   ih_go\n        jmp     $5c8.l\nih_go:' if os.environ.get('TESTNOIRQ') else '')
-    b, lab = asm68.assemble('V_INIT = $100f12\n' + src if 'V_INIT   =' not in src else src, SUB_FREE)
+    b, lab = asm68.assemble('V_INIT = $103412\n' + src if 'V_INIT   =' not in src else src, SUB_FREE)
     assert SUB_FREE + len(b) <= DATA_BASE, hex(SUB_FREE + len(b))
     rom.put('sub', SUB_FREE, b, 'subcore')
+    rom.put('sub', 0xbb6, bytes.fromhex('4ef9') + lab['ClrHook'].to_bytes(4, 'big'), 'clr-vars', expect=bytes.fromhex('41f900101c00'))
     rom.put('sub', 0xafc4, bytes.fromhex('4eb9') + lab['CubeStick'].to_bytes(4, 'big'), 'cube-stick', expect=bytes.fromhex('117c00010026'))
     rom.put('sub', 0x877c, bytes.fromhex('4eb9') + lab['SprHook'].to_bytes(4, 'big') + bytes.fromhex('4e714e714e71'), 'menubg-spr', expect=bytes.fromhex('610000d213fc000000203936'))
     rom.put('sub', DATA_BASE, data, 'menudata')
