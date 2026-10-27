@@ -10,6 +10,8 @@
   ],
   "admin_url": "https://script.google.com/macros/s/AKfycbzHzy2UvScNSpUBcZareJUrHeKzMQlpNf1gZ5VO5Fbcn0tCSgY4Z_5awyJqt-Kqc-ja2A/exec",
   "_admin_url": "申請の管理画面（Apps Script のウェブアプリの URL。管理者だけが開ける）。まとめページの上にリンクが出る",
-  "admins_github": [],
+  "admins_github": [
+    "alamone"
+  ],
   "_admins_github": "共同編集者ではないが管理者として扱う人の GitHub ユーザー名（まとめページに入れる人）。ボットの「完了にする」「差し戻す」などが使える"
 }
