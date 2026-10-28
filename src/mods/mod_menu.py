@@ -38,8 +38,8 @@ ITEMS = [
     ('       TYPE', 1, 0, 45, 0x37, ['RANDOM'] + ['%02d' % i for i in range(1, 46)], 0),
     ('SHD COLOR', 1, 1, 10, 0x16, ['?', 'BLUE', 'RED', 'GREEN', 'GOLD', 'PURPLE', 'CYAN', 'ORANGE', 'PINK', 'SILVER', 'BLACK'], 1),
     ('HUNTER NEXT', 1, 0, 3, 0x1b, ['DEFAULT', 'TYPE 1', 'TYPE 2', 'TYPE 3'], 0),
-    ('SPEED', 0, 0, 5, 0x0d, None, 2),                  # 開始時のスピード（スピードアップを使った回数）
-    ('CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 1),   # 開始時のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
+    ('FULL POWER SPEED', 0, 0, 5, 0x0d, None, 2),       # フル装備コマンドのスピード（スピードアップを使った回数）
+    ('         CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 1),   # フル装備コマンドの後のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
 ]
 # 各項目の画面の行（可視は行2〜29）。面の表の後・CUBE の後に1行ずつ空ける
 ROWS = [2, 3, 5] + list(range(7, 19)) + [20, 21, 22] + [24, 25, 26, 27]   # INVINCIBLE が一番上、最下段は PUSH START
@@ -156,8 +156,9 @@ ROMAN_OFS = [0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22]   # 1文字ずつ空け�
 ATTR_SELGRID = 0x80      # 選択中のマスの色（パレット4: アトラクト後はオレンジ）
 ATTR_DIS = 0xa0          # MODE で使われないマスの色（パレット5: 暗い青紫）
 NITEM = len(ITEMS)
+CUBE0 = [it[0] for it in ITEMS].index('CUBE HEIGHT')   # CUBE HEIGHT/SHIFT/TYPE の最初の項目番号
 # 可視領域は タイル列12〜51 / 行2〜29 (320x224)。それに合わせて配置
-ROW0, COL_LABEL, COL_VAL, COL_CUR = 4, 14, 29, 12
+ROW0, COL_LABEL, COL_VAL, COL_CUR = 4, 14, 31, 12   # 値の列は FULL POWER SPEED（16文字）の後
 TILE_A = 0x24c000
 ATTR_TXT = 0x00          # 属性（パレット番号<<5）。実測で調整
 ATTR_SEL = 0x20          # 選択行
@@ -364,6 +365,7 @@ V_I     = $103417
 V_Y     = $103418
 V_TMP   = $10341a
 V_SINP  = $10341c
+V_RA    = $10341e          ; この行の文字の色（CUBE の3行はキューブラッシュ以外で暗く）
 
 ; ---- 現在行の記述子 a5 を求める ----
 CurDesc:
@@ -385,7 +387,11 @@ da_row:
         mulu    #12,d3
         lea     ITM.l,a5
         adda.l  d3,a5
-        lea     ROWMAP.l,a1
+        move.b  #%(attr)d,V_RA.l
+        jsr     CubeSkip.l
+        beq.s   da_ra
+        move.b  #ATTRDIS,V_RA.l
+da_ra:  lea     ROWMAP.l,a1
         moveq   #0,d1
         move.b  0(a1,d7.w),d1
         move.w  d1,V_Y.l
@@ -401,7 +407,7 @@ da_nc:  move.w  #%(colcur)d,d0
         movea.l (a5),a0
         move.w  #%(collab)d,d0
         move.w  V_Y.l,d1
-        move.b  #%(attr)d,d2
+        move.b  V_RA.l,d2
         jsr     PutStr.l
         cmpi.b  #2,4(a5)
         beq.s   da_next
@@ -421,7 +427,7 @@ da_val: move.w  #%(colval)d,d0
         beq.s   da_str
         move.w  #%(colval)d,d0
         move.w  V_Y.l,d1
-        move.b  #%(attr)d,d2
+        move.b  V_RA.l,d2
         jsr     PutDec.l
         bra.s   da_next
 da_str: moveq   #0,d0
@@ -431,12 +437,25 @@ da_str: moveq   #0,d0
         movea.l 0(a2,d0.w),a0
         move.w  #%(colval)d,d0
         move.w  V_Y.l,d1
-        move.b  #%(attr)d,d2
+        move.b  V_RA.l,d2
         jsr     PutStr.l
 da_next:
         addq.b  #1,V_I.l
         cmpi.b  #NITEM,V_I.l
         bcs.w   da_row
+        rts
+
+; ---- CUBE HEIGHT/SHIFT/TYPE の行（d7=項目番号）をキューブラッシュ以外で飛ばす: ne=飛ばす（d3 を使う）----
+CubeSkip:
+        moveq   #0,d3
+        cmpi.b  #1,$203f0b.l
+        beq.s   ck_x
+        cmpi.b  #CUBE0,d7
+        bcs.s   ck_x
+        cmpi.b  #CUBE0+2,d7
+        bhi.s   ck_x
+        moveq   #1,d3
+ck_x:   tst.b   d3
         rts
 
 ; ---- 値変更 d6=+1/-1 ----
@@ -943,19 +962,24 @@ mf_dorep:
         btst    #2,d2
         beq.w   mf_nu
         move.b  V_CUR.l,d7
-        bne.w   mf_u1
+mf_u0:  tst.b   d7
+        bne.s   mf_u1
         move.b  #NITEM,d7
 mf_u1:  subq.b  #1,d7
+        jsr     CubeSkip.l
+        bne.s   mf_u0
         move.b  d7,V_CUR.l
         move.b  #1,V_DIRTY.l
 mf_nu:  btst    #3,d2
         beq.w   mf_nd
         move.b  V_CUR.l,d7
-        addq.b  #1,d7
+mf_d0:  addq.b  #1,d7
         cmpi.b  #NITEM,d7
-        bcs.w   mf_d1
+        bcs.s   mf_d1
         moveq   #0,d7
-mf_d1:  move.b  d7,V_CUR.l
+mf_d1:  jsr     CubeSkip.l
+        bne.s   mf_d0
+        move.b  d7,V_CUR.l
         move.b  #1,V_DIRTY.l
 mf_nd:  btst    #0,d2
         beq.w   mf_nl
@@ -995,6 +1019,11 @@ mf_sv:  move.b  (a0)+,(a1)+
         moveq   #7,d7
 mf_sv2: move.b  (a0)+,(a1)+
         dbf     d7,mf_sv2
+        cmpi.b  #1,$203f0b.l     ; CUBE HEIGHT/SHIFT/TYPE はキューブラッシュだけ（ほかは RANDOM = 純正のまま。控えた値はそのまま）
+        beq.s   mf_cr
+        clr.b   $203f35.l
+        clr.w   $203f36.l
+mf_cr:
         cmpi.b  #2,$203f0b.l     ; ボスラッシュ: 面1〜10は常にエリアA、EX STAGE は使えないので面1
         bne.s   mf_gb
         cmpi.b  #11,$203f08.l
@@ -1826,4 +1855,4 @@ pf_ret: rts
 """
 
 def source(lab):
-    return ('GRIDCOL = %d\nATTRSELGRID = %d\nATTRDIS = %d\n' % (GRID_COL, ATTR_SELGRID, ATTR_DIS)) + (ENGINE + ENGINE2 + PAUSE.replace('%', '%%')) % {'nitem': NITEM, 'row0': ROW0, 'colcur': COL_CUR, 'collab': COL_LABEL, 'colval': COL_VAL, 'attr': ATTR_TXT, 'attrsel': ATTR_SEL}
+    return ('GRIDCOL = %d\nATTRSELGRID = %d\nATTRDIS = %d\nCUBE0 = %d\n' % (GRID_COL, ATTR_SELGRID, ATTR_DIS, CUBE0)) + (ENGINE + ENGINE2 + PAUSE.replace('%', '%%')) % {'nitem': NITEM, 'row0': ROW0, 'colcur': COL_CUR, 'collab': COL_LABEL, 'colval': COL_VAL, 'attr': ATTR_TXT, 'attrsel': ATTR_SEL}
