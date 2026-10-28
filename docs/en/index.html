@@ -301,7 +301,7 @@ function verHtml(v0, open) {
   const L = DATA.versions[0];
   $('#latest').innerHTML = verHtml(L, true); $('#latest-ver').textContent = 'v' + L.version + (L.date ? ' (' + L.date + ')' : '');
   // (version is filled in on testplay.html)   // 報告ページの「版」を入力済みに
-  $('#history').innerHTML = DATA.versions.map((v, i) => `<div class="panel">${verHtml(v, i === 0)}</div>`).join('');
+  $('#history').innerHTML = DATA.versions.slice(1).map(v => `<div class="panel">${verHtml(v, false)}</div>`).join('');
   $('#ver').innerHTML = DATA.versions.filter(v => v.patches).map(v => `<option value="${esc(v.version)}">v${esc(v.version)} (${esc(v.build ? 'build ' + v.build : v.date)})</option>`).join('');
   $('#ver').onchange = refresh;
   for (const [c, u8] of await idbAll()) { have.set(c, u8); saved++; }   // 前に覚えた純正ROM
