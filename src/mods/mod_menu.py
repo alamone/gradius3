@@ -243,8 +243,17 @@ def build_data(base):
     # ポーズの項目 16B: 選択中の文字列.l 通常の文字列.l 値の場所.l(0=なし) 値の表.l(0=ON/OFF, それ以外=[数.l, 文字列.l...])
     for a, b, f, vt in [('PS_C0', 'PS_C1', 0, 0), ('PS_G0', 'PS_G1', 0, 0), ('PS_I0', 'PS_I1', 0x203f20, 0), ('PS_R0', 'PS_R1', 0x203f0e, 0), ('PS_S0', 'PS_S1', 0x2039c4, 0), ('PS_P0', 'PS_P1', 0x203f2b, 0), ('PS_Q0', 'PS_Q1', 0x203f0c, 0), ('PS_K0', 'PS_K1', 0x203f34, 0), ('PS_V0', 'PS_V1', 0x203f1c, 'LVTAB'), ('PS_H0', 'PS_H1', 0x203f3b, 'LHTAB'), ('PS_U0', 'PS_U1', 0x203f33, 0)]:
         blob.extend(struct.pack('>IIII', lab[a], lab[b], f, lab[vt] if vt else 0))
-    # STAGE DISP のエリア名: 面1〜10 × 12バイト（メニューの AREA_LABELS と同じ並び。❶〜❹ は数字 1〜4、残りは 0）
-    put('STLAB', b''.join(bytes([ord(l[1]) if l.startswith('#') else ord(l) for l in AREA_LABELS[i]] + [0] * (12 - len(AREA_LABELS[i]))) for i in range(10)))
+    # STAGE DISP のエリア: 面1〜10 × 12。本来のエリア（英字）だけ（❶〜❹ は使わない＝手前の英字のまま。2026-10-28 管理者）
+    #   STLAB = 英字（残りは 0）、STPRG = その開始進行度（メニューの表 PROGTBL と同じ値）
+    import mod_main
+    pt_, _ = mod_main.progress_tables()
+    lb, pg = b'', b''
+    for i in range(10):
+        e = [(ord(l), pt_[i * 12 + j]) for j, l in enumerate(AREA_LABELS[i]) if not l.startswith('#')]
+        lb += bytes([c for c, _ in e] + [0] * (12 - len(e)))
+        pg += b''.join(struct.pack('>H', v) for _, v in e) + bytes(2 * (12 - len(e)))
+    put('STLAB', lb)
+    put('STPRG', pg)
     # 項目記述子 12B: labelptr.l type.b min.b max.b mboff.b pad.b strtab.l
     al(); lab['ITM'] = base + len(blob)
     for i, it in enumerate(ITEMS):
@@ -1314,12 +1323,12 @@ sc_on:  move.b  #1,V_SIA.l
         move.b  d4,d5
         addq.w  #1,d5
         bsr.w   AppD2
-        move.w  d4,d0           ; エリア = 進行度 $52 以下で最後のエリア開始点（メニューの表 PROGTBL と同じ）
+        move.w  d4,d0           ; エリア = 進行度 $52 以下で最後の本来のエリア（英字）の開始点
         mulu    #12,d0
         lea     STLAB.l,a3
         adda.w  d0,a3
         add.w   d0,d0
-        lea     PROGTBL.l,a4
+        lea     STPRG.l,a4
         adda.w  d0,a4
         move.w  $52(a2),d1
         move.b  (a3)+,d2
