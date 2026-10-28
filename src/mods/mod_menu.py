@@ -1254,7 +1254,7 @@ rd_v:   move.w  #49,d0
         jmp     PutStr.l
 rd_x:   rts
 
-;---- STAGE DISP（#30・ポーズで切り替え）: 2P のスコアの場所（段2）に 周回・面・エリア・スピード 「L01 S03 AH SP2」を右寄せ（右端=桁51）で出す。
+;---- STAGE DISP（#30・ポーズで切り替え）: 2P のスコアの場所（段2）に 周回-面エリア とスピード 「01-03H  SP2」を出す（2P の字の位置 = 桁39 から・SP はスコアの数字の右端 = 桁49 にそろえる）。
 ;      残機は「自機の字 : 03」の数字にする（純正の絵は下の桁しか見ないので9機までしか出ない。残機は BCD・最大99＝表示は98）。
 ;      表示中は V_SIA を立て、メインのスコア表示（ScoreHk）は 2P だけ描かず、残機の絵（LivHk）も描かない。OFF にしたら消して元に戻す
 V_SIF   = $2039c4          ; STAGE DISP の設定（ポーズの項目。共有RAM の空き）
@@ -1294,27 +1294,27 @@ sc_on:  move.b  #1,V_SIA.l
         bsr.w   LvNum
         tst.b   $203ed1.l       ; キューブラッシュの CUBE INFO が HI・2P の場所を使っている間は上の段は描かない
         bne.w   sc_x
-        lea     V_SBUF.l,a0     ; 文字列を作る（bit7 = 見出しの色）
-        move.b  #$cc,(a0)+      ; L 周回 = ($63 >> 1) + 1（2桁）
+        move.w  #37,d0          ; 段2 の 桁37〜51 を消す
+        move.w  #2,d1
+        moveq   #14,d7
+        jsr     ClrFld.l
+        lea     V_SBUF.l,a0     ; 「周回-面エリア」 例 01-03H（2P の字の位置 = 桁39 から）
         moveq   #0,d5
-        move.b  $63(a2),d5
+        move.b  $63(a2),d5      ; 周回 = ($63 >> 1) + 1（2桁）
         lsr.b   #1,d5
         addq.w  #1,d5
         bsr.w   AppD2
-        move.b  #$20,(a0)+
-        move.b  #$d3,(a0)+      ; S 面（2桁）
+        move.b  #$5b,(a0)+      ; '-'（ゲームの字 $2b）
         moveq   #0,d4
         move.b  $51(a2),d4
         andi.b  #$0f,d4
         cmpi.b  #9,d4
         bhi.s   sc_ex
-        moveq   #0,d5
+        moveq   #0,d5           ; 面（2桁）
         move.b  d4,d5
         addq.w  #1,d5
         bsr.w   AppD2
-        move.b  #$20,(a0)+
-        move.b  #$c1,(a0)+      ; A エリア = 進行度 $52 以下で最後のエリア開始点（メニューの表 PROGTBL と同じ）
-        move.w  d4,d0
+        move.w  d4,d0           ; エリア = 進行度 $52 以下で最後のエリア開始点（メニューの表 PROGTBL と同じ）
         mulu    #12,d0
         lea     STLAB.l,a3
         adda.w  d0,a3
@@ -1335,24 +1335,23 @@ sc_ad:  move.b  d2,(a0)+
         bra.s   sc_sp
 sc_ex:  move.b  #$45,(a0)+      ; 隠し面 = EX
         move.b  #$58,(a0)+
-sc_sp:  move.b  #$20,(a0)+
-        move.b  #$d3,(a0)+      ; SP スピード = $69 の下位5ビット
+sc_sp:  clr.b   (a0)
+        moveq   #39,d0
+        bsr.s   ScPut
+        lea     V_SBUF.l,a0     ; 「SP2」をスコアの数字の右端（桁49）にそろえる
+        move.b  #$d3,(a0)+
         move.b  #$d0,(a0)+
         moveq   #0,d5
-        move.b  $69(a2),d5
+        move.b  $69(a2),d5      ; スピード = $69 の下位5ビット
         andi.b  #$1f,d5
         bsr.w   AppDec
         clr.b   (a0)
         lea     V_SBUF.l,a1
         suba.l  a1,a0
-        move.w  a0,d6           ; 文字数
-        move.w  #37,d0          ; 段2 の 桁37〜51 を消して、右端を 51（画面の右端）にそろえて描く
-        move.w  #2,d1
-        moveq   #14,d7
-        jsr     ClrFld.l
-        moveq   #52,d0
-        sub.w   d6,d0
-        add.w   #128,d0         ; (段2*64+桁)*2
+        moveq   #50,d0
+        sub.w   a0,d0
+; V_SBUF の文字列を 段2・桁 d0 から描く（bit7 = 見出しの色）
+ScPut:  add.w   #128,d0         ; (段2*64+桁)*2
         add.w   d0,d0
         lea     TILEA.l,a1
         adda.w  d0,a1
