@@ -1,10 +1,26 @@
 """メインCPU側スタブ（純正313へのパッチ）
-空き領域: A=0xd4aa(425B) B=0xd8f6(532B) C=0x3fd9a(〜0x3feff, 358B)  ※0x3ff00-0x3fff0 は ROM合計の微調整用に確保
+
+置き場所（#34、2026-10-28〜）: メインROMには本当の空きがほとんど無いので、次の3種類の空きに「かたまり」ごとに詰めて置く（mainpack.py）。
+  1. C = 0x3fd9a〜0x3ffbf（ROM の最後の空き。0x3ffc0〜 は起動画面の文字列と ROM 合計の微調整）
+  2. 地形を掘る跡のマスク（$D4AC〜$DA7D。掘る処理 $D31A が読む）の中の、一度も読まれないバイト:
+     32バイトの行ごとの後ろ14バイト（$D4BE+32n〜$D4CB+32n、n=0〜45）と、最後の行の後ろ $DA7E〜$DB09。
+     マスクとして読まれるバイトは純正のまま（#6）。以前（〜v0.4.17）はマスクの上にコードを置いていた
+  3. 共有RAMの空き（$103812〜$1038D3・$103966〜$1039BF・$1039C6〜$103ABD。どちらの ROM からも参照が無く、
+     記録でも使われなかった所）。起動時にサブが ROM からここへ写し、最後に印 RAMMAGIC を書く（mod_sub の RamCopy）。
+     メインは毎フレーム最初の StubIn で印を見て、まだなら写し終わるまで待つ（LoadW）。
+     それより前に改造のコードが呼ばれる所は無い（StubIn はフレームの処理の最初のフック）
 """
-MB = 0x103f00           # メールボックス（共有RAM。サブ側は 0x203f00）。要MAME確認: 未使用であること
+MB = 0x103f00           # メールボックス（共有RAM。サブ側は 0x203f00）
 # オフセット
 O_P1, O_SYS, O_UNLOCK, O_REQ, O_DONE, O_KIND, O_PAUSE, O_MODRUN = 0, 1, 2, 3, 4, 5, 6, 7
 O_STAGE, O_LOOP, O_AREA, O_MODE, O_BEGIN = 8, 9, 10, 11, 12
+
+RAMMAGIC = 0x103abe     # 共有RAMのコードを写し終えた印（サブが最後に書く。起動時にゲームが共有RAMを消すと 0 に戻る）
+MAGICVAL = 0x4d4f
+ROM_REGIONS = [('C', 0x3fd9a, 0x3ffc0, 'rom')] + \
+    [('S%02d' % n, 0xd4be + 32 * n, 0xd4cc + 32 * n, 'rom') for n in range(46)] + [('T', 0xda7e, 0xdb0a, 'rom')]
+RAM_REGIONS = [('R1', 0x103812, 0x1038d4, 'ram'), ('R2', 0x103966, 0x1039c0, 'ram'), ('R3', 0x1039c6, RAMMAGIC, 'ram')]
+FILLER = 'S45'          # ROM 合計の微調整に使う隙間（コードは置かない）
 
 CONSTS = f"""
 MB      = ${MB:x}
@@ -21,29 +37,32 @@ MB_LOOP = ${MB+O_LOOP:x}
 MB_AREA = ${MB+O_AREA:x}
 MB_MODE = ${MB+O_MODE:x}
 MB_BEG  = ${MB+O_BEGIN:x}
-ApplyStart = $d8f6
-"""
-
-# --- エリアA: 入力ミラー / スタート判定フック / メニュー状態 ---
-SRC_A = CONSTS + """
+MB_LIVES = $103f0d
+MB_TYPE  = $103f0f
+MB_SPD   = $103f10
 MB_EMIS  = $103f11
 MB_EDBL  = $103f12
 MB_ELSR  = $103f13
-        org $d4aa
-; ---- キューブラッシュのパターン固定 (0x26238 の move.b $40032.l,d5 を置換) ----
-; キューブの出現の高さは「その瞬間の $40032 xor $40033」で16通りから決まる。
-; 改造プレイ中で CUBE HEIGHT/SHIFT/TYPE のどれかが R 以外のとき、1個目が出る瞬間だけ
-; フレームカウンタを「その並びになる値」(サブが毎フレーム $103e30 に用意)にする。2個目以降は純正どおり
-CubeSeed:
-        jmp     CUBESEED2.l      ; 本体は 0xd653〜 の空き領域（CubeSeed2）
-        even
-; 残機の絵（純正 $1a72。表 $15ce と $17fe の jsr から）: STAGE DISP 表示中（#30）はサブが数字で描くので描かない
-LivHk:  tst.b   $1039c5.l
-        bne.s   lh_r
-        jmp     $1a72.l
-lh_r:   rts
-StubIn:
-        jsr     $33b8.w
+MB_OPT   = $103f14
+MB_SHD   = $103f15
+MB_PMIS  = $103f17
+MB_PSHOT = $103f18
+MB_PSHON = $103f19
+MB_PEND  = $103f1a
+MB_INV   = $103f20
+RAMMAGIC = ${RAMMAGIC:x}
+"""
+
+# ---- かたまり（名前, ソース, 'rom'=ROM に置く / 'any'=どこでも） ----
+CHUNKS = []
+def chunk(name, src, where='any'): CHUNKS.append((name, src, where))
+
+# 毎フレーム（フレームの処理の最初。0x1d1e の jsr $33b8 を置き換え）: 入力の写し・スコアの描き直し・見出しの色
+chunk('StubIn', """
+StubIn: tst.w   RAMMAGIC.l      ; 共有RAMの改造のコードがまだ無い（起動直後）→ サブが写し終えるまで待つ
+        bne.s   si_ok
+        jsr     LoadW.l
+si_ok:  jsr     $33b8.w
         move.b  $c8003.l,d0
         not.b   d0
         move.b  d0,MB_P1.l
@@ -58,11 +77,31 @@ si_np:  tst.b   $103ed0.l       ; サブからスコアの描き直しの依頼�
         beq.s   ms_nr
         clr.b   $103ed0.l
         movem.l d0-d7/a0-a6,-(a7)
-        jsr     SCOREHK.l
+        jsr     ScoreHk.l
         movem.l (a7)+,d0-d7/a0-a6
-ms_nr:  jsr     HUDPAL.l
-        rts
+ms_nr:  jmp     HudPal.l
+""", 'rom')
+# 共有RAMのコードを待つ（ウォッチドッグを叩きながら。約8秒たっても来なければ叩くのをやめてリセットさせる）
+chunk('LoadW', """
+LoadW:  move.l  #$140000,d0
+lw_l:   move.b  #1,$e0000.l
+        tst.w   RAMMAGIC.l
+        bne.s   lw_r
+        subq.l  #1,d0
+        bne.s   lw_l
+lw_h:   bra.s   lw_h
+lw_r:   rts
+""", 'rom')
 
+# 残機の絵（純正 $1a72。表 $15ce と $17fe の jsr から）: STAGE DISP 表示中（#30）はサブが数字で描くので描かない
+chunk('LivHk', """
+LivHk:  tst.b   $1039c5.l
+        bne.s   lh_r
+        jmp     $1a72.w
+lh_r:   rts
+""", 'rom')
+
+chunk('HookStart', """
 HookStart:
         clr.b   MB_RUN.l        ; アトラクト中は改造プレイ中フラグを落とす
         tst.b   MB_UNLK.l
@@ -104,10 +143,12 @@ hs_go:
         rts
 hs_norm:
         jmp     $2968.w
+""")
 
-; 新トップ状態3: メニュー実行中（サブCPUが描画・操作）。確定/キャンセルを待つ
+# 新トップ状態3: メニュー実行中（サブCPUが描画・操作）。確定/キャンセルを待つ
+chunk('ModState', """
 ModState:
-        jsr     PALCOPY.l       ; メニューの背景の色（サブが用意したら写す）
+        jsr     PalCopy.l       ; メニューの背景の色（サブが用意したら写す）
         move.l  #$6000,$1038e8.l ; スクロール位置 0 に固定（レジスタ値 = 変数-0x6000 を毎フレーム反映する処理がある）
         move.l  #$6000,$1038f0.l
         clr.l   $1038ec.l
@@ -139,24 +180,15 @@ ms_cancel:
         clr.b   MB_REQ.l
         clr.b   MB_DONE.l
         rts
-
-; 新状態表（0x1e58の代わり）
+""")
+# 新状態表（0x1e58の代わり）
+chunk('StateTbl', """
 StateTbl:
         dc.l    $1e6c, $1e64, $28ce, ModState
-"""
+""")
 
-# --- エリアB: 開始設定の反映 ---
-SRC_B = CONSTS + """
-MB_LIVES = $103f0d
-SetEdit  = $d4aa
-MB_PEND  = $103f1a
-MB_EMIS  = $103f11
-MB_EDBL  = $103f12
-MB_ELSR  = $103f13
-MB_TYPE  = $103f0f
-MB_SHD   = $103f15
-        org $d8f6
-; メニュー確定後（0x29c0 で通常のゲーム開始処理を済ませた直後）に呼ばれる
+# メニュー確定後（0x29c0 で通常のゲーム開始処理を済ませた直後）に呼ばれる
+chunk('ApplyStart', """
 ApplyStart:                     ; メニュー確定直後: 改造プレイ開始の印だけ付ける（面・周回は ApplyStage で後から）
         move.b  #1,MB_RUN.l
         move.b  #7,MB_PEND.l
@@ -168,13 +200,23 @@ ApplyStart:                     ; メニュー確定直後: 改造プレイ開�
         st      $103f22.l
 as_1:
         lea     $101000.l,a0
-        bsr.w   sk_set
-        lea     $101080.l,a0
         bsr.s   sk_set
-        rts
+        lea     $101080.l,a0
+sk_set: cmpi.b  #1,MB_MODE.l    ; 残機はディップスイッチどおり。キューブラッシュはそれに +4（遊んでいない側＝残機0 には足さない）
+        bne.s   sk_sr
+        tst.b   $50(a0)
+        beq.s   sk_sr
+        move.b  $50(a0),d0      ; 残機は BCD
+        moveq   #4,d1
+        dc.w    $44fc,$0000     ; move #0,ccr
+        dc.w    $c101           ; abcd d1,d0
+        move.b  d0,$50(a0)
+sk_sr:  rts
+""")
 
-; 面・周回・エリアの反映。装備選択画面が終わり、面の準備(状態2)に入る瞬間に1回だけ呼ばれる
-; （先に書くと、周回≠0 のときゲームが選択画面を飛ばしてしまうため）
+# 面・周回・エリアの反映。装備選択画面が終わり、面の準備(状態2)に入る瞬間に1回だけ呼ばれる
+# （先に書くと、周回≠0 のときゲームが選択画面を飛ばしてしまうため）
+chunk('ApplyStage', """
 ApplyStage:
         move.b  MB_STG.l,d0
         subq.b  #1,d0           ; 面1..10 → 内部 0..9 (11,12=隠し面 → 戻り先は10面)
@@ -189,7 +231,7 @@ as_nb:  move.b  d0,$101051.l
         move.b  d0,$101063.l
         move.b  d0,$1010e3.l
 ; エリア(復活地点)指定: 0x4ce8 は「$101063 bit0≠0 のとき $101052(進行度)以下で最後のエリア開始点」を使う
-SetArea:                        ; 進行度はサブCPUがビルド時の表から計算して MB+$1e に置く
+                                ; 進行度はサブCPUがビルド時の表から計算して MB+$1e に置く
         ori.b   #1,$101063.l    ; 「再開」扱い: 1周目の新規開始で面が1面に戻される処理(0x37c6)を避ける
         ori.b   #1,$1010e3.l
         move.w  $103f1e.l,d6
@@ -197,21 +239,11 @@ SetArea:                        ; 進行度はサブCPUがビルド時の表か�
         move.w  d6,$101052.l
         move.w  d6,$1010d2.l
 sa_ret: rts
+""")
 
-; （タイプ選択画面の差し替え SkipType は、改造プレイでも純正どおり表示するようになったので外した）
-sk_set: cmpi.b  #1,MB_MODE.l    ; 残機はディップスイッチどおり。キューブラッシュはそれに +4（遊んでいない側＝残機0 には足さない）
-        bne.s   sk_sr
-        tst.b   $50(a0)
-        beq.s   sk_sr
-        move.b  $50(a0),d0      ; 残機は BCD
-        moveq   #4,d1
-        dc.w    $44fc,$0000     ; move #0,ccr
-        dc.w    $c101           ; abcd d1,d0
-        move.b  d0,$50(a0)
-sk_sr:  rts
-
-; ---- 改造モードのポーズ(プレイ中 START)。戻り d0≠0 ならこのフレームのゲーム処理を止める ----
-; MB_PAUS: 0=通常 1=ポーズ中(サブがメニュー表示) 2=再開 3=ゲームオーバー
+# ---- 改造モードのポーズ(プレイ中 START)。戻り d0≠0 ならこのフレームのゲーム処理を止める ----
+# MB_PAUS: 0=通常 1=ポーズ中(サブがメニュー表示) 2=再開 3=ゲームオーバー
+chunk('PauseChk', """
 PauseChk:                       ; 戻り d0: 0=通常 1=止める 2=装備コマンド実行
         move.b  MB_PAUS.l,d0
         beq.s   pc_chk
@@ -247,13 +279,12 @@ pc_up:  move.b  (a0),d1
         rts
 pc_no:  moveq   #0,d0
         rts
+""")
 
-
-        even
-
-; ---- 隠しメニューの解除/ロック (毎フレーム, d0=P1 正論理) ----
-; 解除: 上+A → 全部離す → 下+A   ロック: 下+A → 離す → 上+A   (各3秒以内, プレイ中以外)。放置300秒で自動ロック
-; MB+$3a 段階 / +$3b 種類(1=解除,0=ロック) / +$3c 残り時間 / +$3e 最後の操作時刻
+# ---- 隠しメニューの解除/ロック (毎フレーム, d0=P1 正論理) ---- （LOCK_SUSPEND の間は入れない）
+# 解除: 上+A → 全部離す → 下+A   ロック: 下+A → 離す → 上+A   (各3秒以内, プレイ中以外)。放置300秒で自動ロック
+# MB+$3a 段階 / +$3b 種類(1=解除,0=ロック) / +$3c 残り時間 / +$3e 最後の操作時刻
+SRC_LOCK = """
 Lock:   lea     $103f3a.l,a0
         cmpi.b  #2,$40005.l
         bcc.w   lk_act
@@ -303,23 +334,27 @@ lk_r:   rts
 lk_act: clr.b   (a0)
         clr.w   4(a0)
         rts
+"""
 
-
-; スコア表示(0x180a: 2P→HI→1P の順に3つ描く)の入口: キューブラッシュで CUBE INFO を ON にしている間は 1P だけ描く（HI・2P の場所にキューブの情報）。STAGE DISP 中は 2P の場所だけ描かない
-ScoreHk: moveq   #2,d0           ; 描く数−1（2=2P・HI・1P、純正の $180a と同じ）
+# スコア表示(0x180a: 2P→HI→1P の順に3つ描く)の入口: キューブラッシュで CUBE INFO を ON にしている間は 1P だけ描く（HI・2P の場所にキューブの情報）。STAGE DISP 中は 2P の場所だけ描かない
+chunk('ScoreHk', """
+ScoreHk: moveq  #2,d0           ; 描く数−1（2=2P・HI・1P、純正の $180a と同じ）
         sub.b   $1039c5.l,d0    ; STAGE DISP 表示中（#30。サブが 0/1 を置く）: 1 = HI と 1P だけ（2P の場所に出すので）
         tst.b   $103ed1.l       ; サブが「CUBE INFO 表示中」としたとき: 1P だけ
         beq.s   sk_go
         moveq   #0,d0
 sk_go:  jmp     $180e.w
-; ---- 開始時のハンターの設定（PlayHook から） ----
+""", 'rom')
+# ---- 開始時のハンターの設定（PlayHook から） ----
+chunk('PendB', """
 PendB:  move.b  $103f1b.l,d0    ; HUNTER NEXT (0=そのまま, 1..3 → $42e73=0..2)
         beq.s   pb_h1
         subq.b  #1,d0
         move.b  d0,$42e73.l
 pb_h1:  rts                     ; （HUNTER TIME は廃止。装備コマンドの後の1回目を出さない方式に）
-
-; ---- キューブラッシュ（改造プレイ）の点数はハイスコア・ランキングに入れない ----
+""")
+# ---- キューブラッシュ（改造プレイ）の点数はハイスコア・ランキングに入れない ----
+chunk('HiRank', """
 CkCR:   tst.b   MB_RUN.l        ; 戻り: eq = キューブラッシュの改造プレイ
         beq.s   ck_n
         cmpi.b  #1,MB_MODE.l
@@ -339,7 +374,9 @@ RankHk: move.l  $101054.l,d0
         bne.s   rh_r
         moveq   #0,d0
 rh_r:   rts
-; 見出しの暗めの色（F面パレット6・ゲームでは未使用）: 改造プレイ中は毎フレーム入れる
+""")
+# 見出しの暗めの色（F面パレット6・ゲームでは未使用）: 改造プレイ中は毎フレーム入れる
+chunk('HudPal', """
 HudPal: tst.b   MB_RUN.l
         beq.s   hp_r
         lea     $103dec.l,a0    ; パレット6 の 6〜15番（見出しの灰色・CUBE LINE の色。サブが共有RAMに置く）
@@ -357,10 +394,11 @@ hp_w:   move.w  (a0)+,(a1)+
         dbf     d1,hp_w
         dbf     d2,hp_p
 hp_r:   rts
-
-; ---- 敵出現表ポインタ ($42e00) の補正 (0x154aa の move.l a6,$42e00 を置換) ----
-; 改造プレイ・10面(マップ13)・X<0x780(ボスラッシュ区間) のときだけ「X 以上の最初のイベント」から始める
-; (ゲーム本来の X/0x300 刻みの索引だと、ボス直前から始めたときにボスの出現イベントを取りこぼす/前のボスが出る)
+""")
+# ---- 敵出現表ポインタ ($42e00) の補正 (0x154aa の move.l a6,$42e00 を置換) ----
+# 改造プレイ・10面(マップ13)・X<0x780(ボスラッシュ区間) のときだけ「X 以上の最初のイベント」から始める
+# (ゲーム本来の X/0x300 刻みの索引だと、ボス直前から始めたときにボスの出現イベントを取りこぼす/前のボスが出る)
+chunk('EvPtr', """
 EvPtr:  tst.b   MB_RUN.l
         beq.s   ev_st
         cmpi.b  #13,$1039c0.l
@@ -376,26 +414,179 @@ ev_lp:  cmp.w   (a6),d0
         bra.s   ev_lp
 ev_st:  move.l  a6,$42e00.l
         rts
+""")
 
-"""
+# 改造プレイの START 表示（状態2の2フレーム目から）: 元の処理の後で、パレットの出来事の処理（$E318。純正はプレイ中だけ）も回す。
+# 面の途中から始めると、開始位置までのパレットの出来事がプレイの最初のフレームでまとめて実行されるので、START 表示の間は
+# 前の画面のパレットが残って地形などの色が化けていた（#20）。通常プレイ（メニューを出さない）は純正どおり
+chunk('ShPal', """
+ShPal:  jsr     $3790.w
+        jmp     $e318.l
+""")
+# Z=0 なら無敵（改造プレイ中かつ INVINCIBLE=ON）
+chunk('Die', """
+InvChk: tst.b   $103ed2.l       ; キューブラッシュの区間が終わった → 無敵でも1機減らす（サブが立てる）
+        bne.s   ic_f
+        tst.b   MB_RUN.l
+        beq.s   ic_r
+        tst.b   MB_INV.l
+ic_r:   rts
+ic_f:   cmp.b   d0,d0           ; Z=1（無敵ではない）
+        rts
+; 0x7bc4 / 0xae22 の move.b #1,$400a2.l を置き換え（ここから先が死亡処理）
+DieA:   bsr.s   InvChk
+        bne.s   da_inv
+        move.b  #1,$400a2.l
+        rts
+da_inv: addq.l  #4,sp
+        clr.w   $1a(a0)
+        jmp     $7bf4.w
+DieB:   bsr.s   InvChk
+        bne.s   db_inv
+        move.b  #1,$400a2.l
+        rts
+db_inv: addq.l  #4,sp
+        clr.w   $1a(a0)
+        jmp     $ae52.l
+""")
+# ---- テクニカル/ビギナー選択（改造プレイ）: ビギナーは選べない・灰色 ----
+# 0x6b16 の andi.b #2,d6 / beq.s を置き換え（右でビギナーへ移る処理）
+chunk('TypeBeg', """
+TypeBeg: tst.b  MB_RUN.l
+        bne.s   tb_no
+        andi.b  #2,d6
+        beq.s   tb_no
+        rts
+tb_no:  addq.l  #4,sp
+        rts
+""")
+# 0x6a90 の jsr $e824（ビギナーの枠 = パレット $80600 を「選ばれていない色」にする）を置き換え
+chunk('TypeGrey', """
+TypeGrey: tst.b MB_RUN.l
+        beq.s   tg_n
+        lea     GREYPAL.l,a0
+        lea     $80600.l,a1
+        moveq   #15,d1
+tg_lp:  move.w  (a0)+,(a1)+
+        dbf     d1,tg_lp
+        rts
+tg_n:   jmp     $e824.l
+""")
+chunk('GreyPal', """
+GREYPAL: GREYDATA
+""")
+# ボスラッシュ: 面が変わるたび、その面のボス手前を「再開位置」にする（d0 = 面 0..9）
+chunk('BossSet', """
+BossSet: move.b d0,$103f38.l
+        move.l  a0,-(sp)
+        move.w  d0,-(sp)
+        add.w   d0,d0
+        lea     BOSSPROG.l,a0
+        move.w  0(a0,d0.w),d0
+        beq.s   bs_x
+        move.w  d0,$101052.l
+        move.w  d0,$1010d2.l
+        ori.b   #1,$101063.l
+        ori.b   #1,$1010e3.l
+bs_x:   move.w  (sp)+,d0
+        move.l  (sp)+,a0
+        rts
+""")
+chunk('BossProg', """
+BOSSPROG: BOSSDATA
+""")
+# ---- キューブの出現の瞬間（0x26238 の move.b $40032.l,d5 の置き換え）----
+# キューブの出現の高さは「その瞬間の $40032 xor $40033」で16通りから決まる。
+# 改造プレイ中で CUBE HEIGHT/SHIFT/TYPE のどれかが R 以外のとき、1個目が出る瞬間だけ
+# フレームカウンタを「その並びになる値」(サブが毎フレーム $103e30 に用意)にする。2個目以降は純正どおり
+chunk('CubeSeed', """
+CubeSeed:
+        tst.b   MB_RUN.l
+        beq.s   cs_x
+        cmpi.w  #1,$48(a3)
+        bne.s   cs_rec
+        move.b  $103f35.l,d5
+        or.b    $103f36.l,d5
+        or.b    $103f37.l,d5
+        beq.s   cs_r
+CUBESEEDBODY
+cs_r:   move.w  $40032.l,$103e3a.l   ; 1個目の瞬間のカウンタ（サブが H/S/T を割り出してプレイ中に表示）
+cs_rec: move.w  $48(a3),$103e36.l    ; 何個目か と その瞬間のカウンタ（サブが予想と比べて処理落ちのずれを見る）
+        move.w  $40032.l,$103e38.l
+cs_x:   move.b  $40032.l,d5
+        rts
+""")
+# メニューの背景: サブが共有RAM $102000 に置いたスプライトの色(256語)をパレット $80200〜 へ（$103e34 が合図）
+chunk('PalCopy', """
+PalCopy: tst.b  $103e34.l
+        beq.s   pc_r
+        clr.b   $103e34.l
+        lea     $102000.l,a0
+        lea     $80200.l,a1
+        move.w  #255,d0
+pc_l:   move.w  (a0)+,(a1)+
+        dbf     d0,pc_l
+pc_r:   rts
+""")
+# 0x1d24 の jsr $326e（CREDIT の表示）を置き換え: 隠しメニュー表示中（トップ状態3）は出さない
+chunk('CredHook', """
+CredHook: cmpi.b #3,$40005.l
+        beq.s   ch_r
+        jmp     $326e.w
+ch_r:   rts
+""", 'rom')
+# 面クリア → 次の面（状態7 の 0x3c7a: clr.w $101052 を置き換え）。ボスラッシュなら次の面もボス手前から
+chunk('NextStg', """
+NextStg: tst.b  MB_RUN.l
+        beq.s   ns_n
+        cmpi.b  #2,MB_MODE.l
+        bne.s   ns_n
+        move.l  d0,-(sp)
+        moveq   #0,d0
+        move.b  $101051.l,d0
+        andi.b  #$0f,d0
+        addq.b  #1,d0
+        cmpi.b  #10,d0
+        bcs.s   ns1
+        moveq   #0,d0
+ns1:    cmpi.b  #3,d0           ; 4面(ボスなし)は飛ばす: ここで1つ進めておくと 0x68d4 で5面になる
+        bne.s   ns2
+        addq.b  #1,$101051.l
+        moveq   #4,d0
+ns2:    addq.b  #1,$103f39.l    ; 一巡したらゲームオーバー（StageHook と同じ数え方）
+        cmpi.b  #10,$103f39.l
+        bcs.s   ns3
+        move.b  #3,$103f06.l
+ns3:    jsr     BossSet.l       ; = move.b d0,$103f38 ＋ その面のボス手前を再開位置に（面 0〜9 の表は全部 0 以外）
+        move.l  (sp)+,d0
+        rts
+ns_n:   clr.w   $101052.l
+        rts
+""")
+# 0x68d4（次の面へ）の中の jsr $695c（位置を0に戻す）を置き換え: ボスラッシュなら 0x4ce8 でボス手前の位置を入れ直す
+chunk('NextPos', """
+NextPos: jsr    $695c.w
+        tst.b   MB_RUN.l
+        beq.s   np_r
+        cmpi.b  #2,MB_MODE.l
+        bne.s   np_r
+        jmp     $4ce8.w
+np_r:   rts
+""")
+# 装備コマンドの残り回数（無敵中は無制限 $ff として返す）
+chunk('CmdCnt', """
+CmdCnt: tst.b   MB_INV.l        ; d1 = 残り回数（$ff=無制限。無敵中も無制限）。0 でなければ装備コマンドを使う
+        beq.s   cc_n
+        moveq   #-1,d1
+        bra.s   cc_s
+cc_n:   move.b  $103f22.l,d1
+        beq.s   cc_r
+cc_s:   move.w  #7200,$42e70.l  ; オプションハンター: 装備コマンドで付けた後の1回目は出さない（純正の初期値 3600 の2回分。出ないので種類も進まない）
+cc_r:   rts
+""")
 
-# --- エリアC: エディット装備 / プレイ開始時のパワーアップ適用 ---
-SRC_C = CONSTS + """
-MB_SPD   = $103f10
-MB_EMIS  = $103f11
-MB_EDBL  = $103f12
-MB_ELSR  = $103f13
-MB_OPT   = $103f14
-MB_PMIS  = $103f17
-MB_PSHOT = $103f18
-MB_PSHON = $103f19
-MB_PEND  = $103f1a
-MB_MODE  = $103f0b
-PauseChk = $%x
-ApplyStage = $%x
-        org $3fd9a
-
-; ゲーム状態5(プレイ中)の代わり: シールド色・ポーズ/装備コマンド・開始時のハンター設定
+# ゲーム状態5(プレイ中)の代わり: シールド色・ポーズ/装備コマンド・開始時のハンター設定
+chunk('PlayHook', """
 PlayHook:
         tst.b   MB_RUN.l
         beq.w   ph_go
@@ -411,7 +602,7 @@ ph_nc:  jsr     PauseChk.l
         subq.b  #1,d0
         beq.s   ph_rts          ; 1: ポーズ中
         bcs.s   ph_np
-        bsr.s   Command         ; 2: 装備コマンド
+        jsr     Command.l       ; 2: 装備コマンド
 ph_np:
         tst.b   MB_PEND.l
         beq.s   ph_go
@@ -424,23 +615,24 @@ ph_np:
         moveq   #1,d0
 ph_p:   bclr    d0,MB_PEND.l
         beq.s   ph_x
-        jsr     PENDB.l         ; ハンターの設定（本体は B 領域）
+        jsr     PendB.l         ; ハンターの設定
         move.b  $103f3d.l,d4    ; 開始時のスピード（サブがメニュー確定時に用意。キューブラッシュだけ SPEED、ほかは 0）
         beq.s   ph_g
         moveq   #1,d3
-        bsr.w   Use
+        jsr     Use.l
 ph_g:   move.b  $103f3c.l,d0    ; 開始時のゲージ（1周目1面A は 0=純正どおり、ほかは 1=SPEED UP）
-        beq.s   ph_h2
+        beq.s   ph_x
         move.b  d0,$6a(a2)
-ph_h2:
 ph_x:   movem.l (a7)+,d0-d7/a0-a6
 ph_go:  jmp     $3a24.w
 ph_rts: rts
+""")
 
-; ---- 装備コマンド: サブCPUが「目標の装備にそろえるのに各枠を何回使うか」を計算済み(MB+$24〜 / 2P は +$2c〜) ----
-; 枠 1=SPEED 2=MISSILE 3=DOUBLE 4=LASER 5=OPTION 6=SHIELD、+6 = スピードを2段階へ下げる印
+# ---- 装備コマンド: サブCPUが「目標の装備にそろえるのに各枠を何回使うか」を計算済み(MB+$24〜 / 2P は +$2c〜) ----
+# 枠 1=SPEED 2=MISSILE 3=DOUBLE 4=LASER 5=OPTION 6=SHIELD、+6 = スピードを2段階へ下げる印
+chunk('Command', """
 Command:
-        jsr     CMDCNT.l        ; d1 = 残り回数 ($ff=無制限。無敵中も無制限)
+        jsr     CmdCnt.l        ; d1 = 残り回数 ($ff=無制限。無敵中も無制限)
         beq.s   cm_r
         addq.b  #1,d1
         beq.s   cm_go
@@ -488,10 +680,12 @@ us_lp:  movem.l d3-d4/a2-a4,-(a7)
         movem.l (a7)+,d3-d4/a2-a4
         dbf     d4,us_lp
 us_r:   rts
+""")
 
-; ---- ゲーム状態2(面の準備)の入口フック: モード別の面設定 ----
-; MODE: 0=通常 1=キューブラッシュ 2=ボスラッシュ
-sh_pl:  jmp     SHPAL.l         ; 改造プレイの START 表示の2フレーム目から: パレットの出来事も回す（#20）
+# ---- ゲーム状態2(面の準備)の入口フック: モード別の面設定 ----
+# MODE: 0=通常 1=キューブラッシュ 2=ボスラッシュ
+chunk('StageHook', """
+sh_pl:  jmp     ShPal.l         ; 改造プレイの START 表示の2フレーム目から: パレットの出来事も回す（#20）
 StageHook:
         tst.b   MB_RUN.l
         beq.w   sh_go
@@ -529,22 +723,23 @@ sh_boss:                        ; ボスラッシュ (開始位置はサブが�
         addq.b  #1,d0
 sh_b1:  cmp.b   $103f38.l,d0    ; 面が変わった回数を数え、一巡したらゲームオーバー
         beq.s   sh_go
-        jsr     BOSSSET.l       ; = move.b d0,$103f38.l ＋ 次の面もボス手前から始める
+        jsr     BossSet.l       ; = move.b d0,$103f38.l ＋ 次の面もボス手前から始める
         addq.b  #1,$103f39.l
         cmpi.b  #10,$103f39.l   ; 開始面 + 8面 → 開始面に戻った(10回目)
         bcs.s   sh_go
         move.b  #3,$103f06.l    ; 一巡した → ポーズの「GAME OVER」と同じ処理をプレイ開始時に行わせる
 sh_go:  jmp     $3790.w
+""")
 
-; ---- エリア開始表の差し替え (0x4cfc の lea $54fe,a6 を置換) : 改造プレイ時のみ独自表 ----
+# ---- エリア開始表の差し替え (0x4cfc の lea $54fe,a6 を置換) : 改造プレイ時のみ独自表 ----
+chunk('AreaTbl', """
 AreaTbl:
         lea     $54fe.w,a6
         tst.b   MB_RUN.l
         beq.s   at_r
         lea     $103f40.l,a6    ; サブCPUが共有RAMに置く独自エリア表(ポインタ16個+表)
 at_r:   rts
-
-"""
+""")
 
 import os
 def _main313():
@@ -713,171 +908,10 @@ def boss_area_blob(base=0x103f40):
     return b + bytes(0xc0 - len(b))
 
 LOCK_SUSPEND = True        # 解除・ロックのコマンドを一時停止（True の間は常に解除状態）。戻すときは False
-INV_ADDR = 0xd6a0          # 0xd653〜0xd8f5 の未使用データ領域（エディット左右切り替えの後ろ）
-SRC_INV = CONSTS + """
-MB_INV  = $103f20
-; 改造プレイの START 表示（状態2の2フレーム目から）: 元の処理の後で、パレットの出来事の処理（$E318。純正はプレイ中だけ）も回す。
-; 面の途中から始めると、開始位置までのパレットの出来事がプレイの最初のフレームでまとめて実行されるので、START 表示の間は
-; 前の画面のパレットが残って地形などの色が化けていた（#20）。通常プレイ（メニューを出さない）は純正どおり
-ShPal:  jsr     $3790.w
-        jmp     $e318.l
-; Z=0 なら無敵（改造プレイ中かつ INVINCIBLE=ON）
-InvChk: tst.b   $103ed2.l       ; キューブラッシュの区間が終わった → 無敵でも1機減らす（サブが立てる）
-        bne.s   ic_f
-        tst.b   MB_RUN.l
-        beq.s   ic_r
-        tst.b   MB_INV.l
-ic_r:   rts
-ic_f:   cmp.b   d0,d0           ; Z=1（無敵ではない）
-        rts
-; 0x7bc4 / 0xae22 の move.b #1,$400a2.l を置き換え（ここから先が死亡処理）
-DieA:   bsr.s   InvChk
-        bne.s   da_inv
-        move.b  #1,$400a2.l
-        rts
-da_inv: addq.l  #4,sp
-        clr.w   $1a(a0)
-        jmp     $7bf4.w
-DieB:   bsr.s   InvChk
-        bne.s   db_inv
-        move.b  #1,$400a2.l
-        rts
-db_inv: addq.l  #4,sp
-        clr.w   $1a(a0)
-        jmp     $ae52.l
-
-; ---- テクニカル/ビギナー選択（改造プレイ）: ビギナーは選べない・灰色 ----
-; 0x6b16 の andi.b #2,d6 / beq.s を置き換え（右でビギナーへ移る処理）
-TypeBeg: tst.b  MB_RUN.l
-        bne.s   tb_no
-        andi.b  #2,d6
-        beq.s   tb_no
-        rts
-tb_no:  addq.l  #4,sp
-        rts
-; 0x6a90 の jsr $e824（ビギナーの枠 = パレット $80600 を「選ばれていない色」にする）を置き換え
-TypeGrey: tst.b MB_RUN.l
-        beq.s   tg_n
-        lea     GREYPAL.l,a0
-        lea     $80600.l,a1
-        moveq   #15,d1
-tg_lp:  move.w  (a0)+,(a1)+
-        dbf     d1,tg_lp
-        rts
-tg_n:   jmp     $e824.l
-GREYPAL: GREYDATA
-; ボスラッシュ: 面が変わるたび、その面のボス手前を「再開位置」にする（d0 = 面 0..9）
-BossSet: move.b d0,$103f38.l
-        move.l  a0,-(sp)
-        move.w  d0,-(sp)
-        add.w   d0,d0
-        lea     BOSSPROG.l,a0
-        move.w  0(a0,d0.w),d0
-        beq.s   bs_x
-        move.w  d0,$101052.l
-        move.w  d0,$1010d2.l
-        ori.b   #1,$101063.l
-        ori.b   #1,$1010e3.l
-bs_x:   move.w  (sp)+,d0
-        move.l  (sp)+,a0
-        rts
-BOSSPROG: BOSSDATA
-; ---- キューブの出現の瞬間（0x26238 の move.b $40032.l,d5 の置き換え。CubeSeed から来る）----
-CubeSeed2:
-        tst.b   $103f07.l
-        beq.s   cs_x
-        cmpi.w  #1,$48(a3)
-        bne.s   cs_rec
-        move.b  $103f35.l,d5
-        or.b    $103f36.l,d5
-        or.b    $103f37.l,d5
-        beq.s   cs_r
-CUBESEEDBODY
-cs_r:   move.w  $40032.l,$103e3a.l   ; 1個目の瞬間のカウンタ（サブが H/S/T を割り出してプレイ中に表示）
-cs_rec: move.w  $48(a3),$103e36.l    ; 何個目か と その瞬間のカウンタ（サブが予想と比べて処理落ちのずれを見る）
-        move.w  $40032.l,$103e38.l
-cs_x:   move.b  $40032.l,d5
-        rts
-; メニューの背景: サブが共有RAM $102000 に置いたスプライトの色(256語)をパレット $80200〜 へ（$103e34 が合図）
-PalCopy: tst.b  $103e34.l
-        beq.s   pc_r
-        clr.b   $103e34.l
-        lea     $102000.l,a0
-        lea     $80200.l,a1
-        move.w  #255,d0
-pc_l:   move.w  (a0)+,(a1)+
-        dbf     d0,pc_l
-pc_r:   rts
-; 0x1d24 の jsr $326e（CREDIT の表示）を置き換え: 隠しメニュー表示中（トップ状態3）は出さない
-CredHook: cmpi.b #3,$40005.l
-        beq.s   ch_r
-        jmp     $326e.w
-ch_r:   rts
-; 面クリア → 次の面（状態7 の 0x3c7a: clr.w $101052 を置き換え）。ボスラッシュなら次の面もボス手前から
-NextStg: tst.b  MB_RUN.l
-        beq.s   ns_n
-        cmpi.b  #2,MB_MODE.l
-        bne.s   ns_n
-        movem.l d0/a0,-(sp)
-        moveq   #0,d0
-        move.b  $101051.l,d0
-        andi.b  #$0f,d0
-        addq.b  #1,d0
-        cmpi.b  #10,d0
-        bcs.s   ns1
-        moveq   #0,d0
-ns1:    cmpi.b  #3,d0           ; 4面(ボスなし)は飛ばす: ここで1つ進めておくと 0x68d4 で5面になる
-        bne.s   ns2
-        addq.b  #1,$101051.l
-        moveq   #4,d0
-ns2:    move.b  d0,$103f38.l
-        addq.b  #1,$103f39.l    ; 一巡したらゲームオーバー（StageHook と同じ数え方）
-        cmpi.b  #10,$103f39.l
-        bcs.s   ns3
-        move.b  #3,$103f06.l
-ns3:    add.w   d0,d0
-        lea     BOSSPROG.l,a0
-        move.w  0(a0,d0.w),d0
-        move.w  d0,$101052.l
-        move.w  d0,$1010d2.l
-        ori.b   #1,$101063.l
-        ori.b   #1,$1010e3.l
-        movem.l (sp)+,d0/a0
-        rts
-ns_n:   clr.w   $101052.l
-        rts
-; 0x68d4（次の面へ）の中の jsr $695c（位置を0に戻す）を置き換え: ボスラッシュなら 0x4ce8 でボス手前の位置を入れ直す
-NextPos: jsr    $695c.w
-        tst.b   MB_RUN.l
-        beq.s   np_r
-        cmpi.b  #2,MB_MODE.l
-        bne.s   np_r
-        jmp     $4ce8.w
-np_r:   rts
-; 装備コマンドの残り回数（無敵中は無制限 $ff として返す）
-CmdCnt: tst.b   MB_INV.l        ; d1 = 残り回数（$ff=無制限。無敵中も無制限）。0 でなければ装備コマンドを使う
-        beq.s   cc_n
-        moveq   #-1,d1
-        bra.s   cc_s
-cc_n:   move.b  $103f22.l,d1
-        beq.s   cc_r
-cc_s:   move.w  #7200,$42e70.l  ; オプションハンター: 装備コマンドで付けた後の1回目は出さない（純正の初期値 3600 の2回分。出ないので種類も進まない）
-cc_r:   rts
-"""
+RAMBLOB = None             # 共有RAMに置くコード [(メインの番地, bytes)]。apply() が作り、mod_sub がサブROMに入れて起動時に写す
 
 def apply(rom):
-    import asm68
-    # 組み立て順: B → C(PauseChk を参照) → A(IdleLock を参照)
-    src_b = SRC_B
-    if LOCK_SUSPEND:                                      # 解除/ロックは一時停止中: 本体はROMに入れない（ソースは残す）
-        a_, b_ = src_b.index('Lock:   lea'), src_b.index('lk_act: clr.b   (a0)')
-        b_ = src_b.index('rts', b_) + 3
-        src_b = src_b[:a_] + 'Lock:   rts' + src_b[b_:]
-    b2, lab2 = asm68.assemble(src_b, 0xd8f6, labels=None)
-    assert len(b2) <= 532, len(b2)
-    rom.put('main', 0xd8f6, b2, 'stubsB')
-    rom.put('main', 0x154aa, bytes.fromhex('4eb9') + lab2['EvPtr'].to_bytes(4, 'big'), 'evptr', expect=bytes.fromhex('23ce00042e00'))
-    import struct
+    import asm68, struct, mainpack, mod_edit
     d313 = _main313()
     gw = []
     for i in range(16):                                   # ビギナーの枠の色(0x328c0)を灰色・やや暗く
@@ -891,48 +925,68 @@ def apply(rom):
         if st == 9: bp.append(_prog(ST10[1][0]))
         elif st == 3 or not bt_[st]: bp.append(0)
         else: bp.append(_prog((bt_[st] << 8) - BRDELTA))
-    src_inv = SRC_INV.replace('GREYDATA', 'dc.w    ' + ','.join('$%x' % x for x in gw)).replace('BOSSDATA', 'dc.w    ' + ','.join('$%x' % x for x in bp))
-    src_inv = src_inv.replace('CUBESEEDBODY', ('        move.w  #$%x,$40032.l' % ((int(os.environ['CUBESLOT']) << 2) << 8)) if os.environ.get('CUBESLOT') else '        move.w  $103e30.l,$40032.l')
-    bi, li = asm68.assemble(src_inv, INV_ADDR)
-    assert INV_ADDR + len(bi) <= 0xd8f5, hex(len(bi))
-    rom.img('main')[INV_ADDR:INV_ADDR + len(bi)] = bi
-    rom.used.append(('main', INV_ADDR, INV_ADDR + len(bi), 'invincible'))
-    b3, lab3 = asm68.assemble(SRC_C.replace('PENDB', '$%x' % lab2['PendB']).replace('CMDCNT', '$%x' % li['CmdCnt']).replace('SHPAL', '$%x' % li['ShPal']).replace('BOSSSET', '$%x' % li['BossSet']).replace('PauseChk = $%x', 'PauseChk = $%x' % lab2['PauseChk']).replace('ApplyStage = $%x', 'ApplyStage = $%x' % lab2['ApplyStage']), 0x3fd9a)
-    assert 0x3fd9a + len(b3) <= 0x3ffc0, hex(len(b3))
-    rom.put('main', 0x3fd9a, b3, 'stubsC')
-    rom.put('main', 0x4cfc, bytes.fromhex('4eb9') + lab3['AreaTbl'].to_bytes(4, 'big'), 'areatbl', expect=bytes.fromhex('4df9000054fe'))
-    rom.put('main', 0x28ec + 2*4, lab3['StageHook'].to_bytes(4, 'big'), 'stagehook', expect=bytes.fromhex('00003790'))
-    rom.put('main', 0x28ec + 5*4, lab3['PlayHook'].to_bytes(4, 'big'), 'playhook', expect=bytes.fromhex('00003a24'))
-    srca = SRC_A.replace('PALCOPY', '$%x' % li['PalCopy']).replace('SCOREHK', '$%x' % lab2['ScoreHk']).replace('HUDPAL', '$%x' % lab2['HudPal']).replace('CUBESEED2', '$%x' % li['CubeSeed2']).replace('CUBESEEDBODY_UNUSED', ('        move.w  #$%x,$40032.l' % ((int(os.environ['CUBESLOT']) << 2) << 8)) if os.environ.get('CUBESLOT') else '''        move.w  $103e30.l,$40032.l''').replace('LOCKCALL', 'move.b  #1,MB_UNLK.l     ; 解除/ロックのコマンドは一時停止中: 常に解除' if LOCK_SUSPEND else 'jsr     Lock.l')
-    b, lab = asm68.assemble(('Lock = $%x\n' % lab2['Lock']) + srca, 0xd4aa)
-    assert len(b) <= 425, len(b)
-    rom.put('main', 0xd4aa, b, 'stubsA')
+    assert all(bp[i] for i in range(10) if i != 3), bp     # NextStg は「0 なら書かない」BossSet を使う（4面以外は全部 0 以外）
+    chunks = []
+    for n, s, w in CHUNKS:
+        s = s.replace('GREYDATA', 'dc.w    ' + ','.join('$%x' % x for x in gw)).replace('BOSSDATA', 'dc.w    ' + ','.join('$%x' % x for x in bp))
+        s = s.replace('CUBESEEDBODY', ('        move.w  #$%x,$40032.l' % ((int(os.environ['CUBESLOT']) << 2) << 8)) if os.environ.get('CUBESLOT') else '        move.w  $103e30.l,$40032.l')
+        s = s.replace('LOCKCALL', 'move.b  #1,MB_UNLK.l     ; 解除/ロックのコマンドは一時停止中: 常に解除' if LOCK_SUSPEND else 'jsr     Lock.l')
+        chunks.append((n, s, w))
+    if not LOCK_SUSPEND: chunks.append(('Lock', SRC_LOCK, 'any'))
+    lr = '\n'.join(l for l in (mod_edit.SRC_LR % (0, mod_edit.EB + mod_edit.O_MAX)).splitlines() if not l.strip().startswith('org'))
+    chunks.append(('EdLR', lr, 'any'))
+    regions = [r for r in ROM_REGIONS if r[0] != FILLER] + RAM_REGIONS
+    place, out, lab, size, left = mainpack.layout(chunks, regions, CONSTS)
+    global RAMBLOB
+    RAMBLOB = []
+    kinds = {r[0]: r[3] for r in regions}
+    for rn, org, b in sorted(out, key=lambda x: x[1]):
+        if kinds[rn] == 'rom': rom.put('main', org, b, 'mod:' + rn)
+        else: RAMBLOB.append((org, b))
+    # 共有RAMのコードは隣り合うものをまとめる
+    mg = []
+    for org, b in RAMBLOB:
+        if mg and mg[-1][0] + len(mg[-1][1]) == org: mg[-1] = (mg[-1][0], mg[-1][1] + b)
+        else: mg.append((org, b))
+    RAMBLOB = mg
+    J = lambda a: bytes.fromhex('4eb9') + lab[a].to_bytes(4, 'big')
+    rom.put('main', 0x154aa, J('EvPtr'), 'evptr', expect=bytes.fromhex('23ce00042e00'))
+    rom.put('main', 0x4cfc, J('AreaTbl'), 'areatbl', expect=bytes.fromhex('4df9000054fe'))
+    rom.put('main', 0x28ec + 2*4, lab['StageHook'].to_bytes(4, 'big'), 'stagehook', expect=bytes.fromhex('00003790'))
+    rom.put('main', 0x28ec + 5*4, lab['PlayHook'].to_bytes(4, 'big'), 'playhook', expect=bytes.fromhex('00003a24'))
     rom.put('main', 0x15ce, lab['LivHk'].to_bytes(4, 'big'), 'lives-tbl', expect=bytes.fromhex('00001a72'))
-    rom.put('main', 0x17fe, bytes.fromhex('4eb9') + lab['LivHk'].to_bytes(4, 'big'), 'lives-1p', expect=bytes.fromhex('4eb900001a72'))
-    rom.put('main', 0x1d1e, bytes.fromhex('4eb9') + lab['StubIn'].to_bytes(4, 'big'), 'hook-in', expect=bytes.fromhex('4eb9000033b8'))
-    rom.put('main', 0x1e82, bytes.fromhex('4eb9') + lab['HookStart'].to_bytes(4, 'big'), 'hook-start', expect=bytes.fromhex('4eb900002968'))
-    rom.put('main', 0x26238, bytes.fromhex('4eb9') + lab['CubeSeed'].to_bytes(4, 'big'), 'cubeseed', expect=bytes.fromhex('1a3900040032'))
+    rom.put('main', 0x17fe, J('LivHk'), 'lives-1p', expect=bytes.fromhex('4eb900001a72'))
+    rom.put('main', 0x1d1e, J('StubIn'), 'hook-in', expect=bytes.fromhex('4eb9000033b8'))
+    rom.put('main', 0x1e82, J('HookStart'), 'hook-start', expect=bytes.fromhex('4eb900002968'))
+    rom.put('main', 0x26238, J('CubeSeed'), 'cubeseed', expect=bytes.fromhex('1a3900040032'))
     rom.put('main', 0x1e44, lab['StateTbl'].to_bytes(4, 'big'), 'state-table-ptr', expect=bytes.fromhex('00001e58'))
-    import mod_edit
-    mod_edit.apply_main(rom, _main313())
-    print('edit L/R stub bytes', mod_edit.apply_lr(rom))
+    mod_edit.apply_main(rom, d313)
+    rom.put('main', 0x7288, J('EdLR'), 'ed_lrhook', expect=bytes.fromhex('1e060207000c'))
     # 無敵（改造プレイのみ・メニューの INVINCIBLE）: 自機が死亡に入る2か所の直前で、無敵なら当たりを消して通常の続きへ
-    rom.put('main', 0x7bc4, bytes.fromhex('4eb9') + li['DieA'].to_bytes(4, 'big') + bytes.fromhex('4e71'), 'inv-a', expect=bytes.fromhex('13fc0001000400a2'))
-    rom.put('main', 0xae22, bytes.fromhex('4eb9') + li['DieB'].to_bytes(4, 'big') + bytes.fromhex('4e71'), 'inv-b', expect=bytes.fromhex('13fc0001000400a2'))
-    rom.put('main', 0x6b16, bytes.fromhex('4eb9') + li['TypeBeg'].to_bytes(4, 'big'), 'type-beg', expect=bytes.fromhex('0206000267' + '1a'))
-    rom.put('main', 0x6a90, bytes.fromhex('4eb9') + li['TypeGrey'].to_bytes(4, 'big'), 'type-grey', expect=bytes.fromhex('4eb90000e824'))
-    rom.put('main', 0x197e, bytes.fromhex('4eb9') + lab2['HiHk'].to_bytes(4, 'big'), 'hi-cube', expect=bytes.fromhex('beb900040058'))
-    rom.put('main', 0x226c4, bytes.fromhex('4eb9') + lab2['RankHk'].to_bytes(4, 'big'), 'rank-cube', expect=bytes.fromhex('203900101054'))
-    rom.put('main', 0x15b6, lab2['ScoreHk'].to_bytes(4, 'big'), 'score-tbl', expect=bytes.fromhex('0000180a'))
-    rom.put('main', 0x1932, lab2['ScoreHk'].to_bytes(4, 'big'), 'score-1p', expect=bytes.fromhex('0000180a'))
-    rom.put('main', 0x1954, lab2['ScoreHk'].to_bytes(4, 'big'), 'score-2p', expect=bytes.fromhex('0000180a'))
-    rom.put('main', 0x1d24, bytes.fromhex('4eb9') + li['CredHook'].to_bytes(4, 'big'), 'credit-hide', expect=bytes.fromhex('4eb90000326e'))
-    rom.put('main', 0x692a, bytes.fromhex('4eb9') + li['NextPos'].to_bytes(4, 'big'), 'bossrush-pos', expect=bytes.fromhex('4eb90000695c'))
-    rom.put('main', 0x3c7a, bytes.fromhex('4eb9') + li['NextStg'].to_bytes(4, 'big'), 'bossrush-next', expect=bytes.fromhex('427900101052'))
-    print('invincible stub bytes', len(bi))
-    rom.free_main = [(0xd4aa + len(b), 0xd4aa + 425), (0xd8f6 + len(b2), 0xd8f6 + 532)]
-    print('main free: A %d  B %d  C %d' % (425 - len(b), 532 - len(b2), 0x3ffc0 - 0x3fd9a - len(b3)))
-    return lab, lab2
+    rom.put('main', 0x7bc4, J('DieA') + bytes.fromhex('4e71'), 'inv-a', expect=bytes.fromhex('13fc0001000400a2'))
+    rom.put('main', 0xae22, J('DieB') + bytes.fromhex('4e71'), 'inv-b', expect=bytes.fromhex('13fc0001000400a2'))
+    rom.put('main', 0x6b16, J('TypeBeg'), 'type-beg', expect=bytes.fromhex('0206000267' + '1a'))
+    rom.put('main', 0x6a90, J('TypeGrey'), 'type-grey', expect=bytes.fromhex('4eb90000e824'))
+    rom.put('main', 0x197e, J('HiHk'), 'hi-cube', expect=bytes.fromhex('beb900040058'))
+    rom.put('main', 0x226c4, J('RankHk'), 'rank-cube', expect=bytes.fromhex('203900101054'))
+    rom.put('main', 0x15b6, lab['ScoreHk'].to_bytes(4, 'big'), 'score-tbl', expect=bytes.fromhex('0000180a'))
+    rom.put('main', 0x1932, lab['ScoreHk'].to_bytes(4, 'big'), 'score-1p', expect=bytes.fromhex('0000180a'))
+    rom.put('main', 0x1954, lab['ScoreHk'].to_bytes(4, 'big'), 'score-2p', expect=bytes.fromhex('0000180a'))
+    rom.put('main', 0x1d24, J('CredHook'), 'credit-hide', expect=bytes.fromhex('4eb90000326e'))
+    rom.put('main', 0x692a, J('NextPos'), 'bossrush-pos', expect=bytes.fromhex('4eb90000695c'))
+    rom.put('main', 0x3c7a, J('NextStg'), 'bossrush-next', expect=bytes.fromhex('427900101052'))
+    # 共有RAMのコードは、メインが呼ぶ前に必ず写してあること（StubIn・LoadW は ROM）
+    for k in ('StubIn', 'LoadW'): assert kinds[place[k][0]] == 'rom', k
+    fr = [r for r in ROM_REGIONS if r[0] == FILLER][0]
+    rom.free_main = [(fr[1], fr[2])]                      # ROM 合計の微調整（起動画面の文字列の後ろと、この隙間）
+    rom.main_layout = (place, size, left)
+    used = sum(size.values()); ramu = sum(len(b) for o, b in RAMBLOB)
+    print('main mod code %d bytes (ROM %d / shared RAM %d). left: C %d, gaps %d, T %d, RAM %d' % (
+        used, used - ramu, ramu, left['C'], sum(v for k, v in left.items() if k.startswith('S')), left['T'],
+        sum(v for k, v in left.items() if k.startswith('R'))))
+    return lab, place
+
+
 
 
 def brskip_blob():

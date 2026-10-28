@@ -7,7 +7,7 @@ sys.path[:0] = [os.path.join(os.path.dirname(HERE), 'tools'), HERE]
 import g3build, mod_main, mod_sub, mod_boot, mod_sound, os
 out=sys.argv[1]
 r=g3build.Rom()
-la,lb=mod_main.apply(r)
+mod_main.apply(r)
 ls,n=mod_sub.apply(r)
 if not os.environ.get("NOSNDVOL"): mod_sound.apply(r); mod_sound.fix_sum(r)
 print('sub core bytes',n)
