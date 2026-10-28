@@ -37,6 +37,11 @@ MB_ELSR  = $103f13
 CubeSeed:
         jmp     CUBESEED2.l      ; 本体は 0xd653〜 の空き領域（CubeSeed2）
         even
+; 残機の絵（純正 $1a72。表 $15ce と $17fe の jsr から）: STAGE DISP 表示中（#30）はサブが数字で描くので描かない
+LivHk:  tst.b   $1039c5.l
+        bne.s   lh_r
+        jmp     $1a72.l
+lh_r:   rts
 StubIn:
         jsr     $33b8.w
         move.b  $c8003.l,d0
@@ -902,6 +907,8 @@ def apply(rom):
     b, lab = asm68.assemble(('Lock = $%x\n' % lab2['Lock']) + srca, 0xd4aa)
     assert len(b) <= 425, len(b)
     rom.put('main', 0xd4aa, b, 'stubsA')
+    rom.put('main', 0x15ce, lab['LivHk'].to_bytes(4, 'big'), 'lives-tbl', expect=bytes.fromhex('00001a72'))
+    rom.put('main', 0x17fe, bytes.fromhex('4eb9') + lab['LivHk'].to_bytes(4, 'big'), 'lives-1p', expect=bytes.fromhex('4eb900001a72'))
     rom.put('main', 0x1d1e, bytes.fromhex('4eb9') + lab['StubIn'].to_bytes(4, 'big'), 'hook-in', expect=bytes.fromhex('4eb9000033b8'))
     rom.put('main', 0x1e82, bytes.fromhex('4eb9') + lab['HookStart'].to_bytes(4, 'big'), 'hook-start', expect=bytes.fromhex('4eb900002968'))
     rom.put('main', 0x26238, bytes.fromhex('4eb9') + lab['CubeSeed'].to_bytes(4, 'big'), 'cubeseed', expect=bytes.fromhex('1a3900040032'))

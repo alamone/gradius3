@@ -368,7 +368,7 @@ cu_t:   subq.w  #1,d2
         rts
 """
 
-DATA_BASE = 0x39800
+DATA_BASE = 0x39c00   # 0x39800 → 0x39c00（#30 でサブのコードが増えた。データの終わりは 0x3e2xx、0x3ffff まで空き）
 WTYPE_BYTES = bytes([1,3,1, 3,1,4, 4,2,2, 2,4,3])   # TYPE A..D -> (missile, double, laser)
 
 def apply(rom):

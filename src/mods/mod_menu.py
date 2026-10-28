@@ -1254,11 +1254,13 @@ rd_v:   move.w  #49,d0
         jmp     PutStr.l
 rd_x:   rts
 
-;---- STAGE DISP（#30・ポーズで切り替え）: 2P のスコアの場所（段2）に 周回・面・エリア・スピード 「L1 S3 AH SP2」を右寄せで出す。
-;      表示中は V_SIA を立て、メインのスコア表示（ScoreHk）は 2P だけ描かない（1P・HI は描く）。OFF にしたら消してスコアの描き直しを頼む
+;---- STAGE DISP（#30・ポーズで切り替え）: 2P のスコアの場所（段2）に 周回・面・エリア・スピード 「L01 S03 AH SP2」を右寄せ（右端=桁51）で出す。
+;      残機は「自機の字 : 03」の数字にする（純正の絵は下の桁しか見ないので9機までしか出ない。残機は BCD・最大99＝表示は98）。
+;      表示中は V_SIA を立て、メインのスコア表示（ScoreHk）は 2P だけ描かず、残機の絵（LivHk）も描かない。OFF にしたら消して元に戻す
 V_SIF   = $2039c4          ; STAGE DISP の設定（ポーズの項目。共有RAM の空き）
-V_SIA   = $2039c5          ; 表示中（メインはこれを見て 2P のスコアを描かない）
+V_SIA   = $2039c5          ; 表示中（メインはこれを見て 2P のスコア・残機の絵を描かない）
 V_SBUF  = $103a00          ; 文字列を作る場所（サブ私有RAM・元のプログラムは書かない範囲）
+LVADR   = $24c1a0          ; 1P の残機の欄（段3・桁16〜25 の10文字。純正 $1a72 と同じ場所）
 StChk:  tst.b   MBS_RUN.l
         beq.w   sc_q
         cmpi.b  #2,TOPSTATE.l
@@ -1266,16 +1268,18 @@ StChk:  tst.b   MBS_RUN.l
         move.w  $20101e.l,d0    ; 面が始まってから（fr と同じ判定。4面でも出る #4）
         or.w    $20109e.l,d0
         beq.w   sc_x
-        tst.b   $203ed1.l       ; キューブラッシュの CUBE INFO が HI・2P の場所を使っている間は描かない
-        bne.w   sc_x
         tst.b   V_SIF.l
         bne.s   sc_on
         tst.b   V_SIA.l
         beq.w   sc_x
-        clr.b   V_SIA.l         ; OFF にした → 消して、メインに 2P のスコアを描き直してもらう
+        clr.b   V_SIA.l         ; OFF にした → 残機を絵に戻し、上の段を消して、メインに 2P のスコアを描き直してもらう
+        bsr.w   StPl
+        bsr.w   LvIcon
+        tst.b   $203ed1.l       ; CUBE INFO 表示中なら上の段はそのまま
+        bne.w   sc_x
         move.w  #37,d0
         move.w  #2,d1
-        moveq   #13,d7
+        moveq   #14,d7
         jsr     ClrFld.l
         move.b  #1,$203ed0.l
         rts
@@ -1286,19 +1290,19 @@ sc_on:  move.b  #1,V_SIA.l
         andi.w  #3,d0
         cmpi.w  #1,d0
         bne.w   sc_x
+        bsr.w   StPl
+        bsr.w   LvNum
+        tst.b   $203ed1.l       ; キューブラッシュの CUBE INFO が HI・2P の場所を使っている間は上の段は描かない
+        bne.w   sc_x
         lea     V_SBUF.l,a0     ; 文字列を作る（bit7 = 見出しの色）
-        lea     $201000.l,a2    ; 1P（1P の絵が無ければ 2P）
-        tst.w   $20101e.l
-        bne.s   sc_p1
-        lea     $201080.l,a2
-sc_p1:  move.b  #$cc,(a0)+      ; L 周回 = ($63 >> 1) + 1
+        move.b  #$cc,(a0)+      ; L 周回 = ($63 >> 1) + 1（2桁）
         moveq   #0,d5
         move.b  $63(a2),d5
         lsr.b   #1,d5
         addq.w  #1,d5
-        bsr.w   AppDec
+        bsr.w   AppD2
         move.b  #$20,(a0)+
-        move.b  #$d3,(a0)+      ; S 面
+        move.b  #$d3,(a0)+      ; S 面（2桁）
         moveq   #0,d4
         move.b  $51(a2),d4
         andi.b  #$0f,d4
@@ -1307,7 +1311,7 @@ sc_p1:  move.b  #$cc,(a0)+      ; L 周回 = ($63 >> 1) + 1
         moveq   #0,d5
         move.b  d4,d5
         addq.w  #1,d5
-        bsr.w   AppDec
+        bsr.w   AppD2
         move.b  #$20,(a0)+
         move.b  #$c1,(a0)+      ; A エリア = 進行度 $52 以下で最後のエリア開始点（メニューの表 PROGTBL と同じ）
         move.w  d4,d0
@@ -1342,11 +1346,11 @@ sc_sp:  move.b  #$20,(a0)+
         lea     V_SBUF.l,a1
         suba.l  a1,a0
         move.w  a0,d6           ; 文字数
-        move.w  #37,d0          ; 段2 の 桁37〜50 を消して、右端を 50 にそろえて描く
+        move.w  #37,d0          ; 段2 の 桁37〜51 を消して、右端を 51（画面の右端）にそろえて描く
         move.w  #2,d1
-        moveq   #13,d7
+        moveq   #14,d7
         jsr     ClrFld.l
-        moveq   #51,d0
+        moveq   #52,d0
         sub.w   d6,d0
         add.w   #128,d0         ; (段2*64+桁)*2
         add.w   d0,d0
@@ -1368,6 +1372,59 @@ sc_d:   subi.b  #$30,d4
         addq.w  #2,a1
         bra.s   sc_pl
 sc_x:   rts
+; a2 = 表示する自機（1P。1P の絵が無ければ 2P）
+StPl:   lea     $201000.l,a2
+        tst.w   $20101e.l
+        bne.s   sp_r
+        lea     $201080.l,a2
+sp_r:   rts
+; 残機を数字で: 自機の字($3f) ':' 2桁（= 純正の絵の数 = BCD の $50 − 1）、残りの欄は空白
+LvNum:  moveq   #0,d5
+        move.b  $50(a2),d5
+        move.w  d5,d0
+        lsr.w   #4,d0
+        mulu    #10,d0
+        andi.w  #$0f,d5
+        add.w   d0,d5
+        subq.w  #1,d5
+        bpl.s   ln_p
+        moveq   #0,d5
+ln_p:   lea     LVADR.l,a1
+        move.b  #$3f,$4001(a1)
+        clr.b   1(a1)
+        move.b  #$0e,$4003(a1)  ; ':'
+        clr.b   3(a1)
+        divu    #10,d5
+        move.b  d5,$4005(a1)
+        clr.b   5(a1)
+        swap    d5
+        move.b  d5,$4007(a1)
+        clr.b   7(a1)
+        addq.w  #8,a1
+        moveq   #5,d7
+        bra.s   lv_bl
+; 残機を純正どおりの絵に戻す（$1a72 と同じ: 下の桁 − 1 個の自機の字、残りは空白。10文字）
+LvIcon: moveq   #0,d5
+        move.b  $50(a2),d5
+        andi.w  #$0f,d5
+        lea     LVADR.l,a1
+        moveq   #9,d7
+li_l:   subq.w  #1,d5
+        ble.s   lv_bl
+        move.b  #$3f,$4001(a1)
+        clr.b   1(a1)
+        addq.w  #2,a1
+        dbf     d7,li_l
+        rts
+lv_bl:  move.b  #$10,$4001(a1)
+        clr.b   1(a1)
+        addq.w  #2,a1
+        dbf     d7,lv_bl
+        rts
+; d5.w を2桁以上で（10未満は頭に0）
+AppD2:  cmpi.w  #10,d5
+        bcc.s   AppDec
+        move.b  #$30,(a0)+
 ; d5.w の10進数を（先頭の0なしで）a0 に足す
 AppDec: andi.l  #$ffff,d5
         divu    #10,d5
