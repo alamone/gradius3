@@ -38,8 +38,8 @@ ITEMS = [
     ('       TYPE', 1, 0, 45, 0x37, ['RANDOM'] + ['%02d' % i for i in range(1, 46)], 0),
     ('SHIELD COLOR', 1, 1, 10, 0x16, ['?', 'BLUE', 'RED', 'GREEN', 'GOLD', 'PURPLE', 'CYAN', 'ORANGE', 'PINK', 'SILVER', 'BLACK'], 1),
     ('HUNTER NEXT', 1, 0, 3, 0x1b, ['DEFAULT', 'TYPE 1', 'TYPE 2', 'TYPE 3'], 0),
-    ('FULL POWER SPEED', 0, 0, 5, 0x0d, None, 3),       # フル装備コマンドのスピード（スピードアップを使った回数）
-    ('         CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 6),   # フル装備コマンドの後のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
+    ('FULL POWER   SPEED', 0, 0, 5, 0x0d, None, 3),       # フル装備コマンドのスピード（スピードアップを使った回数）
+    ('FULL POWER CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 6),   # フル装備コマンドの後のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
 ]
 # 各項目の画面の行（可視は行2〜29）。面の表の後・CUBE の後に1行ずつ空ける
 ROWS = [2, 3, 5] + list(range(7, 19)) + [20, 21, 22] + [24, 25, 26, 27]   # INVINCIBLE が一番上、最下段は PUSH START
@@ -410,12 +410,12 @@ da_nc:  move.w  #%(colcur)d,d0
         move.b  V_RA.l,d2
         jsr     PutStr.l
         cmpi.b  #2,4(a5)
-        beq.s   da_next
+        beq.w   da_next
         cmpi.b  #3,4(a5)
         bne.s   da_val
         jsr     DrawGrid.l
-        bra.s   da_next
-da_val: move.w  #%(colval)d,d0
+        bra.w   da_next
+da_val: jsr     ValCol.l
         move.w  V_Y.l,d1
         moveq   #11,d7
         jsr     ClrFld.l
@@ -425,17 +425,20 @@ da_val: move.w  #%(colval)d,d0
         move.b  0(a0,d0.w),d5
         cmpi.b  #1,4(a5)
         beq.s   da_str
-        move.w  #%(colval)d,d0
-        move.w  V_Y.l,d1
+        jsr     ValCol.l
+        cmpi.b  #10,d5          ; 1桁の数は左にそろえる（2桁目の空白を1つ左に）
+        bcc.s   da_d2
+        subq.w  #1,d0
+da_d2:  move.w  V_Y.l,d1
         move.b  V_RA.l,d2
         jsr     PutDec.l
-        bra.s   da_next
+        bra.w   da_next
 da_str: moveq   #0,d0
         move.b  d5,d0
         lsl.w   #2,d0
         movea.l 8(a5),a2
         movea.l 0(a2,d0.w),a0
-        move.w  #%(colval)d,d0
+        jsr     ValCol.l
         move.w  V_Y.l,d1
         move.b  V_RA.l,d2
         jsr     PutStr.l
@@ -444,6 +447,14 @@ da_next:
         cmpi.b  #NITEM,V_I.l
         bcs.w   da_row
         rts
+
+; ---- 値の桁: 上の3行（INVINCIBLE・MODE・LOOP）は面の表の A の桁、ほかは COL_VAL ----
+ValCol:
+        move.w  #%(colval)d,d0
+        cmpi.b  #3,V_I.l
+        bcc.s   vc_r
+        move.w  #GRIDCOL,d0
+vc_r:   rts
 
 ; ---- CUBE HEIGHT/SHIFT/TYPE の行（d7=項目番号）をキューブラッシュ以外で飛ばす: ne=飛ばす（d3 を使う）----
 CubeSkip:
