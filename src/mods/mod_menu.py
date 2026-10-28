@@ -36,10 +36,10 @@ ITEMS = [
     ('CUBE HEIGHT', 1, 0, 16, 0x35, ['RANDOM'] + [str(i) for i in range(1, 17)], 0),   # キューブラッシュの並び: 3つとも RANDOM = 純正のまま
     ('      SHIFT', 1, 0, 4, 0x36, ['RANDOM', 'A', 'B', 'C', 'D'], 0),
     ('       TYPE', 1, 0, 45, 0x37, ['RANDOM'] + ['%02d' % i for i in range(1, 46)], 0),
-    ('SHD COLOR', 1, 1, 10, 0x16, ['?', 'BLUE', 'RED', 'GREEN', 'GOLD', 'PURPLE', 'CYAN', 'ORANGE', 'PINK', 'SILVER', 'BLACK'], 1),
+    ('SHIELD COLOR', 1, 1, 10, 0x16, ['?', 'BLUE', 'RED', 'GREEN', 'GOLD', 'PURPLE', 'CYAN', 'ORANGE', 'PINK', 'SILVER', 'BLACK'], 1),
     ('HUNTER NEXT', 1, 0, 3, 0x1b, ['DEFAULT', 'TYPE 1', 'TYPE 2', 'TYPE 3'], 0),
-    ('FULL POWER SPEED', 0, 0, 5, 0x0d, None, 2),       # フル装備コマンドのスピード（スピードアップを使った回数）
-    ('         CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 1),   # フル装備コマンドの後のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
+    ('FULL POWER SPEED', 0, 0, 5, 0x0d, None, 3),       # フル装備コマンドのスピード（スピードアップを使った回数）
+    ('         CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 6),   # フル装備コマンドの後のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
 ]
 # 各項目の画面の行（可視は行2〜29）。面の表の後・CUBE の後に1行ずつ空ける
 ROWS = [2, 3, 5] + list(range(7, 19)) + [20, 21, 22] + [24, 25, 26, 27]   # INVINCIBLE が一番上、最下段は PUSH START
@@ -158,7 +158,7 @@ ATTR_DIS = 0xa0          # MODE で使われないマスの色（パレット5: 
 NITEM = len(ITEMS)
 CUBE0 = [it[0] for it in ITEMS].index('CUBE HEIGHT')   # CUBE HEIGHT/SHIFT/TYPE の最初の項目番号
 # 可視領域は タイル列12〜51 / 行2〜29 (320x224)。それに合わせて配置
-ROW0, COL_LABEL, COL_VAL, COL_CUR = 4, 14, 31, 12   # 値の列は FULL POWER SPEED（16文字）の後
+ROW0, COL_LABEL, COL_VAL, COL_CUR = 4, 14, 35, 12   # 値の列（2026-10-28 に 29→35）
 TILE_A = 0x24c000
 ATTR_TXT = 0x00          # 属性（パレット番号<<5）。実測で調整
 ATTR_SEL = 0x20          # 選択行

@@ -7,7 +7,8 @@ D = os.path.join(os.path.dirname(__file__), 'menubg')
 F = 7440
 DIM = 0.40
 COLSHIFT = 10
-SHD_X, SHD_Y = int(os.environ.get('SHDX', '293')), int(os.environ.get('SHDY', '185'))
+SHD_X, SHD_Y = int(os.environ.get('SHDX', '333')), int(os.environ.get('SHDY', '185'))
+FF_DX, FF_DY = int(os.environ.get('FFDX', '34')), int(os.environ.get('FFDY', '0'))
 SHIP, SHIP_OX, SHIP_OY = 71, int(os.environ.get('SHIPX', '184')), int(os.environ.get('SHIPY', '148'))   # 自機のスプライト番号と位置（スプライト座標）          # 記録時の A面スクロール(0x160) → メニュー中(0x1b0) の差 = 80ドット = 10タイル
 
 def _load():
@@ -52,6 +53,11 @@ def blobs():
     # シールド色の見本: フリーシールド（丸い玉1つ・16x16・コード 0x3a・色3。ゲーム中に記録）を SHD COLOR の右に置く。色はメニューで選んだ色を暗くせずに入れる
     x, y = SHD_X, SHD_Y
     sp[0:8] = bytes([0x80 | 0x39, 0x00, 0x3a, 0x06, ((256 - y) & 0x1ff) >> 8, (256 - y) & 0xff, (x & 0x1ff) >> 8, x & 0xff])
+    # その右に自機とフォースフィールド（ゲーム中に記録した並び: 自機 コード 0x20ba・色0、フォースフィールド 0x8170・色3 は自機の y+8・x−14）
+    def ent(n, b1, code, col, ry, rx): return bytes([0x80 | n, b1, code, col, (ry & 0x1ff) >> 8, ry & 0xff, (rx & 0x1ff) >> 8, rx & 0xff])
+    ry, rx = (256 - y + FF_DY) & 0x1ff, x + FF_DX
+    sp[8:16] = ent(0x3a, 0x81, 0x70, 0x06, ry + 8, rx - 14)
+    sp[16:24] = ent(0x3b, 0x20, 0xba, 0x00, ry, rx)
     return {'MBGPAL': (0, bytes(p)), 'MBGSPR': (0, bytes(sp))}   # ボス本体・レーザー・自機はすべてスプライト（A面は奥の岩なので使わない）
 
 if __name__ == '__main__':
