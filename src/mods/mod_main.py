@@ -300,12 +300,13 @@ lk_act: clr.b   (a0)
         rts
 
 
-; スコア表示(0x180a: 2P→HI→1P の順に3つ描く)の入口: キューブラッシュで CUBE INFO を ON にしている間は 1P だけ描く（HI・2P の場所にキューブの情報）
-ScoreHk: tst.b  $103ed1.l       ; サブが「CUBE INFO 表示中」としたとき
-        bne.s   sk_1p
-        jmp     $180a.w
-sk_1p:  moveq   #0,d0
-        jmp     $180e.w
+; スコア表示(0x180a: 2P→HI→1P の順に3つ描く)の入口: キューブラッシュで CUBE INFO を ON にしている間は 1P だけ描く（HI・2P の場所にキューブの情報）。STAGE DISP 中は 2P の場所だけ描かない
+ScoreHk: moveq   #2,d0           ; 描く数−1（2=2P・HI・1P、純正の $180a と同じ）
+        sub.b   $1039c5.l,d0    ; STAGE DISP 表示中（#30。サブが 0/1 を置く）: 1 = HI と 1P だけ（2P の場所に出すので）
+        tst.b   $103ed1.l       ; サブが「CUBE INFO 表示中」としたとき: 1P だけ
+        beq.s   sk_go
+        moveq   #0,d0
+sk_go:  jmp     $180e.w
 ; ---- 開始時のハンターの設定（PlayHook から） ----
 PendB:  move.b  $103f1b.l,d0    ; HUNTER NEXT (0=そのまま, 1..3 → $42e73=0..2)
         beq.s   pb_h1

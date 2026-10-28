@@ -223,6 +223,8 @@ def build_data(base):
     put('PS_Q1', b' CUBE INFO\0')
     put('PS_K0', b'>CUBE COLOR\0')
     put('PS_K1', b' CUBE COLOR\0')
+    put('PS_S0', b'>STAGE DISP\0')   # #30 周回・面・エリア・スピード（2P のスコアの場所）
+    put('PS_S1', b' STAGE DISP\0')
     put('PS_P0', b'>POS DISP\0')
     put('PS_P1', b' POS DISP\0')
     put('PS_U0', b'>CUBE HUNTER\0')
@@ -239,8 +241,10 @@ def build_data(base):
     al(); lab['LHTAB'] = base + len(blob); blob.extend(struct.pack('>IIIII', 4, lab['LV_0'], lab['LV_1'], lab['LH_2'], lab['LV_3']))
     al(); lab['PTAB'] = base + len(blob)
     # ポーズの項目 16B: 選択中の文字列.l 通常の文字列.l 値の場所.l(0=なし) 値の表.l(0=ON/OFF, それ以外=[数.l, 文字列.l...])
-    for a, b, f, vt in [('PS_C0', 'PS_C1', 0, 0), ('PS_G0', 'PS_G1', 0, 0), ('PS_I0', 'PS_I1', 0x203f20, 0), ('PS_R0', 'PS_R1', 0x203f0e, 0), ('PS_P0', 'PS_P1', 0x203f2b, 0), ('PS_Q0', 'PS_Q1', 0x203f0c, 0), ('PS_K0', 'PS_K1', 0x203f34, 0), ('PS_V0', 'PS_V1', 0x203f1c, 'LVTAB'), ('PS_H0', 'PS_H1', 0x203f3b, 'LHTAB'), ('PS_U0', 'PS_U1', 0x203f33, 0)]:
+    for a, b, f, vt in [('PS_C0', 'PS_C1', 0, 0), ('PS_G0', 'PS_G1', 0, 0), ('PS_I0', 'PS_I1', 0x203f20, 0), ('PS_R0', 'PS_R1', 0x203f0e, 0), ('PS_S0', 'PS_S1', 0x2039c4, 0), ('PS_P0', 'PS_P1', 0x203f2b, 0), ('PS_Q0', 'PS_Q1', 0x203f0c, 0), ('PS_K0', 'PS_K1', 0x203f34, 0), ('PS_V0', 'PS_V1', 0x203f1c, 'LVTAB'), ('PS_H0', 'PS_H1', 0x203f3b, 'LHTAB'), ('PS_U0', 'PS_U1', 0x203f33, 0)]:
         blob.extend(struct.pack('>IIII', lab[a], lab[b], f, lab[vt] if vt else 0))
+    # STAGE DISP のエリア名: 面1〜10 × 12バイト（メニューの AREA_LABELS と同じ並び。❶〜❹ は数字 1〜4、残りは 0）
+    put('STLAB', b''.join(bytes([ord(l[1]) if l.startswith('#') else ord(l) for l in AREA_LABELS[i]] + [0] * (12 - len(AREA_LABELS[i]))) for i in range(10)))
     # 項目記述子 12B: labelptr.l type.b min.b max.b mboff.b pad.b strtab.l
     al(); lab['ITM'] = base + len(blob)
     for i, it in enumerate(ITEMS):
@@ -573,6 +577,7 @@ mi_ah:  move.b  (a0),(a1)+
         dbf     d0,mi_ah
         clr.b   $203f0e.l       ; RANK DISP・CUBE INFO はポーズで切り替える（始めは OFF）
         clr.b   $203f2b.l       ; POS DISP
+        clr.b   V_SIF.l         ; STAGE DISP（#30）
         clr.b   $203f1c.l       ; CUBE LINE V
         clr.b   $203f3b.l       ; CUBE LINE H
         clr.b   $203f0c.l
@@ -1249,6 +1254,135 @@ rd_v:   move.w  #49,d0
         jmp     PutStr.l
 rd_x:   rts
 
+;---- STAGE DISP（#30・ポーズで切り替え）: 2P のスコアの場所（段2）に 周回・面・エリア・スピード 「L1 S3 AH SP2」を右寄せで出す。
+;      表示中は V_SIA を立て、メインのスコア表示（ScoreHk）は 2P だけ描かない（1P・HI は描く）。OFF にしたら消してスコアの描き直しを頼む
+V_SIF   = $2039c4          ; STAGE DISP の設定（ポーズの項目。共有RAM の空き）
+V_SIA   = $2039c5          ; 表示中（メインはこれを見て 2P のスコアを描かない）
+V_SBUF  = $103a00          ; 文字列を作る場所（サブ私有RAM・元のプログラムは書かない範囲）
+StChk:  tst.b   MBS_RUN.l
+        beq.w   sc_q
+        cmpi.b  #2,TOPSTATE.l
+        bne.w   sc_q
+        move.w  $20101e.l,d0    ; 面が始まってから（fr と同じ判定。4面でも出る #4）
+        or.w    $20109e.l,d0
+        beq.w   sc_x
+        tst.b   $203ed1.l       ; キューブラッシュの CUBE INFO が HI・2P の場所を使っている間は描かない
+        bne.w   sc_x
+        tst.b   V_SIF.l
+        bne.s   sc_on
+        tst.b   V_SIA.l
+        beq.w   sc_x
+        clr.b   V_SIA.l         ; OFF にした → 消して、メインに 2P のスコアを描き直してもらう
+        move.w  #37,d0
+        move.w  #2,d1
+        moveq   #13,d7
+        jsr     ClrFld.l
+        move.b  #1,$203ed0.l
+        rts
+sc_q:   clr.b   V_SIA.l         ; 改造プレイの外（タイトル・通常プレイなど）: 描かない・2P も純正どおり
+        rts
+sc_on:  move.b  #1,V_SIA.l
+        move.w  FRAMECNT.l,d0   ; 4フレームに1回（RANK=2・POS=3 とずらす）
+        andi.w  #3,d0
+        cmpi.w  #1,d0
+        bne.w   sc_x
+        lea     V_SBUF.l,a0     ; 文字列を作る（bit7 = 見出しの色）
+        lea     $201000.l,a2    ; 1P（1P の絵が無ければ 2P）
+        tst.w   $20101e.l
+        bne.s   sc_p1
+        lea     $201080.l,a2
+sc_p1:  move.b  #$cc,(a0)+      ; L 周回 = ($63 >> 1) + 1
+        moveq   #0,d5
+        move.b  $63(a2),d5
+        lsr.b   #1,d5
+        addq.w  #1,d5
+        bsr.w   AppDec
+        move.b  #$20,(a0)+
+        move.b  #$d3,(a0)+      ; S 面
+        moveq   #0,d4
+        move.b  $51(a2),d4
+        andi.b  #$0f,d4
+        cmpi.b  #9,d4
+        bhi.s   sc_ex
+        moveq   #0,d5
+        move.b  d4,d5
+        addq.w  #1,d5
+        bsr.w   AppDec
+        move.b  #$20,(a0)+
+        move.b  #$c1,(a0)+      ; A エリア = 進行度 $52 以下で最後のエリア開始点（メニューの表 PROGTBL と同じ）
+        move.w  d4,d0
+        mulu    #12,d0
+        lea     STLAB.l,a3
+        adda.w  d0,a3
+        add.w   d0,d0
+        lea     PROGTBL.l,a4
+        adda.w  d0,a4
+        move.w  $52(a2),d1
+        move.b  (a3)+,d2
+        moveq   #10,d3
+sc_al:  addq.w  #2,a4
+        tst.b   (a3)
+        beq.s   sc_ad
+        cmp.w   (a4),d1
+        bcs.s   sc_ad
+        move.b  (a3)+,d2
+        dbf     d3,sc_al
+sc_ad:  move.b  d2,(a0)+
+        bra.s   sc_sp
+sc_ex:  move.b  #$45,(a0)+      ; 隠し面 = EX
+        move.b  #$58,(a0)+
+sc_sp:  move.b  #$20,(a0)+
+        move.b  #$d3,(a0)+      ; SP スピード = $69 の下位5ビット
+        move.b  #$d0,(a0)+
+        moveq   #0,d5
+        move.b  $69(a2),d5
+        andi.b  #$1f,d5
+        bsr.w   AppDec
+        clr.b   (a0)
+        lea     V_SBUF.l,a1
+        suba.l  a1,a0
+        move.w  a0,d6           ; 文字数
+        move.w  #37,d0          ; 段2 の 桁37〜50 を消して、右端を 50 にそろえて描く
+        move.w  #2,d1
+        moveq   #13,d7
+        jsr     ClrFld.l
+        moveq   #51,d0
+        sub.w   d6,d0
+        add.w   #128,d0         ; (段2*64+桁)*2
+        add.w   d0,d0
+        lea     TILEA.l,a1
+        adda.w  d0,a1
+        lea     V_SBUF.l,a0
+sc_pl:  move.b  (a0)+,d4
+        beq.s   sc_x
+        moveq   #0,d2
+        bclr    #7,d4
+        beq.s   sc_c
+        move.b  #ATTRLAB,d2
+sc_c:   cmpi.b  #$20,d4
+        bne.s   sc_d
+        move.b  #$40,d4
+sc_d:   subi.b  #$30,d4
+        move.b  d4,$4001(a1)
+        move.b  d2,1(a1)
+        addq.w  #2,a1
+        bra.s   sc_pl
+sc_x:   rts
+; d5.w の10進数を（先頭の0なしで）a0 に足す
+AppDec: andi.l  #$ffff,d5
+        divu    #10,d5
+        swap    d5
+        move.w  d5,-(a7)
+        clr.w   d5
+        swap    d5
+        tst.w   d5
+        beq.s   ad_o
+        bsr.s   AppDec
+ad_o:   move.w  (a7)+,d5
+        addi.b  #$30,d5
+        move.b  d5,(a0)+
+        rts
+
 ; ---- POS DISP（ポーズで切り替え）: RANK の下の段に画面の位置 「X:1CA0 Y:0200」（ゲームの進み具合の値 = 画面の位置÷0x100）
 V_PSL   = $103731          ; 位置を表示しているか（OFF にしたら消す）
 PosChk: tst.b   MBS_RUN.l
@@ -1443,7 +1577,7 @@ V_PST   = $103450
 V_PSEL  = $103451
 V_PPIN  = $103452
 V_PSIN  = $103453
-V_PSAV  = $103800          ; 11行x21桁x2バイト = 462（〜0x1014cd）（ポーズの間だけ使う。プレイ中は元のプログラムが使っていない範囲）
+V_PSAV  = $103800          ; 12行x21桁x2バイト = 504（〜0x1039f7。#30 で1行増やした）（ポーズの間だけ使う。プレイ中は元のプログラムが使っていない範囲）
 MBS_INV = $203f20          ; 無敵（メインの MB+$20）
 V_LINV  = $203ef0          ; スタートメニューの前回値の写し（MB+$20 に対応）
 PX      = 26
@@ -1484,11 +1618,11 @@ PLine:  move.w  #PX+1,d0
         moveq   #0,d2
         jmp     PutStr.l
 
-; d6 = 項目の数（キューブラッシュは10、ほかは5）
-PCnt6:  moveq   #10,d6
+; d6 = 項目の数（キューブラッシュは11、ほかは6）
+PCnt6:  moveq   #11,d6
         cmpi.b  #1,$203f0b.l
         beq.s   pc6_r
-        moveq   #5,d6
+        moveq   #6,d6
 pc6_r:  rts
 
 PDraw:  bsr.s   PCnt6

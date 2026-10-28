@@ -210,7 +210,8 @@ fr_ingame:
         bra.w   fr_nr
 fr_rk:  move.b  #1,V_RKL.l
         jsr     RankDisp.l
-fr_nr:  jsr     PosChk.l
+fr_nr:  jsr     StChk.l
+        jsr     PosChk.l
         cmpi.b  #1,MBS_PAUS.l
         bne.w   fr_np
         jmp     PauseFrame.l
