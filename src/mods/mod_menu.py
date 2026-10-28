@@ -1032,10 +1032,7 @@ mf_g3:  cmpi.b  #11,$203f08.l       ; EX STAGE の B → サラマンダ隠し�
         cmpi.b  #2,$203f0a.l
         bne.s   mf_g4
         move.b  #12,$203f08.l
-mf_g4:  clr.w   $203f3c.l       ; 開始時のゲージ（MB+$3c: 0=純正どおり 1=SPEED UP）・開始時のスピード（MB+$3d: キューブラッシュだけ SPEED）
-        cmpi.b  #1,$203f0b.l
-        bne.s   mf_sp
-        move.b  $203f0d.l,$203f3d.l
+mf_g4:  clr.w   $203f3c.l       ; 開始時のゲージ（MB+$3c: 0=純正どおり 1=SPEED UP）・開始時のスピード（MB+$3d: いつも 0。メニューの SPEED は装備コマンドだけ・2026-10-28 管理者決定）
 mf_sp:  cmpi.w  #$0101,$203f08.l   ; 1周目の1面 A（進み具合 0）だけ純正どおり。それ以外はゲージを SPEED UP に（保険あり・#5）
         bne.s   mf_gs
         tst.w   $203f1e.l

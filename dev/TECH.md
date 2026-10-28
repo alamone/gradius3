@@ -5,7 +5,7 @@ ROM の解析で分かったこと・改造で使っている場所のメモ。�
 ## メモリ
 
 - メイン/サブ共有RAM: メイン 0x100000 = サブ 0x200000。MB = 0x103f00（サブ 0x203f00）。
-- MB の使用（v0.4.17 追加）: 0x3c 開始時のゲージ（0=純正どおり=1周目1面A、1=SPEED UP）・0x3d 開始時のスピード（キューブラッシュだけ SPEED）。どちらもサブがメニュー確定時に書く。※ 0x3a〜0x3e は解除/ロックのコマンド（一時停止中）と重なる。ロックを戻すときは移すこと
+- MB の使用（v0.4.17 追加）: 0x3c 開始時のゲージ（0=純正どおり=1周目1面A、1=SPEED UP）・0x3d 開始時のスピード（いまはいつも 0。2026-10-28 にキューブラッシュも 0 に）。どちらもサブがメニュー確定時に書く。※ 0x3a〜0x3e は解除/ロックのコマンド（一時停止中）と重なる。ロックを戻すときは移すこと
 - MB の使用: 0x06 MBS_PAUS（0通常 1ポーズ中 2再開 3ゲームオーバー）, 0x0b キューブラッシュ, 0x0c CUBE INFO, 0x0e RANK DISP, 0x1c CUBE LINE V, 0x20 無敵, 0x21 1P START, 0x2b POS DISP, 0x33 CUBE HUNTER, 0x34 CUBE COLOR, **0x3b CUBE LINE H**。0x24–0x2a, 0x2c–0x32 は CmdCalc が使用。
 - 空き共有RAM（死亡をまたいで確認済み）: 0x103cf0–0x103dff, 0x1039c6–0x103abf（0x1039c4 = STAGE DISP の設定、0x1039c5 = STAGE DISP 表示中＝メインは 2P のスコアを描かない。#30）。0x103cb0–0x103cef はゲームが死亡/再開時に使う（使うと面が3面に飛ぶバグになった）。
 - 使用中: 0x103ed0–ed6（フラグ。ed3 CrEnd, ed4 CUBE COLOR, ed5 V_HAVE, ed6 V_CEW）, 0x103ed8–eff V_LBUF, 0x103ec8–ecf V_LBUF2, 0x103ef0 V_LINV, 0x103dec〜 パレット6の6〜15番（10ワード。サブ Frame が LNPAL から毎フレーム書き、メイン HudPal が 0x800cc へ写す）。CUBE COLOR の写し 0x103cf0（9ブロック×[dest.l, 12ワード]）。

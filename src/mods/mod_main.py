@@ -661,7 +661,7 @@ ph_np:
 ph_p:   bclr    d0,MB_PEND.l
         beq.s   ph_x
         jsr     PendB.l         ; ハンターの設定
-        move.b  $103f3d.l,d4    ; 開始時のスピード（サブがメニュー確定時に用意。キューブラッシュだけ SPEED、ほかは 0）
+        move.b  $103f3d.l,d4    ; 開始時のスピード（サブがメニュー確定時に用意。いまはいつも 0）
         beq.s   ph_g
         moveq   #1,d3
         jsr     Use.l
