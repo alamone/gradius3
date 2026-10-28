@@ -1,14 +1,14 @@
 #!/bin/bash
 REPO=${REPO:-$(cd "$(dirname "$0")/../../../.." && pwd)}   # リポジトリの場所（既定はこのファイルから4つ上）
 # usage: menu_start.sh <romdir> <name> <stage> <area> <shot:0|3|4> [END] [SNAP s:e:i]
-# メニューで面・エリアを選んで開始、無敵、ショットの種類を書き込み、ショットを連打（右へ少し進む）
+# メニューで面・エリアを選んで開始、無敵、（HOLDX="f:KEY:長さ,..." で入力を足す）ショットの種類を書き込み、ショットを連打（右へ少し進む）
 RD=$1; N=$2; ST=$3; AR=$4; SH=$5; END=${6:-5000}; SNAPR=${7:-2500:5000:100}
 G=1730
 SEQ="1400:COIN,1500:START,$G:START,$((G+140)):B1,$((G+220)):B1,$((G+300)):B1"
 [ -z "$NOFIRE" ] && for f in $(seq $((G+400)) 6 $END); do SEQ="$SEQ,$f:B2"; done
 P="1700:103f08:$(printf %x $ST),1700:103f0a:$(printf %x $AR)"
 # 無敵とショット種類は毎200フレーム書き込む
-for f in $(seq $((G+400)) 200 $END); do P="$P,$f:103f20:1,$f:10106c:$SH"; done
+[ -z "$NOINV" ] && for f in $(seq $((G+400)) 200 $END); do P="$P,$f:103f20:1,$f:10106c:$SH"; done; P="$P${XP:-}"   # NOINV=1 で無敵なし、XP=",f:番地:値" で書き込みを足す
 S=$(echo $SNAPR | tr : ' '); set -- $S
 SHOTS=$(seq -s, $1 $3 $2)
 mkdir -p runs/$N
