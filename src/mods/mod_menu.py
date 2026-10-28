@@ -38,7 +38,7 @@ ITEMS = [
     ('       TYPE', 1, 0, 45, 0x37, ['RANDOM'] + ['%02d' % i for i in range(1, 46)], 0),
     ('SHD COLOR', 1, 1, 10, 0x16, ['?', 'BLUE', 'RED', 'GREEN', 'GOLD', 'PURPLE', 'CYAN', 'ORANGE', 'PINK', 'SILVER', 'BLACK'], 1),
     ('HUNTER NEXT', 1, 0, 3, 0x1b, ['DEFAULT', 'TYPE 1', 'TYPE 2', 'TYPE 3'], 0),
-    ('SPEED', 0, 0, 5, 0x0d, None, 2),                  # 開始時のスピード（スピードアップを使った回数）
+    ('SPEED', 0, 0, 5, 0x0d, None, 2),                  # 装備コマンドで足すスピードの段数（今のスピード＋SPEED、5速まで）。キューブラッシュは開始時のスピード
     ('CAPSULE', 1, 0, 7, 0x23, ['OFF', 'SPEEDUP', 'MISSILE', 'DOUBLE', 'LASER', 'OPTION', '_', '\x8c'], 1),   # 開始時のカプセルゲージの位置。'_'=? / 0x8c=!（描き足した字）
 ]
 # 各項目の画面の行（可視は行2〜29）。面の表の後・CUBE の後に1行ずつ空ける
@@ -1074,18 +1074,16 @@ CmdCalc:
 cc_one: move.b  MBS_P1.l,d2
         move.b  $69(a0),d0
         andi.b  #$1f,d0
-        move.b  $203f0d.l,d1    ; 目標のスピード = メニューの SPEED
-        move.b  d1,d3
-        sub.b   d0,d1
+        move.b  $203f0d.l,d1    ; スピードは「足す」: 今のスピード＋メニューの SPEED（5速で止める。下げることはない）
+        add.b   d0,d1
+        cmpi.b  #5,d1
+        bls.s   cc0
+        moveq   #5,d1
+cc0:    sub.b   d0,d1           ; スピードアップする回数
         bpl.s   cc1
         moveq   #0,d1
 cc1:    move.b  d1,(a1)
-        clr.b   6(a1)
-        cmp.b   d3,d0
-        bls.s   cc1b
-        addq.b  #1,d3
-        move.b  d3,6(a1)        ; 今のほうが速い → 目標まで下げる（メインの Command）
-cc1b:
+        clr.b   6(a1)           ; 下げる印は使わない
         moveq   #0,d1
         tst.b   $6d(a0)
         bne.s   cc2
