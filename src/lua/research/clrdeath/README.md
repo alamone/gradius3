@@ -22,3 +22,13 @@ P=$(for f in $(seq 9150 9260); do printf ',%d:101008:0:w,%d:10100a:ac00:w,%d:101
 DELAY=1 RESTORE_AT=9188 G3RUN_OVR=$R/delay.lua G3RUN2=$RUN MAINPATCH=$INV LUAF=../dig/rompatch.lua NOFIRE=1 XP="$P" WATCH=40029,101001 $R/plain_start.sh <純正> dlyA 1 0a81 0 9300 9190:9200:1
 ```
 - 遅らせる＋その場所 → 9194 で死ぬ（`101001=04`）。遅らせない（`DELAY=0`）／別の場所（x 6000 や y 6000）→ 死なない。
+
+## 直し方の確認（書く順を「属性 → 番号」に）
+サブ `$732E`〜`$7345`（24バイト）を `e05c 1a04 0205 000e da04 1345 0001 e04c 1344 4001 4e71 4e71`
+（ror.w #8,d4 / move.b d4,d5 / andi.b #$e,d5 / add.b d4,d5 / move.b d5,$1(a1) / lsr.w #8,d4 / move.b d4,$4001(a1) / nop nop）に書き換える。
+属性 = 上のバイト + (上のバイト & $E)（上のバイトは 4〜9 なので純正の計算と同じ）。
+```bash
+FIX=732e:e05c1a040205000eda0413450001e04c134440014e714e71
+DELAY=1 DELAYCODE=1 SUBPATCH=$FIX ...   # 後に書くほう（番号）を遅らせても死なない
+DELAY=0 SUBPATCH=$FIX ...               # 9190〜9700 の画面は純正と1ピクセルも違わない（52枚）
+```

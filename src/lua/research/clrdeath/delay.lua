@@ -13,12 +13,14 @@ DL_N = emu.add_machine_frame_notifier(function()
   fr = fr + 1
   if fr == RA then rg:write_u16(0x7bc4, 0x13fc); rg:write_u16(0x7bc6, 0x0001); rg:write_u16(0x7bc8, 0x0004); rg:write_u16(0x7bca, 0x00a2)
     rg:write_u16(0xae22, 0x13fc); rg:write_u16(0xae24, 0x0001); rg:write_u16(0xae26, 0x0004); rg:write_u16(0xae28, 0x00a2) end
-  if pend and fr == pend[1] then sub:write_u8(0x24e72b, pend[2]); print(string.format("frame %d: 遅らせた属性 %02x を書いた", fr, pend[2])); pend = nil end
+  if pend and fr == pend[1] then sub:write_u8(pend[3], pend[2]); print(string.format("frame %d: 遅らせた値 %02x を書いた", fr, pend[2])); pend = nil end
 end)
-DL_T = sub:install_write_tap(0x24e72a, 0x24e72b, "dl", function(o, d, mask)
-  if DL and main:read_u8(0x40029) == 7 and not pend and (d & 0xff) == 0x0d then
-    pend = {fr + 2, d & 0xff}
-    print(string.format("frame %d: サブの属性の書き込み %x を遅らせる (pc=%x)", fr + 1, d, m.devices[":sub"].state["PC"].value))
+local CODE = os.getenv("DELAYCODE") == "1"   -- 番号の書き込みのほうを遅らせる（書く順を逆にした直し方の確認用）
+local A0, V0 = CODE and 0x25272a or 0x24e72a, CODE and 0x45 or 0x0d
+DL_T = sub:install_write_tap(A0, A0 + 1, "dl", function(o, d, mask)
+  if DL and main:read_u8(0x40029) == 7 and not pend and (d & 0xff) == V0 then
+    pend = {fr + 2, d & 0xff, A0 + 1}
+    print(string.format("frame %d: サブの書き込み %x を遅らせる (pc=%x)", fr + 1, d, m.devices[":sub"].state["PC"].value))
     return 0
   end
 end)
