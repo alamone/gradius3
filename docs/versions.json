@@ -1,6 +1,93 @@
 {
  "versions": [
   {
+   "version": "0.4.18",
+   "date": "2026-10-28",
+   "build": "2026-10-28 19:42",
+   "title": "ポーズに周回・面・エリア・スピードの表示／3面・6面の掘り跡を直した",
+   "changes": [
+    "ポーズメニューに STAGE DISP を足した（POS DISP の上）。ON にすると、2P のスコアの場所に「周回-面 エリア」とスピードを出す（例 01-03H  SP2。エリアは元のエリアの英字で、白抜き数字の開始位置では手前の英字）。ハイスコアはそのまま出る。4面でも出る",
+    "STAGE DISP が ON の間は、残機を自機の字と2桁の数字（例 :03）で出す",
+    "3面・6面・10面でショットで地形を掘ったときの跡が、丸い穴ではなく四角く・点が散った形になっていたのを純正どおりに直した（改造のコードがゲームの掘り跡の形の表と重なっていた。メニューを出さずに START で始めたときも起きていた）",
+    "改造のコードの置き場所を整理した（起動直後にサブCPUが一部をRAMへ写す）。遊び方は変わらない"
+   ],
+   "verified": [
+    "3面で地形を掘った跡が純正と同じ丸い形になること",
+    "メニューを出さずに START で始めたとき・メニューのキャンセル・3面の途中から無敵・ポーズ・装備コマンド・STAGE DISP・キューブラッシュ・ボスラッシュ・10面 ❹・隠し面で、0.4.17 の開発版と RAM・画面が一致すること（掘り跡が直った分を除く）",
+    "通しプレイ・2人プレイ・テストモード・ゲームオーバー・隠し面などで、RAM に写した改造のコードが書き換えられないこと",
+    "STAGE DISP の周回・面・エリア・スピードが、面の途中から始めたとき・死んで再開したとき・面が変わったときも正しく出ること（4面も）"
+   ],
+   "known": [
+    "3面 ❶（ボスの手前）は、画面が止まった所で逆さ火山の敵がしばらく続いてからボスが出る（止まっている間の進み方は時間で決まるので、開始位置を後ろにずらしても飛ばせない）",
+    "5面 ❷ は中ボスの止まる区間の中なので、中ボスが出る／ボスの曲にならない（調査中）",
+    "10面 ❹（脱出）の位置はまだ細かく確かめていない",
+    "キューブラッシュでは、9面の左端の地形が出ないので、キューブのくっつき方が実機と変わることがある（直し方を検討中）",
+    "パワーアップで5速にしてから、それより遅い SPEED の装備コマンドを使うと、ゲージの SPEED UP の字が消えたままになる",
+    "オプションハンターは1周目の序盤など、ゲームの条件によってはもともと出ない（タイマーが進まない）",
+    "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
+    "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
+    "無敵中は壁の中に入り込める"
+   ],
+   "en": {
+    "title": "Loop/stage/area/speed display in the pause menu / fixed the dug terrain in stages 3 and 6",
+    "changes": [
+     "Added STAGE DISP to the pause menu (above POS DISP). When ON, the loop-stage, area and speed are shown in the 2P score area (e.g. 01-03H  SP2; the area is the original area letter, and the added start points show the letter before them). The high score is still shown. Works in stage 4 too",
+     "While STAGE DISP is ON, the remaining lives are shown as the ship icon and a 2-digit number (e.g. :03)",
+     "Fixed the holes dug in the terrain with shots in stages 3, 6 and 10: they were square with scattered dots instead of round as in the original (the mod's code overlapped the game's dig-shape table; this also happened when starting with START without the menu)",
+     "Reorganized where the mod's code is placed (the sub CPU copies part of it into RAM right after boot). Nothing changes in how you play"
+    ],
+    "verified": [
+     "Holes dug in the terrain in stage 3 have the same round shape as the original",
+     "Starting with START without the menu, cancelling the menu, starting mid stage 3 with invincibility, pause, power-up command and STAGE DISP, Cube Rush, Boss Rush, stage 10 ❹ and the hidden stages give the same RAM and screen as the 0.4.17 development build (except for the fixed dig holes)",
+     "In full playthroughs, 2-player games, test mode, game over and the hidden stages, the mod code copied into RAM is never overwritten",
+     "STAGE DISP shows the correct loop, stage, area and speed when starting mid-stage, after dying and when the stage changes (stage 4 too)"
+    ],
+    "known": [
+     "Stage 3 ❶ (before the boss): after the screen stops, the upside-down volcano enemies continue for a while before the boss appears (progress while stopped depends on time, so it cannot be skipped by moving the start point later)",
+     "Stage 5 ❷ is inside the section where the screen stops for the mid-boss, so the mid-boss appears / the boss music does not play (under investigation)",
+     "The exact position of stage 10 ❹ (escape) has not been checked in detail yet",
+     "In Cube Rush the terrain at the left edge of stage 9 is missing, so cubes can stick differently from the arcade (fix under consideration)",
+     "If you reach speed 5 with power-ups and then use the power-up command with a slower SPEED, the SPEED UP label in the gauge stays blank",
+     "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+     "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+     "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+     "While invincible you can go inside walls"
+    ]
+   },
+   "patches": {
+    "945_r13.f15": {
+     "file": "patches/0.4.18/945_r13_f15.bps",
+     "source_crc": "706494e1",
+     "target_crc": "0275eeea",
+     "size": 936
+    },
+    "945_r12.e15": {
+     "file": "patches/0.4.18/945_r12_e15.bps",
+     "source_crc": "6dcd00ab",
+     "target_crc": "d1dfb57a",
+     "size": 921
+    },
+    "945_m09.r17": {
+     "file": "patches/0.4.18/945_m09_r17.bps",
+     "source_crc": "b4a6df25",
+     "target_crc": "ecff21d7",
+     "size": 13314
+    },
+    "945_m08.n17": {
+     "file": "patches/0.4.18/945_m08_n17.bps",
+     "source_crc": "74e981d2",
+     "target_crc": "47a81932",
+     "size": 13314
+    },
+    "945_r05.d9": {
+     "file": "patches/0.4.18/945_r05_d9.bps",
+     "source_crc": "c8c45365",
+     "target_crc": "273411a3",
+     "size": 324
+    }
+   }
+  },
+  {
    "version": "0.4.17",
    "date": "2026-10-28",
    "build": "2026-10-28 08:22",
@@ -127,38 +214,6 @@
     "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
     "無敵中は壁の中に入り込める"
    ],
-   "patches": {
-    "945_r13.f15": {
-     "file": "patches/0.4.16/945_r13_f15.bps",
-     "source_crc": "706494e1",
-     "target_crc": "9399d898",
-     "size": 1304
-    },
-    "945_r12.e15": {
-     "file": "patches/0.4.16/945_r12_e15.bps",
-     "source_crc": "6dcd00ab",
-     "target_crc": "a13848d2",
-     "size": 1281
-    },
-    "945_m09.r17": {
-     "file": "patches/0.4.16/945_m09_r17.bps",
-     "source_crc": "b4a6df25",
-     "target_crc": "48935831",
-     "size": 12122
-    },
-    "945_m08.n17": {
-     "file": "patches/0.4.16/945_m08_n17.bps",
-     "source_crc": "74e981d2",
-     "target_crc": "9f5c2b38",
-     "size": 12123
-    },
-    "945_r05.d9": {
-     "file": "patches/0.4.16/945_r05_d9.bps",
-     "source_crc": "c8c45365",
-     "target_crc": "273411a3",
-     "size": 324
-    }
-   },
    "en": {
     "title": "CUBE LINE with 3 patterns each for vertical and horizontal",
     "changes": [
