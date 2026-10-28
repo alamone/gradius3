@@ -669,6 +669,12 @@ ph_g:   move.b  $103f3c.l,d0    ; 開始時のゲージ（1周目1面A は 0=純
         beq.s   ph_x
         move.b  d0,$6a(a2)
 ph_x:   movem.l (a7)+,d0-d7/a0-a6
+        move.b  MB_PEND.l,d0    ; 10面の脱出から始めた（StageHook）: ゲームの処理の後で、ラスボスを倒したときと同じ色（$E926:
+        andi.b  #$38,d0         ; パレット $31 ← $33740。純正は $1FFBA）を入れる。開始位置までのパレットの出来事が
+        beq.s   ph_go           ; プレイの2フレーム目にまとめて入る（$E428）ので、プレイの最初の7フレームのあいだ入れ直す（#21）
+        subi.b  #8,MB_PEND.l
+        jsr     $3a24.w
+        jmp     $e926.l
 ph_go:  jmp     $3a24.w
 ph_rts: rts
 """)
@@ -756,7 +762,12 @@ StageHook:
         move.w  #$310,$101052.l
         ori.b   #1,$101063.l
         bra.s   sh_go
-sh_m:   cmpi.b  #2,MB_MODE.l
+sh_m:   cmpi.b  #9,$101051.l    ; 10面のラスボスの後（脱出 ❹）から始める・再開する: ラスボスを倒したときに入る色（#21）を
+        bne.s   sh_nx           ; プレイの最初のフレームで入れる（PlayHook。パレットの出来事の処理より後に）
+        cmpi.w  #$2500,$101052.l
+        bcs.s   sh_nx
+        ori.b   #$38,MB_PEND.l  ; bit3〜5 = 残りフレーム数×8（7フレーム）
+sh_nx:  cmpi.b  #2,MB_MODE.l
         bne.s   sh_go
 sh_boss:                        ; ボスラッシュ (開始位置はサブが用意するボスラッシュ用エリア表で決まる)
         moveq   #0,d0
