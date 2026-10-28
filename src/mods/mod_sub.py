@@ -42,9 +42,46 @@ ClrHook:
         move.w  #$173,d0        ; 0x5d0 バイト = 0x174 ロング
         jmp     $bc4.w
 
+; ---- メインの改造のコードの一部を RAM へ写す（#34。mod_main の先頭の説明） ----
+; 印 RMAGIC（共有RAM）: 偶数 2k = k 番目のメインRAM用の中身を受け渡し場所に置いて 2k+1 にする（メインが写して 2k+2 にする）。
+; 全部（RMCNT 個）渡したら、共有RAMの R1〜R3 にコードを置いて最後に RMVAL。RMVAL なら何もしない
+RamCopy:
+        move.w  RMAGIC.l,d0
+        cmpi.w  #RMVAL,d0
+        beq.s   rc_x
+        btst    #0,d0
+        bne.s   rc_x                    ; メインが写している最中
+        lsr.w   #1,d0
+        cmpi.w  #RMCNT,d0
+        bcc.s   rc_fin
+        mulu    #10,d0
+        lea     RMTBL.l,a0              ; [写す先.l, ロング数-1.w, 中身のサブROMの番地.l] × RMCNT
+        adda.l  d0,a0
+        lea     RSTAGE.l,a1
+        move.l  (a0)+,(a1)+
+        move.w  (a0)+,d1
+        move.w  d1,(a1)+
+        movea.l (a0),a0
+rc_c:   move.l  (a0)+,(a1)+
+        dbf     d1,rc_c
+        addq.w  #1,RMAGIC.l
+rc_x:   rts
+rc_fin: lea     RSTBL.l,a2              ; [写す先(サブの番地).l, 中身.l, 語数-1.w] … 写す先 0 で終わり
+rc_l:   move.l  (a2)+,d0
+        beq.s   rc_e
+        movea.l d0,a1
+        movea.l (a2)+,a0
+        move.w  (a2)+,d1
+rc_w:   move.w  (a0)+,(a1)+
+        dbf     d1,rc_w
+        bra.s   rc_l
+rc_e:   move.w  #RMVAL,RMAGIC.l
+        rts
+
 IrqHook:
         TESTNOIRQ
         movem.l d0-d7/a0-a6,-(a7)
+        bsr.w   RamCopy                 ; 起動直後: メインの改造のコードを RAM へ（#34。済んでいれば何もしない）
         moveq   #0,d0                   ; 独自エリア表を共有RAMへ: 今の面(0〜9)の分 (ボスラッシュ時は専用表)
         move.b  $201051.l,d0
         btst    #2,$203f1a.l            ; メニューから始めた直後（面・エリアをまだ反映していない）はメニューで選んだ面
@@ -407,6 +444,24 @@ def apply(rom):
     dl['BOSSTBL'] = DATA_BASE + len(data); data += b''.join(struct.pack('>H', x) for x in bt)
     dl['SHCOL'] = DATA_BASE + len(data)
     data += open(os.path.join(os.path.dirname(__file__), 'shield_colors.bin'), 'rb').read()
+    rb = mod_main.RAMBLOB                                 # メインの改造のコードのうち RAM で動かす分（#34）
+    if len(data) & 1: data += b'\0'
+    mt = b''; mblobs = []
+    for dst, b in rb['main']: mblobs.append((dst, b))
+    sblobs = list(rb['shr'])
+    tbl_m = DATA_BASE + len(data); data += bytes(10 * len(mblobs))
+    tbl_s = DATA_BASE + len(data); data += bytes(10 * len(sblobs) + 4)
+    mtab, stab = b'', b''
+    for dst, b in mblobs:
+        assert len(b) % 4 == 0 and len(b) <= mod_main.STAGEMAX
+        mtab += struct.pack('>IHI', dst, len(b) // 4 - 1, DATA_BASE + len(data)); data += b
+    for dst, b in sblobs:
+        if len(b) & 1: b += b'\0'
+        stab += struct.pack('>IIH', dst + 0x100000, DATA_BASE + len(data), len(b) // 2 - 1); data += b
+    stab += bytes(4)
+    data = data[:tbl_m - DATA_BASE] + mtab + stab + data[tbl_s - DATA_BASE + len(stab):]
+    dl['RMTBL'] = tbl_m; dl['RSTBL'] = tbl_s; dl['RMCNT'] = len(mblobs)
+    dl['RMAGIC'] = rb['magic'] + 0x100000; dl['RMVAL'] = rb['magicval']; dl['RSTAGE'] = rb['stage'] + 0x100000
     wt = DATA_BASE + len(data) + (len(data) & 1)
     data = data + (b'\0' if len(data) & 1 else b'') + WTYPE_BYTES
     consts = ''.join('%s = $%x\n' % (k, v) for k, v in dl.items()) + 'WTYPE = $%x\n' % wt

@@ -1,14 +1,25 @@
 """メインCPU側スタブ（純正313へのパッチ）
 
-置き場所（#34、2026-10-28〜）: メインROMには本当の空きがほとんど無いので、次の3種類の空きに「かたまり」ごとに詰めて置く（mainpack.py）。
-  1. C = 0x3fd9a〜0x3ffbf（ROM の最後の空き。0x3ffc0〜 は起動画面の文字列と ROM 合計の微調整）
-  2. 地形を掘る跡のマスク（$D4AC〜$DA7D。掘る処理 $D31A が読む）の中の、一度も読まれないバイト:
+置き場所（#34、2026-10-28〜）: メインROMには本当の空きがほとんど無いので、次の空きに「かたまり」ごとに詰めて置く（mainpack.py）。
+  1. C = 0x3fd9a〜0x3ffbf（ROM の最後の空き。0x3ffc0〜 は起動画面の文字列、0x3fff0〜 は ROM 合計の微調整）
+  2. 地形を掘る跡のマスク（$D4AC〜$DA7D。掘る処理 $D31A が読む）の中の、一度も読まれないバイト（隙間の列）:
      32バイトの行ごとの後ろ14バイト（$D4BE+32n〜$D4CB+32n、n=0〜45）と、最後の行の後ろ $DA7E〜$DB09。
-     マスクとして読まれるバイトは純正のまま（#6）。以前（〜v0.4.17）はマスクの上にコードを置いていた
-  3. 共有RAMの空き（$103812〜$1038D3・$103966〜$1039BF・$1039C6〜$103ABD。どちらの ROM からも参照が無く、
-     記録でも使われなかった所）。起動時にサブが ROM からここへ写し、最後に印 RAMMAGIC を書く（mod_sub の RamCopy）。
-     メインは毎フレーム最初の StubIn で印を見て、まだなら写し終わるまで待つ（LoadW）。
-     それより前に改造のコードが呼ばれる所は無い（StubIn はフレームの処理の最初のフック）
+     命令を詰めて隙間の終わりで bra.s で次の隙間へつなぐ。マスクとして読まれるバイトは純正のまま（#6）。
+     以前（〜v0.4.17）はマスクの上にコードを置いていた
+  3. 共有RAMの空き R1〜R3（$103860〜$1038D3・$103966〜$1039BF・$1039C6〜$103ABD。どちらの ROM からも参照が無く、
+     記録でも使われなかった所）。
+  4. メインRAM M1 = $40500〜$405DF（スタックの上。起動の途中だけ SSP=$40600 で使い（$405F4 まで）、
+     $155E で SSP=$40500 にした後は使われない）・M2 = $42E78〜$42FFF（$42E00〜$42E75 の変数の後ろ。参照なし）・
+     M3 = $43F70〜$43FFF（ハイスコア表 $43F00〜$43F63 と並べ替えの作業場所 〜$43F6D の後ろ。参照なし）。
+     どれも起動時の消去のほかは書かれない（記録で確認）。
+  3・4 はサブが起動時に ROM から写す（mod_sub の RamCopy）。メインRAMにはサブが書けないので、R3 を受け渡し場所にして
+     240B ずつ渡す。印 RAMMAGIC（共有RAM）で順番を合わせる: 偶数 2k → サブが k 番目を R3 に置いて 2k+1 →
+     メインが写して 2k+2 → …全部渡したら、サブが R1〜R3 の中身を置いて MAGICVAL。
+     メインは毎フレーム StubIn（フレームの処理の最初のフック）の最後で印を見て、MAGICVAL でなければ LoadStep で
+     1回分ずつ写す（その間は RAM のコードを呼ばない。起動直後の数フレームで、RAM のコードを呼ぶ場面＝ゲームの開始・
+     デモ・START などはまだ来ない）。120 フレームたっても終わらなければ LoadW で終わるまで待つ。
+     起動直後のフレームの進み方は純正と同じ（待たない）。
+     起動時（$119A・$11E4・$1202）にゲームがメインRAM・共有RAMを消すので、リセットのたびに最初からやり直しになる
 """
 MB = 0x103f00           # メールボックス（共有RAM。サブ側は 0x203f00）
 # オフセット
@@ -17,10 +28,14 @@ O_STAGE, O_LOOP, O_AREA, O_MODE, O_BEGIN = 8, 9, 10, 11, 12
 
 RAMMAGIC = 0x103abe     # 共有RAMのコードを写し終えた印（サブが最後に書く。起動時にゲームが共有RAMを消すと 0 に戻る）
 MAGICVAL = 0x4d4f
-ROM_REGIONS = [('C', 0x3fd9a, 0x3ffc0, 'rom')] + \
-    [('S%02d' % n, 0xd4be + 32 * n, 0xd4cc + 32 * n, 'rom') for n in range(46)] + [('T', 0xda7e, 0xdb0a, 'rom')]
-RAM_REGIONS = [('R1', 0x103812, 0x1038d4, 'ram'), ('R2', 0x103966, 0x1039c0, 'ram'), ('R3', 0x1039c6, RAMMAGIC, 'ram')]
-FILLER = 'S45'          # ROM 合計の微調整に使う隙間（コードは置かない）
+LCNT = 0x103abc          # 写している間のフレーム数（R3 の最後の語。写し終えたら使わない）
+REGIONS = [('C', 0x3fd9a, 0x3ffc0, 'rom'),
+           ('R1', 0x103860, 0x1038d4, 'shr'), ('R2', 0x103966, 0x1039c0, 'shr'), ('R3', 0x1039c6, LCNT, 'shr'),
+           ('M1', 0x40500, 0x405e0, 'mrm'), ('M2', 0x42e78, 0x43000, 'mrm'), ('M3', 0x43f70, 0x44000, 'mrm')]
+STAGE = 0x1039c6        # メインRAMへ写す中身の受け渡し場所（R3 を借りる。先頭 6バイト = 写す先.l・ロング数-1.w）
+STAGEMAX = 240          # 1回に渡す大きさ（R3 248B − 見出し6B 以下の4の倍数）
+STREAM = [('S%02d' % n, 0xd4be + 32 * n, 0xd4cc + 32 * n) for n in range(46)] + [('T', 0xda7e, 0xdb0a)]
+FILLER = (0x3fff0, 0x40000)   # ROM 合計の微調整（ROM の最後の16バイト。どこからも読まれない）
 
 CONSTS = f"""
 MB      = ${MB:x}
@@ -51,18 +66,24 @@ MB_PSHON = $103f19
 MB_PEND  = $103f1a
 MB_INV   = $103f20
 RAMMAGIC = ${RAMMAGIC:x}
+MAGICVAL = ${MAGICVAL:x}
+LCNT    = ${LCNT:x}
+STAGE   = $1039c6
 """
 
 # ---- かたまり（名前, ソース, 'rom'=ROM に置く / 'any'=どこでも） ----
 CHUNKS = []
-def chunk(name, src, where='any'): CHUNKS.append((name, src, where))
+ANY = {'rom', 'shr', 'mrm'}
+# 'rom' = ROM のひと続きの空き（C）だけ / 'any' = どこでも（隙間の列を除く。毎フレーム通る処理など）
+# 隙間の列（つなぎの bra.s で少し遅くなる）には、めったに通らない処理だけを置く（COLD の順に入るだけ）
+def chunk(name, src, where='any'):
+    CHUNKS.append((name, src, {'rom'} if where == 'rom' else set(ANY) if where == 'any' else where))
+COLD = ['LoadW', 'EdLR', 'TypeBeg', 'TypeGrey', 'ApplyStart', 'ApplyStage', 'NextStg', 'NextPos', 'BossSet', 'PendB',
+        'CmdCnt', 'Command', 'AreaTbl', 'EvPtr', 'Die', 'ShPal', 'StageHook', 'ModState', 'PalCopy']
 
 # 毎フレーム（フレームの処理の最初。0x1d1e の jsr $33b8 を置き換え）: 入力の写し・スコアの描き直し・見出しの色
 chunk('StubIn', """
-StubIn: tst.w   RAMMAGIC.l      ; 共有RAMの改造のコードがまだ無い（起動直後）→ サブが写し終えるまで待つ
-        bne.s   si_ok
-        jsr     LoadW.l
-si_ok:  jsr     $33b8.w
+StubIn: jsr     $33b8.w
         move.b  $c8003.l,d0
         not.b   d0
         move.b  d0,MB_P1.l
@@ -79,19 +100,43 @@ si_np:  tst.b   $103ed0.l       ; サブからスコアの描き直しの依頼�
         movem.l d0-d7/a0-a6,-(a7)
         jsr     ScoreHk.l
         movem.l (a7)+,d0-d7/a0-a6
-ms_nr:  jmp     HudPal.l
+ms_nr:  tst.b   MB_RUN.l        ; 改造プレイ中（= RAM のコードは写し終えている）→ 見出しの色
+        bne.s   si_hp
+        cmpi.w  #MAGICVAL,RAMMAGIC.l ; RAM の改造のコードがまだ無い（起動直後）→ 1回分ずつ写す
+        bne.s   si_ld
+        rts
+si_hp:  jmp     HudPal2.l
+si_ld:  jmp     LoadStep.l
 """, 'rom')
-# 共有RAMのコードを待つ（ウォッチドッグを叩きながら。約8秒たっても来なければ叩くのをやめてリセットさせる）
+# RAM のコードを待つ（ウォッチドッグを叩きながら。約8秒たっても終わらなければ叩くのをやめてリセットさせる）
 chunk('LoadW', """
-LoadW:  move.l  #$140000,d0
+LoadStep:                       ; 起動直後の毎フレーム（StubIn から）: サブが置いた1回分を写す。2秒たっても終わらなければ LoadW で待つ
+        addq.w  #1,LCNT.l
+        cmpi.w  #120,LCNT.l
+        bcc.s   LoadW
+        move.w  RAMMAGIC.l,d1
+        bsr.s   lw_cp
+        rts
+LoadW:  move.l  #$140000,d0     ; 終わるまで待つ（ウォッチドッグを叩きながら。約8秒で叩くのをやめてリセットさせる）
 lw_l:   move.b  #1,$e0000.l
-        tst.w   RAMMAGIC.l
-        bne.s   lw_r
+        move.w  RAMMAGIC.l,d1
+        cmpi.w  #MAGICVAL,d1
+        beq.s   lw_r
+        bsr.s   lw_cp
         subq.l  #1,d0
         bne.s   lw_l
 lw_h:   bra.s   lw_h
+lw_cp:  btst    #0,d1           ; 奇数: サブが受け渡し場所に1回分を置いた → 写して次の番号（偶数）を返す
+        beq.s   lw_r
+        lea     STAGE.l,a0
+        movea.l (a0)+,a1
+        move.w  (a0)+,d2
+lw_c:   move.l  (a0)+,(a1)+
+        dbf     d2,lw_c
+        addq.w  #1,d1
+        move.w  d1,RAMMAGIC.l
 lw_r:   rts
-""", 'rom')
+""", {'rom'})
 
 # 残機の絵（純正 $1a72。表 $15ce と $17fe の jsr から）: STAGE DISP 表示中（#30）はサブが数字で描くので描かない
 chunk('LivHk', """
@@ -143,7 +188,7 @@ hs_go:
         rts
 hs_norm:
         jmp     $2968.w
-""")
+""", 'rom')
 
 # 新トップ状態3: メニュー実行中（サブCPUが描画・操作）。確定/キャンセルを待つ
 chunk('ModState', """
@@ -185,7 +230,7 @@ ms_cancel:
 chunk('StateTbl', """
 StateTbl:
         dc.l    $1e6c, $1e64, $28ce, ModState
-""")
+""", 'rom')          # 毎フレーム読まれる（RAM のコードを写し終える前から）ので ROM
 
 # メニュー確定後（0x29c0 で通常のゲーム開始処理を済ませた直後）に呼ばれる
 chunk('ApplyStart', """
@@ -379,7 +424,7 @@ rh_r:   rts
 chunk('HudPal', """
 HudPal: tst.b   MB_RUN.l
         beq.s   hp_r
-        lea     $103dec.l,a0    ; パレット6 の 6〜15番（見出しの灰色・CUBE LINE の色。サブが共有RAMに置く）
+HudPal2: lea    $103dec.l,a0    ; パレット6 の 6〜15番（見出しの灰色・CUBE LINE の色。サブが共有RAMに置く）
         lea     $800cc.l,a1
         moveq   #9,d1
 hp_6:   move.w  (a0)+,(a1)+
@@ -932,23 +977,33 @@ def apply(rom):
         s = s.replace('CUBESEEDBODY', ('        move.w  #$%x,$40032.l' % ((int(os.environ['CUBESLOT']) << 2) << 8)) if os.environ.get('CUBESLOT') else '        move.w  $103e30.l,$40032.l')
         s = s.replace('LOCKCALL', 'move.b  #1,MB_UNLK.l     ; 解除/ロックのコマンドは一時停止中: 常に解除' if LOCK_SUSPEND else 'jsr     Lock.l')
         chunks.append((n, s, w))
-    if not LOCK_SUSPEND: chunks.append(('Lock', SRC_LOCK, 'any'))
+    if not LOCK_SUSPEND: chunks.append(('Lock', SRC_LOCK, {'rom', 'shr', 'mrm'}))
     lr = '\n'.join(l for l in (mod_edit.SRC_LR % (0, mod_edit.EB + mod_edit.O_MAX)).splitlines() if not l.strip().startswith('org'))
-    chunks.append(('EdLR', lr, 'any'))
-    regions = [r for r in ROM_REGIONS if r[0] != FILLER] + RAM_REGIONS
-    place, out, lab, size, left = mainpack.layout(chunks, regions, CONSTS)
+    chunks.append(('EdLR', lr, {'rom', 'shr', 'mrm'}))
+    byname = {c[0]: c for c in chunks}
+    chunks = [(n, s, w | {'stream'}) for n, s, w in (byname[k] for k in COLD)] + [c for c in chunks if c[0] not in COLD]
+    place, out, lab, size, left = mainpack.layout(chunks, REGIONS, STREAM, CONSTS, data=('StateTbl', 'GreyPal', 'BossProg'))
     global RAMBLOB
-    RAMBLOB = []
-    kinds = {r[0]: r[3] for r in regions}
-    for rn, org, b in sorted(out, key=lambda x: x[1]):
-        if kinds[rn] == 'rom': rom.put('main', org, b, 'mod:' + rn)
-        else: RAMBLOB.append((org, b))
-    # 共有RAMのコードは隣り合うものをまとめる
-    mg = []
-    for org, b in RAMBLOB:
-        if mg and mg[-1][0] + len(mg[-1][1]) == org: mg[-1] = (mg[-1][0], mg[-1][1] + b)
-        else: mg.append((org, b))
-    RAMBLOB = mg
+    kinds = {r[0]: r[3] for r in REGIONS}
+    shr, mrm = {}, {}
+    for rn, org, b in out:
+        k = kinds.get(rn, 'rom')
+        if k == 'rom': rom.put('main', org, b, 'mod:' + rn)
+        else: (shr if k == 'shr' else mrm).setdefault(rn, []).append((org, b))
+    def joined(d):
+        res = []
+        for rn in sorted(d):
+            lo = [r for r in REGIONS if r[0] == rn][0][1]
+            blob = bytearray()
+            for org, b in sorted(d[rn]):
+                assert org == lo + len(blob); blob += b
+            res.append((lo, bytes(blob)))
+        return res
+    mparts = []
+    for lo, blob in joined(mrm):                          # メインRAMへは受け渡し場所の大きさごとに分ける
+        blob += bytes(-len(blob) % 4)
+        for i in range(0, len(blob), STAGEMAX): mparts.append((lo + i, blob[i:i + STAGEMAX]))
+    RAMBLOB = {'main': mparts, 'shr': joined(shr), 'magic': RAMMAGIC, 'magicval': MAGICVAL, 'stage': STAGE}
     J = lambda a: bytes.fromhex('4eb9') + lab[a].to_bytes(4, 'big')
     rom.put('main', 0x154aa, J('EvPtr'), 'evptr', expect=bytes.fromhex('23ce00042e00'))
     rom.put('main', 0x4cfc, J('AreaTbl'), 'areatbl', expect=bytes.fromhex('4df9000054fe'))
@@ -975,15 +1030,12 @@ def apply(rom):
     rom.put('main', 0x1d24, J('CredHook'), 'credit-hide', expect=bytes.fromhex('4eb90000326e'))
     rom.put('main', 0x692a, J('NextPos'), 'bossrush-pos', expect=bytes.fromhex('4eb90000695c'))
     rom.put('main', 0x3c7a, J('NextStg'), 'bossrush-next', expect=bytes.fromhex('427900101052'))
-    # 共有RAMのコードは、メインが呼ぶ前に必ず写してあること（StubIn・LoadW は ROM）
-    for k in ('StubIn', 'LoadW'): assert kinds[place[k][0]] == 'rom', k
-    fr = [r for r in ROM_REGIONS if r[0] == FILLER][0]
-    rom.free_main = [(fr[1], fr[2])]                      # ROM 合計の微調整（起動画面の文字列の後ろと、この隙間）
+    # RAM のコードは、メインが呼ぶ前に必ず写してあること（StubIn・LoadW は ROM）
+    for k in ('StubIn', 'LoadW'): assert all(kinds.get(r, 'rom') == 'rom' for r in place[k]), k
+    rom.free_main = [FILLER]                              # ROM 合計の微調整（起動画面の文字列の後ろと、ROM の最後の16バイト）
     rom.main_layout = (place, size, left)
-    used = sum(size.values()); ramu = sum(len(b) for o, b in RAMBLOB)
-    print('main mod code %d bytes (ROM %d / shared RAM %d). left: C %d, gaps %d, T %d, RAM %d' % (
-        used, used - ramu, ramu, left['C'], sum(v for k, v in left.items() if k.startswith('S')), left['T'],
-        sum(v for k, v in left.items() if k.startswith('R'))))
+    tot = sum(size.values())
+    print('main mod code %d bytes. left: %s' % (tot, ', '.join('%s %d' % kv for kv in left.items())))
     return lab, place
 
 
