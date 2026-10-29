@@ -836,10 +836,12 @@ ST10 = [(0, 0x20000), (0x11c00, 0x20000), (0x21c02, 0x20000), (0x35bdd, 0x20000)
 #   BOSS RUSH = ボス2〜6の手前
 for _kv in os.environ.get('ST10X', '').split(','):      # テスト用: ST10X="2=24000,3=38000"
     if _kv: _i, _v = _kv.split('='); ST10[int(_i)] = (int(_v, 16), ST10[int(_i)][1])
-ST10_ROW = [0, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+EXTRA_AREAS = os.environ.get('EXTRA_AREAS') == '1'   # 場所を調整して足した復活地点（❶〜❹）。次の版では外す（10面 ❶ は残す）。mod_menu と同じ
+ST10_ROW = [0, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17] if EXTRA_AREAS else [0, 7, 8, 9, 10, 11, 12, 13, 15]
 BR_ROW = [2, 3, 4, 5, 6]
 # 9面 = 開始 / 0x58000(キューブ地帯の手前。キューブラッシュもここから) / 0x5c000(ボス手前)
 ST9 = [(0, 0), (0x58000, 0), (0x5c000, 0)]
+# ※ 9面の表は次の版でもそのまま（エリア2 0x58000 はキューブラッシュの開始・復活地点。メニューの 9面は A だけ出す）
 if os.environ.get('ST9X'): ST9 = [(0, 0)] + [(int(v, 16), 0) for v in os.environ['ST9X'].split(',')]
 # 3面 = 本来の8地点 + ビッグコアMkIII手前 0x1ca000 (Y は8番目と同じ)
 MK3 = (int(os.environ.get("MK3X", "1ca000"), 16), 0x30000)
@@ -860,7 +862,8 @@ def stage_areas(st):
     m = smap[st]; a = L(0x54fe + 4*m); r = []
     while L(a) != 0x0fffffff and len(r) < 16: r.append((L(a), L(a+4))); a += 8
     add = []
-    if st == 2: add = [MK3]
+    if not EXTRA_AREAS: pass
+    elif st == 2: add = [MK3]
     elif st in (0, 4, 5, 6, 7):
         bt = boss_progress()
         bx = (bt[st] << 8) - BRDELTA
@@ -934,7 +937,9 @@ def ext10_blob(boss=False):
     ボスラッシュ時 = ボス1直前から（❷❸ は除く）"""
     import struct
     if boss: t = [e for e in ST10[1:] if e[0] not in (ST10_C2, ST10_C3)]
-    else: t = [ST10[i] for i in ST10_ROW]
+    elif EXTRA_AREAS: t = [ST10[i] for i in ST10_ROW]
+    else: t = [ST10[i] for i in sorted(ST10_ROW + BR_ROW)]   # 次の版: BOSS RUSH の行（ボス2〜6の手前）は通常のモードで選ぶので、表にも入れる
+    #   （表に無い地点を選ぶと面の最初から始まってしまう。そのかわり、ボスラッシュの区間で死ぬとその手前の地点から再開する）
     b = b''.join(struct.pack('>II', x, y) for x, y in t + [(0x0fffffff, 0)])
     assert len(b) <= 0x88, len(b)
     return b + bytes(0x88 - len(b))

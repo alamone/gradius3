@@ -7,9 +7,29 @@ import struct
 
 # (ラベル, 種別, 最小, 最大, MBオフセット, 値文字列 or None, 既定値)   種別 0=数値 1=列挙 2=アクション
 # 種別 3 = 面/エリアの表の1行（最小値=面番号 1..12、最大値=その面のエリア数）
-AREAS = [5, 5, 9, 1, 7, 5, 4, 5, 3, 12, 2, 0, 5]   # 選べるエリア数。1面V・7面IV・8面V はボス戦中の復活地点で、そこから開始すると即面クリアになるため除外（代わりに ❶ボスの手前）
+# 1面V・7面IV・8面V はボス戦中の復活地点で、そこから開始すると即面クリアになるため出さない
+# 次の版で外すもの（2026-10-29 管理者決定）: MODE の BOSS RUSH と、場所を調整して足した復活地点（❶〜❹。10面 ❶ は残す）。
+# 後の版で戻すときは EXTRA_AREAS=1 BOSSRUSH=1 でビルドする（mod_main も同じ変数を見る）
+import os
+EXTRA_AREAS = os.environ.get('EXTRA_AREAS') == '1'
+BOSSRUSH = os.environ.get('BOSSRUSH') == '1'
 # 各行の表示（英字は普通の文字、数字は白抜き ❶〜❹）
 _W = lambda n: '#%d' % n
+AREA_LABELS_LESS = [
+    ['A', 'B', 'C', 'D'],                                         # 1面
+    ['A', 'B', 'C', 'D', 'E'],                                    # 2面
+    ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'],                     # 3面
+    ['A'],                                                        # 4面
+    ['A', 'B', 'C', 'D', 'E'],                                    # 5面
+    ['A', 'B', 'C', 'D'],                                         # 6面
+    ['A', 'B', 'C'],                                              # 7面
+    ['A', 'B', 'C', 'D'],                                         # 8面
+    ['A'],                                                        # 9面
+    ['A', _W(1), 'B', 'C', 'D', 'E', 'F', 'G', 'H'],              # 10面: ❶ボスラッシュ直後
+    ['A', 'B'],                                                   # EX STAGE
+    [],
+    ['A', 'B', 'C', 'D', 'E'],                                    # BOSS RUSH（10面のボス2〜6の手前）
+]
 AREA_LABELS = [
     ['A', 'B', 'C', 'D', _W(1)],                                  # 1面: ❶ボスの手前
     ['A', 'B', 'C', 'D', 'E'],                                    # 2面
@@ -25,12 +45,14 @@ AREA_LABELS = [
     [],
     ['A', 'B', 'C', 'D', 'E'],                                    # BOSS RUSH
 ]
+if not EXTRA_AREAS: AREA_LABELS = AREA_LABELS_LESS
+AREAS = [len(x) for x in AREA_LABELS]   # 選べるエリア数
 STAGE_LABELS = ['STAGE   %d' % i for i in range(1, 10)] + ['STAGE  10', 'EX STAGE', '', 'BOSS RUSH']   # 数字の右端を BOSS RUSH の H にそろえる
 # 行の並び: 面1〜10, BOSS RUSH(内部の面番号13), EX STAGE(11。A=グラディウス B=サラマンダ → 開始時に 11/12)
 ROW_ORDER = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 12, 10]
 ITEMS = [
     ('INVINCIBLE', 1, 0, 1, 0x20, ['OFF', 'ON'], 0),   # 一時的な項目（無敵）
-    ('MODE',      1, 0, 2, 0x0b, ['NORMAL', 'CUBE RUSH', 'BOSS RUSH'], 0),
+    ('MODE',      1, 0, 2 if BOSSRUSH else 1, 0x0b, ['NORMAL', 'CUBE RUSH', 'BOSS RUSH'][:3 if BOSSRUSH else 2], 0),
     ('LOOP',      0, 1, 99, 0x09, None, 1),
 ] + [(STAGE_LABELS[i], 3, i + 1, AREAS[i], 0x08, None, 0) for i in ROW_ORDER] + [
     ('CUBE HEIGHT', 1, 0, 16, 0x35, ['RANDOM'] + [str(i) for i in range(1, 17)], 0),   # キューブラッシュの並び: 3つとも RANDOM = 純正のまま
