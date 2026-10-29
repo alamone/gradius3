@@ -1,0 +1,50 @@
+{
+ "title": "ボスラッシュモードと追加の開始位置をいったん外した／START 表示の間の地形を隠す／メニューの整理",
+ "changes": [
+  "メニューの MODE から BOSS RUSH を外した（後の版でまた付ける予定）。MODE は NORMAL・CUBE RUSH の2つ",
+  "面とエリアの表から、場所を調整して足した開始位置（1面❶・3面❶・5面❶❷・6〜8面❶・9面❶❷・10面❷〜❹）を外した（後の版でまた付ける予定）。残るのは元のエリアの始まり（英字）と、10面 ❶（ボスラッシュの後）・BOSS RUSH の行（10面のボスラッシュの区間の途中）・EX STAGE",
+  "BOSS RUSH の行（10面のボスラッシュの区間）から始めると、MODE が NORMAL のときは面の最初から始まってしまっていたのを直した。そこで死ぬと、その手前の地点から再開する",
+  "面の途中のエリアから始めたとき・死んで再開したときの START 表示の間は、地形・背景を出さない（純正の死んで再開と同じ。描きかけの地形が見えていた）",
+  "メニュー：SPEED・CAPSULE を FULL POWER SPEED・FULL POWER CAPSULE に、SHD COLOR を SHIELD COLOR に改名。初期値は FULL POWER SPEED 3・CAPSULE シールド。CUBE HEIGHT・SHIFT・TYPE はキューブラッシュのときだけ選べる。シールドの色の見本に自機とフォースフィールドを出す",
+  "キューブラッシュも開始スピードは 0（メニューの FULL POWER SPEED は装備コマンドを使ったときだけ）"
+ ],
+ "verified": [
+  "MODE が NORMAL と CUBE RUSH だけになり、BOSS RUSH が選べないこと",
+  "10面 ❶・10面 H・BOSS RUSH の行の A〜E・キューブラッシュが、正しい位置から始まること（MAME）",
+  "BOSS RUSH の行から始めて死んだとき、その地点から再開すること",
+  "外した機能を戻すビルドの切り替えで、前の開発版と同じ ROM になること"
+ ],
+ "known": [
+  "キューブラッシュでは、9面の左端の地形が出ないので、キューブのくっつき方が実機と変わることがある（直し方を検討中）",
+  "パワーアップで5速にしてから、それより遅い SPEED の装備コマンドを使うと、ゲージの SPEED UP の字が消えたままになる",
+  "オプションハンターは1周目の序盤など、ゲームの条件によってはもともと出ない（タイマーが進まない）",
+  "装備コマンドは装備を足すだけなので、レーザー・ダブルを持っている状態からミサイル＋START を押してもノーマルショットには戻らない",
+  "解除コマンドの一時停止中は、通常プレイでもレバー上か下を入れたまま START を押すとメニューに入る",
+  "無敵中は壁の中に入り込める"
+ ],
+ "en": {
+  "title": "Boss Rush mode and the added start points removed for now / terrain hidden during the START display / menu cleanup",
+  "changes": [
+   "Removed BOSS RUSH from the menu MODE (planned to come back in a later version). MODE is now NORMAL or CUBE RUSH",
+   "Removed the adjusted start points from the stage and area table (stage 1 ❶, stage 3 ❶, stage 5 ❶❷, stages 6–8 ❶, stage 9 ❶❷, stage 10 ❷–❹; planned to come back later). What remains: the starts of the original areas (letters), stage 10 ❶ (after the boss rush), the BOSS RUSH row (partway through the boss rush section of stage 10) and EX STAGE",
+   "Fixed: starting from the BOSS RUSH row (stage 10 boss rush section) with MODE set to NORMAL started from the beginning of the stage. If you die there you now restart from that point",
+   "When starting mid-stage or restarting after death, the terrain and background are not shown during the START display (as in the original restart after death; half-drawn terrain used to be visible)",
+   "Menu: SPEED and CAPSULE renamed to FULL POWER SPEED and FULL POWER CAPSULE, SHD COLOR to SHIELD COLOR. Defaults are FULL POWER SPEED 3 and CAPSULE on shield. CUBE HEIGHT, SHIFT and TYPE can only be changed in Cube Rush. The shield color sample shows the ship with the force field",
+   "Cube Rush also starts at speed 0 (the menu FULL POWER SPEED only applies when you use the power-up command)"
+  ],
+  "verified": [
+   "MODE offers only NORMAL and CUBE RUSH; BOSS RUSH cannot be selected",
+   "Stage 10 ❶, stage 10 H, BOSS RUSH rows A–E and Cube Rush start at the correct positions (MAME)",
+   "After starting from the BOSS RUSH row and dying, you restart from that point",
+   "With the switch that restores the removed features, the ROM is identical to the previous development build"
+  ],
+  "known": [
+   "In Cube Rush the terrain at the left edge of stage 9 is missing, so cubes can stick differently from the arcade (fix under consideration)",
+   "If you reach speed 5 with power-ups and then use the power-up command with a slower SPEED, the SPEED UP label in the gauge stays blank",
+   "The Option Hunter does not appear at all under some game conditions, such as early in the first loop (its timer does not advance)",
+   "The power-up command only adds equipment, so pressing Missile + START while you have Laser or Double does not take you back to the normal shot",
+   "While the unlock command is suspended, pressing START while holding Up or Down enters the menu even in normal play",
+   "While invincible you can go inside walls"
+  ]
+ }
+}
